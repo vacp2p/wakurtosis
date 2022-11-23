@@ -1,0 +1,520 @@
+{
+  "waku_0": {
+    "ports_shift": 0,
+    "topics": "test",
+    "static_nodes": [
+      "waku_23",
+      "waku_39",
+      "waku_21",
+      "waku_43"
+    ]
+  },
+  "waku_1": {
+    "ports_shift": 1,
+    "topics": "test",
+    "static_nodes": [
+      "waku_9",
+      "waku_42",
+      "waku_7",
+      "waku_29",
+      "waku_46"
+    ]
+  },
+  "waku_2": {
+    "ports_shift": 2,
+    "topics": "test",
+    "static_nodes": [
+      "waku_38",
+      "waku_4",
+      "waku_40",
+      "waku_3",
+      "waku_23",
+      "waku_49",
+      "waku_19"
+    ]
+  },
+  "waku_3": {
+    "ports_shift": 3,
+    "topics": "test",
+    "static_nodes": [
+      "waku_2",
+      "waku_44",
+      "waku_20",
+      "waku_42",
+      "waku_25",
+      "waku_21"
+    ]
+  },
+  "waku_4": {
+    "ports_shift": 4,
+    "topics": "test",
+    "static_nodes": [
+      "waku_2",
+      "waku_33",
+      "waku_26",
+      "waku_38",
+      "waku_19",
+      "waku_29",
+      "waku_12",
+      "waku_37"
+    ]
+  },
+  "waku_5": {
+    "ports_shift": 5,
+    "topics": "test",
+    "static_nodes": [
+      "waku_47",
+      "waku_40"
+    ]
+  },
+  "waku_6": {
+    "ports_shift": 6,
+    "topics": "test",
+    "static_nodes": [
+      "waku_13",
+      "waku_21",
+      "waku_38"
+    ]
+  },
+  "waku_7": {
+    "ports_shift": 7,
+    "topics": "test",
+    "static_nodes": [
+      "waku_1",
+      "waku_18",
+      "waku_30",
+      "waku_16"
+    ]
+  },
+  "waku_8": {
+    "ports_shift": 8,
+    "topics": "test",
+    "static_nodes": [
+      "waku_37"
+    ]
+  },
+  "waku_9": {
+    "ports_shift": 9,
+    "topics": "test",
+    "static_nodes": [
+      "waku_1",
+      "waku_27",
+      "waku_19",
+      "waku_34"
+    ]
+  },
+  "waku_10": {
+    "ports_shift": 10,
+    "topics": "test",
+    "static_nodes": [
+      "waku_32",
+      "waku_46",
+      "waku_41",
+      "waku_37",
+      "waku_16"
+    ]
+  },
+  "waku_11": {
+    "ports_shift": 11,
+    "topics": "test",
+    "static_nodes": [
+      "waku_35"
+    ]
+  },
+  "waku_12": {
+    "ports_shift": 12,
+    "topics": "test",
+    "static_nodes": [
+      "waku_4",
+      "waku_30",
+      "waku_26",
+      "waku_27",
+      "waku_42",
+      "waku_22",
+      "waku_36"
+    ]
+  },
+  "waku_13": {
+    "ports_shift": 13,
+    "topics": "test",
+    "static_nodes": [
+      "waku_6",
+      "waku_22",
+      "waku_27"
+    ]
+  },
+  "waku_14": {
+    "ports_shift": 14,
+    "topics": "test",
+    "static_nodes": [
+      "waku_39",
+      "waku_29",
+      "waku_15",
+      "waku_43",
+      "waku_23",
+      "waku_48",
+      "waku_44"
+    ]
+  },
+  "waku_15": {
+    "ports_shift": 15,
+    "topics": "test",
+    "static_nodes": [
+      "waku_14",
+      "waku_26"
+    ]
+  },
+  "waku_16": {
+    "ports_shift": 16,
+    "topics": "test",
+    "static_nodes": [
+      "waku_7",
+      "waku_10",
+      "waku_22",
+      "waku_38",
+      "waku_26"
+    ]
+  },
+  "waku_17": {
+    "ports_shift": 17,
+    "topics": "test",
+    "static_nodes": [
+      "waku_22"
+    ]
+  },
+  "waku_18": {
+    "ports_shift": 18,
+    "topics": "test",
+    "static_nodes": [
+      "waku_7",
+      "waku_35",
+      "waku_48",
+      "waku_30",
+      "waku_36"
+    ]
+  },
+  "waku_19": {
+    "ports_shift": 19,
+    "topics": "test",
+    "static_nodes": [
+      "waku_2",
+      "waku_4",
+      "waku_9",
+      "waku_48",
+      "waku_40",
+      "waku_28",
+      "waku_45"
+    ]
+  },
+  "waku_20": {
+    "ports_shift": 20,
+    "topics": "test",
+    "static_nodes": [
+      "waku_3",
+      "waku_23"
+    ]
+  },
+  "waku_21": {
+    "ports_shift": 21,
+    "topics": "test",
+    "static_nodes": [
+      "waku_0",
+      "waku_3",
+      "waku_6",
+      "waku_36",
+      "waku_40",
+      "waku_30",
+      "waku_44"
+    ]
+  },
+  "waku_22": {
+    "ports_shift": 22,
+    "topics": "test",
+    "static_nodes": [
+      "waku_12",
+      "waku_13",
+      "waku_16",
+      "waku_17",
+      "waku_43",
+      "waku_42",
+      "waku_34",
+      "waku_38",
+      "waku_30"
+    ]
+  },
+  "waku_23": {
+    "ports_shift": 23,
+    "topics": "test",
+    "static_nodes": [
+      "waku_0",
+      "waku_2",
+      "waku_14",
+      "waku_20",
+      "waku_33",
+      "waku_32"
+    ]
+  },
+  "waku_24": {
+    "ports_shift": 24,
+    "topics": "test",
+    "static_nodes": [
+      "waku_33",
+      "waku_44",
+      "waku_29"
+    ]
+  },
+  "waku_25": {
+    "ports_shift": 25,
+    "topics": "test",
+    "static_nodes": [
+      "waku_3",
+      "waku_48"
+    ]
+  },
+  "waku_26": {
+    "ports_shift": 26,
+    "topics": "test",
+    "static_nodes": [
+      "waku_4",
+      "waku_12",
+      "waku_15",
+      "waku_16",
+      "waku_27",
+      "waku_34",
+      "waku_48"
+    ]
+  },
+  "waku_27": {
+    "ports_shift": 27,
+    "topics": "test",
+    "static_nodes": [
+      "waku_9",
+      "waku_12",
+      "waku_13",
+      "waku_26",
+      "waku_39"
+    ]
+  },
+  "waku_28": {
+    "ports_shift": 28,
+    "topics": "test",
+    "static_nodes": [
+      "waku_19",
+      "waku_29",
+      "waku_45",
+      "waku_36"
+    ]
+  },
+  "waku_29": {
+    "ports_shift": 29,
+    "topics": "test",
+    "static_nodes": [
+      "waku_1",
+      "waku_4",
+      "waku_14",
+      "waku_24",
+      "waku_28",
+      "waku_48",
+      "waku_42"
+    ]
+  },
+  "waku_30": {
+    "ports_shift": 30,
+    "topics": "test",
+    "static_nodes": [
+      "waku_7",
+      "waku_12",
+      "waku_18",
+      "waku_21",
+      "waku_22",
+      "waku_47"
+    ]
+  },
+  "waku_31": {
+    "ports_shift": 31,
+    "topics": "test",
+    "static_nodes": [
+      "waku_46",
+      "waku_38"
+    ]
+  },
+  "waku_32": {
+    "ports_shift": 32,
+    "topics": "test",
+    "static_nodes": [
+      "waku_10",
+      "waku_23"
+    ]
+  },
+  "waku_33": {
+    "ports_shift": 33,
+    "topics": "test",
+    "static_nodes": [
+      "waku_4",
+      "waku_23",
+      "waku_24"
+    ]
+  },
+  "waku_34": {
+    "ports_shift": 34,
+    "topics": "test",
+    "static_nodes": [
+      "waku_9",
+      "waku_22",
+      "waku_26",
+      "waku_49"
+    ]
+  },
+  "waku_35": {
+    "ports_shift": 35,
+    "topics": "test",
+    "static_nodes": [
+      "waku_11",
+      "waku_18"
+    ]
+  },
+  "waku_36": {
+    "ports_shift": 36,
+    "topics": "test",
+    "static_nodes": [
+      "waku_12",
+      "waku_18",
+      "waku_21",
+      "waku_28",
+      "waku_45"
+    ]
+  },
+  "waku_37": {
+    "ports_shift": 37,
+    "topics": "test",
+    "static_nodes": [
+      "waku_4",
+      "waku_8",
+      "waku_10",
+      "waku_39"
+    ]
+  },
+  "waku_38": {
+    "ports_shift": 38,
+    "topics": "test",
+    "static_nodes": [
+      "waku_2",
+      "waku_4",
+      "waku_6",
+      "waku_16",
+      "waku_22",
+      "waku_31",
+      "waku_40",
+      "waku_39"
+    ]
+  },
+  "waku_39": {
+    "ports_shift": 39,
+    "topics": "test",
+    "static_nodes": [
+      "waku_0",
+      "waku_14",
+      "waku_27",
+      "waku_37",
+      "waku_38"
+    ]
+  },
+  "waku_40": {
+    "ports_shift": 40,
+    "topics": "test",
+    "static_nodes": [
+      "waku_2",
+      "waku_5",
+      "waku_19",
+      "waku_21",
+      "waku_38"
+    ]
+  },
+  "waku_41": {
+    "ports_shift": 41,
+    "topics": "test",
+    "static_nodes": [
+      "waku_10"
+    ]
+  },
+  "waku_42": {
+    "ports_shift": 42,
+    "topics": "test",
+    "static_nodes": [
+      "waku_1",
+      "waku_3",
+      "waku_12",
+      "waku_22",
+      "waku_29"
+    ]
+  },
+  "waku_43": {
+    "ports_shift": 43,
+    "topics": "test",
+    "static_nodes": [
+      "waku_0",
+      "waku_14",
+      "waku_22",
+      "waku_45"
+    ]
+  },
+  "waku_44": {
+    "ports_shift": 44,
+    "topics": "test",
+    "static_nodes": [
+      "waku_3",
+      "waku_14",
+      "waku_21",
+      "waku_24",
+      "waku_47"
+    ]
+  },
+  "waku_45": {
+    "ports_shift": 45,
+    "topics": "test",
+    "static_nodes": [
+      "waku_19",
+      "waku_28",
+      "waku_36",
+      "waku_43"
+    ]
+  },
+  "waku_46": {
+    "ports_shift": 46,
+    "topics": "test",
+    "static_nodes": [
+      "waku_1",
+      "waku_10",
+      "waku_31"
+    ]
+  },
+  "waku_47": {
+    "ports_shift": 47,
+    "topics": "test",
+    "static_nodes": [
+      "waku_5",
+      "waku_30",
+      "waku_44"
+    ]
+  },
+  "waku_48": {
+    "ports_shift": 48,
+    "topics": "test",
+    "static_nodes": [
+      "waku_14",
+      "waku_18",
+      "waku_19",
+      "waku_25",
+      "waku_26",
+      "waku_29"
+    ]
+  },
+  "waku_49": {
+    "ports_shift": 49,
+    "topics": "test",
+    "static_nodes": [
+      "waku_2",
+      "waku_34"
+    ]
+  }
+}
