@@ -1,4 +1,4 @@
-IMAGE_NAME = "wakunode"
+IMAGE_NAME = "statusteam/nim-waku:deploy-status-prod"
 WAKU_RPC_PORT_ID = "rpc"
 TCP_PORT = 8545
 
@@ -79,7 +79,7 @@ def instantiate_waku_nodes(waku_topology):
                     "/usr/bin/wakunode", "--rpc-address=0.0.0.0"
                 ],
                 cmd=[
-                    "--topics='" + decoded[wakunode_name]["topics"] + "'",
+                    "--topics='" + waku_topology[wakunode_name]["topics"] + "'",
                     "--config-file=" + CONFIG_LOCATION + "/" + wakunode_name + ".toml"
                 ]
             )
@@ -92,7 +92,7 @@ def instantiate_waku_nodes(waku_topology):
 
         services[wakunode_name] = waku_info
 
-        return services
+    return services
 
 
 def interconnect_waku_nodes(topology_information, services):
