@@ -2,6 +2,7 @@ IMAGE_NAME = "wakunode"
 WAKU_RPC_PORT_ID = "rpc"
 TCP_PORT = 8545
 
+POST_RELAY_MESSAGE = "post_waku_v2_relay_v1_message"
 GET_WAKU_INFO_METHOD = "get_waku_v2_debug_v1_info"
 CONNECT_TO_PEER_METHOD = "post_waku_v2_admin_v1_peers"
 
@@ -12,17 +13,24 @@ def create_waku_id(other_node_info):
     port = other_node_info["service"].ports["rpc"].number
     node_id = other_node_info["id"]
 
-    return "/ip4/" + str(ip) + "/tcp/" + str(port) + "/p2p/" + node_id
+    return '["/ip4/' + str(ip) + '/tcp/' + str(port) + '/p2p/' + node_id+'"]'
 
 
 def connect_wakunode_to_peer(service_id, port_id, other_node_info):
-
     method = CONNECT_TO_PEER_METHOD
 
     params = create_waku_id(other_node_info)
 
     response = send_json_rpc(service_id, port_id, method, params)
 
+    print(response)
+
+
+def send_waku_message(service_id, topic):
+    topic = topic
+    waku_message = '{"payload": "0x1a2b3c4d5e6f", "timestamp": 1626813243}'
+    params = topic + ", " + waku_message
+    response = send_json_rpc(service_id, WAKU_RPC_PORT_ID, POST_RELAY_MESSAGE, params)
     print(response)
 
 def send_json_rpc(service_id, port_id, method, params):
@@ -43,10 +51,10 @@ def send_json_rpc(service_id, port_id, method, params):
 def get_wakunode_id(service_id, port_id):
     response = send_json_rpc(service_id, port_id, GET_WAKU_INFO_METHOD, "")
 
-    result = extract(response.body, ".result.listenAddresses")
-    wakunode_id = result[:-1].split("/")[-1]
+    result = extract(response.body, '.result.listenAddresses | .[0] | split("/") | .[-1]')
+    print(result)
 
-    return wakunode_id
+    return result
 
 
 def run(args):
@@ -75,17 +83,27 @@ def run(args):
 
     # Get up all waku nodes
     for wakunode_name in decoded.keys():
+        CONFIG_LOCATION = "/tmp/config.toml"
+        artifact_id = upload_files(
+            src="github.com/logos-co/wakurtosis/kurtosis-module/starlark/config_files/" + wakunode_name + ".toml"
+        )
+
         waku_service = add_service(
             service_id=wakunode_name,
             config=struct(
                 image=IMAGE_NAME,
                 ports={WAKU_RPC_PORT_ID: struct(number=TCP_PORT, protocol="TCP")},
+                files={
+                    artifact_id: CONFIG_LOCATION
+                },
                 entrypoint=[
                     "/usr/bin/wakunode", "--rpc-address=0.0.0.0"
-                ],
-                cmd=[
-                    "--topics='" + decoded[wakunode_name]["topics"] + "'", '--rpc-admin=true', '--keep-alive=true'
                 ]
+                # cmd=[
+                #     "--topics='" + decoded[wakunode_name]["topics"] + "'",
+                #     '--rpc-admin=true', '--keep-alive=true'
+                #     #"--config-file " + CONFIG_LOCATION
+                # ]
             )
         )
 
@@ -96,12 +114,14 @@ def run(args):
 
         services[wakunode_name] = waku_info
 
-        # exec(wakunode_name, ["sleep", "30"])
-
-
     # Interconnect them
-    for wakunode_name in decoded.keys():
-        peers = decoded[wakunode_name]["static_nodes"]
+    #for wakunode_name in decoded.keys():
+    #    peers = decoded[wakunode_name]["static_nodes"]
 
-        for peer in peers:
-            connect_wakunode_to_peer(wakunode_name, WAKU_RPC_PORT_ID, services[peer])
+    #    # todo: change to do only one rpc call
+    #    for peer in peers:
+    #        connect_wakunode_to_peer(wakunode_name, WAKU_RPC_PORT_ID, services[peer])
+
+    # for wakunode_name in decoded.keys():
+    #     # send message in topic
+    #     send_waku_message(wakunode_name, "test")
