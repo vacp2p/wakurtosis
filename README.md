@@ -1,11 +1,19 @@
-My Kurtosis Module
+Wakurtosis
 =====================
-Welcome to your new [Kurtosis module](https://docs.kurtosistech.com/modules.html)! You can use the ExampleExecutableKurtosisModule implementation as a pattern to create your own Kurtosis module.
 
-Quickstart steps:
-1. Customize your own Kurtosis module by editing the generated files inside the `/path/to/your/code/repos/kurtosis-module/impl` folder
-    1. Rename files and objects, if you want, using a name that describes the functionality of your Kurtosis module
-    1. Write the functionality of your Kurtosis module inside your implementation of the `ExecutableKurtosisModule.execute` method by using the serialized parameters (validating & sanitizing the parameters as necessary)
-    1. Write an implementation of `KurtosisModuleConfigurator` that accepts configuration parameters and produces an instance of your custom Kurtosis module
-    1. Edit the main file and replace the example `KurtosisModuleConfigurator` with your own implementation that produces your custom `ExecutableKurtosisModule`
-    1. Run `scripts/build.sh` to package your Kurtosis module into a Docker image that can be used inside Kurtosis
+Starting version for Waku network simulations (https://github.com/waku-org/pm/issues/2)
+
+Kurtosis: https://docs.kurtosis.com/
+
+### How to use:
+
+#### Before using this repository make sure that: 
+
+- **You are using Kurtosis version 0.57.4**. This is important, as they are working on it and changes can be huge depending on different versions.
+- The topology that will be instantiated is defined in `kurtosis-module/starlark/waku_test_topology.json`. This topology is created with https://github.com/logos-co/Waku-topology-test 
+- Each node will need its own configuration file in `kurtosis-module/starlark/config_files/waku_X.toml` being `waku_X` the same name that is defined in the topology.
+- It is assumed that you have a Waku docker image. Name is harcoded in `main.star` as `IMAGE_NAME = "wakunode"` in the first lane.
+
+Run this repo with: `kurtosis run main.star`
+
+Please, any improvements/bugs that you see, create an issue and we will work on it. 
