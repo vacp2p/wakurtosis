@@ -86,6 +86,7 @@ def instantiate_waku_nodes(waku_topology):
         )
 
         waku_info = {}
+        exec(wakunode_name, ["sleep", "10"])
         id = get_wakunode_id(wakunode_name, WAKU_RPC_PORT_ID)
         waku_info["id"] = id
         waku_info["service"] = waku_service
