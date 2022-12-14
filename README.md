@@ -13,8 +13,14 @@ Kurtosis: https://docs.kurtosis.com/
 - The topology that will be instantiated is defined in `kurtosis-module/starlark/waku_test_topology.json`. This topology is created with https://github.com/logos-co/Waku-topology-test 
 - Each node will need its own configuration file in `kurtosis-module/starlark/config_files/waku_X.toml` being `waku_X` the same name that is defined in the topology.
 
-Run this repo with: `kurtosis run main.star`
+Run this repo with:
 
-If you want to use the same configuration for every node, you can use `kurtosis run main.star --args '{"same_toml_configuration": true}'`. This will use the file `kurtosis-module/starlark/config_files/waku_general.toml` for every node.
+`kurtosis run main.star`
+
+If you want to use the same configuration for every node, you can use:
+
+`kurtosis run main.star --args '{"same_toml_configuration": true}'`
+
+This will use the file `kurtosis-module/starlark/config_files/waku_general.toml` for every node.
 
 Please, any improvements/bugs that you see, create an issue and we will work on it. 
