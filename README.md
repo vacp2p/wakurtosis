@@ -15,4 +15,6 @@ Kurtosis: https://docs.kurtosis.com/
 
 Run this repo with: `kurtosis run main.star`
 
+If you want to use the same configuration for every node, you can use `kurtosis run main.star --args '{"same_toml_configuration": true}'`. This will use the file `kurtosis-module/starlark/config_files/waku_general.toml` for every node.
+
 Please, any improvements/bugs that you see, create an issue and we will work on it. 
