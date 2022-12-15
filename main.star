@@ -26,6 +26,7 @@ GRAFANA_TCP_PORT = 3000
 POST_RELAY_MESSAGE = "post_waku_v2_relay_v1_message"
 GET_WAKU_INFO_METHOD = "get_waku_v2_debug_v1_info"
 CONNECT_TO_PEER_METHOD = "post_waku_v2_admin_v1_peers"
+GET_PEERS_METHOD = "get_waku_v2_admin_v1_peers"
 
 GENERAL_TOML_CONFIGURATION_PATH = "github.com/logos-co/wakurtosis/kurtosis-module/starlark/config_files/waku_general.toml"
 GENERAL_TOML_CONFIGURATION_NAME = "waku_general.toml"
@@ -39,7 +40,7 @@ def create_waku_id(other_node_info):
     return '"/ip4/' + str(ip) + '/tcp/' + str(port) + '/p2p/' + node_id + '"'
 
 
-def  merge_peer_ids(peer_ids):
+def merge_peer_ids(peer_ids):
     return "[" + ",".join(peer_ids) + "]"
 
 
@@ -47,7 +48,7 @@ def connect_wakunode_to_peers(service_id, port_id, peer_ids):
     method = CONNECT_TO_PEER_METHOD
 
     params = merge_peer_ids(peer_ids)
-    
+
     print(params)
 
     response = send_json_rpc(service_id, port_id, method, params)
@@ -113,6 +114,8 @@ def instantiate_waku_nodes(waku_topology, same_toml_configuration):
 
         artifact_id, configuration_file = get_toml_configuration_artifact(wakunode_name, same_toml_configuration)
 
+        print("configuration file is " + configuration_file)
+
         waku_service = add_service(
             service_id=wakunode_name,
             config=struct(
@@ -133,7 +136,7 @@ def instantiate_waku_nodes(waku_topology, same_toml_configuration):
                 cmd=[
                     "--topics=" + waku_topology[wakunode_name]["topics"],
                     "--metrics-server=True",
-                    "--config-file=" + CONFIG_LOCATION + "/" + configuration_file,
+                    "--config-file=" + CONFIG_LOCATION + "/" + configuration_file
                 ]
             )
         )
@@ -153,6 +156,14 @@ def instantiate_waku_nodes(waku_topology, same_toml_configuration):
     return services
 
 
+def ask_connected_nodes(topology):
+    for wakunode_name in topology.keys():
+        exec(wakunode_name, ["sleep", "10"])
+        response = send_json_rpc(wakunode_name, WAKU_RPC_PORT_ID, GET_PEERS_METHOD, "")
+
+        # result = extract(response.body, '.result.listenAddresses | .[0] | split("/") | .[-1]')
+        print(response)
+
 def interconnect_waku_nodes(topology_information, services):
     # Interconnect them
     for wakunode_name in topology_information.keys():
@@ -165,7 +176,6 @@ def interconnect_waku_nodes(topology_information, services):
             peer_ids.append(peer_id)
 
         connect_wakunode_to_peers(wakunode_name, WAKU_RPC_PORT_ID, peer_ids)
-
 
 
 def send_test_messages(topology_information):
@@ -323,7 +333,7 @@ def run(args):
     same_toml_configuration = args.same_toml_configuration
     waku_topology = json.decode(waku_topology)
 
-    # waku_topology = {
+    # decoded = {
     #     "waku_0": {
     #         "ports_shift": 0,
     #         "topics": "test",
@@ -337,6 +347,14 @@ def run(args):
     #         "static_nodes": [
     #             "waku_0"
     #         ]
+    #     },
+    #     "waku_2": {
+    #         "ports_shift": 1,
+    #         "topics": "test",
+    #         "static_nodes": [
+    #             "waku_0",
+    #             "waku_1"
+    #         ]
     #     }
     # }
 
@@ -349,3 +367,6 @@ def run(args):
     interconnect_waku_nodes(waku_topology, services)
 
     send_test_messages(waku_topology)
+
+    ask_connected_nodes(decoded)
+
