@@ -36,13 +36,19 @@ def create_waku_id(other_node_info):
     port = other_node_info["service"].ports[WAKU_LIBP2P_PORT_ID].number
     node_id = other_node_info["id"]
 
-    return '["/ip4/' + str(ip) + '/tcp/' + str(port) + '/p2p/' + node_id + '"]'
+    return '"/ip4/' + str(ip) + '/tcp/' + str(port) + '/p2p/' + node_id + '"'
 
 
-def connect_wakunode_to_peer(service_id, port_id, other_node_info):
+def  merge_peer_ids(peer_ids):
+    return "[" + ",".join(peer_ids) + "]"
+
+
+def connect_wakunode_to_peers(service_id, port_id, peer_ids):
     method = CONNECT_TO_PEER_METHOD
 
-    params = create_waku_id(other_node_info)
+    params = merge_peer_ids(peer_ids)
+    
+    print(params)
 
     response = send_json_rpc(service_id, port_id, method, params)
 
@@ -152,9 +158,14 @@ def interconnect_waku_nodes(topology_information, services):
     for wakunode_name in topology_information.keys():
         peers = topology_information[wakunode_name]["static_nodes"]
 
-        # todo: change to do only one rpc call
+        peer_ids = []
         for peer in peers:
-            connect_wakunode_to_peer(wakunode_name, WAKU_RPC_PORT_ID, services[peer])
+            # Get all Ids
+            peer_id = create_waku_id(services[peer])
+            peer_ids.append(peer_id)
+
+        connect_wakunode_to_peers(wakunode_name, WAKU_RPC_PORT_ID, peer_ids)
+
 
 
 def send_test_messages(topology_information):
