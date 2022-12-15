@@ -24,7 +24,7 @@ rpc_targets=$(kurtosis enclave inspect $ENCLAVE_ID | grep 'rpc' | sed -e 's/^.*-
 
 # Generate the targets file for Prometheus
 echo "Building Prometheus targets  ..."
-echo "[{\"labels\": {\"job\": \"wakurtosis\"}, \"prometheus targets\" : [$prometheus_targets], \"rpc targets\" : [$rpc_targets] } ]" | tee './targets.json' > /dev/null
+echo "[{\"labels\": {\"job\": \"wakurtosis\"}, \"prometheus_targets\" : [$prometheus_targets], \"rpc_targets\" : [$rpc_targets] } ]" | tee './targets.json' > /dev/null
 
 echo "RPC targets are: $rpc_targets"
 echo "Prometheus targets are: $prometheus_targets"
