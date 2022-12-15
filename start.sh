@@ -14,7 +14,7 @@ kurtosis enclave stop $ENCLAVE_ID
 kurtosis enclave rm $ENCLAVE_ID
 
 # Start the Kurtosis enclave
-kurtosis run main.star --enclave-id $ENCLAVE_ID
+kurtosis run --enclave-id $ENCLAVE_ID main.star
 
 # Fetch the targets from the Kurtosis output
 # TODO: Fetch the targets directly in the Starlark script
