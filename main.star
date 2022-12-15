@@ -2,6 +2,10 @@ IMAGE_NAME = "statusteam/nim-waku:deploy-status-prod"
 WAKU_RPC_PORT_ID = "rpc"
 TCP_PORT = 8545
 
+# Waku Matrics Port
+PROMETHEUS_PORT_ID = "prometheus"
+PROMETHEUS_TCP_PORT = 8008
+
 POST_RELAY_MESSAGE = "post_waku_v2_relay_v1_message"
 GET_WAKU_INFO_METHOD = "get_waku_v2_debug_v1_info"
 CONNECT_TO_PEER_METHOD = "post_waku_v2_admin_v1_peers"
@@ -89,15 +93,20 @@ def instantiate_waku_nodes(waku_topology, same_toml_configuration):
             service_id=wakunode_name,
             config=struct(
                 image=IMAGE_NAME,
-                ports={WAKU_RPC_PORT_ID: struct(number=TCP_PORT, protocol="TCP")},
+                ports={
+                    WAKU_RPC_PORT_ID: struct(number=TCP_PORT, protocol="TCP"),
+                    PROMETHEUS_PORT_ID: struct(number=PROMETHEUS_TCP_PORT, protocol="TCP")
+                },
                 files={
                     artifact_id: CONFIG_LOCATION
                 },
                 entrypoint=[
-                    "/usr/bin/wakunode", "--rpc-address=0.0.0.0"
+                    "/usr/bin/wakunode", "--rpc-address=0.0.0.0",
+                    "--metrics-server-address=0.0.0.0"
                 ],
                 cmd=[
                     "--topics='" + waku_topology[wakunode_name]["topics"] + "'",
+                    '--metrics-server=true',
                     "--config-file=" + configuration_file
                 ]
             )
