@@ -6,6 +6,9 @@ POST_RELAY_MESSAGE = "post_waku_v2_relay_v1_message"
 GET_WAKU_INFO_METHOD = "get_waku_v2_debug_v1_info"
 CONNECT_TO_PEER_METHOD = "post_waku_v2_admin_v1_peers"
 
+GENERAL_TOML_CONFIGURATION_PATH = "github.com/logos-co/wakurtosis/configurable_toml/kurtosis-module/starlark/config_files/waku_general.toml"
+GENERAL_TOML_CONFIGURATION_NAME = "waku_general.toml"
+
 
 def create_waku_id(other_node_info):
     ip = other_node_info["service"].ip_address
@@ -57,15 +60,30 @@ def get_wakunode_id(service_id, port_id):
     return result
 
 
-def instantiate_waku_nodes(waku_topology):
+def get_toml_configuration_artifact(wakunode_name, same_toml_configuration):
+    if same_toml_configuration:
+        artifact_id = upload_files(
+            src=GENERAL_TOML_CONFIGURATION_PATH
+        )
+        file_name = GENERAL_TOML_CONFIGURATION_NAME
+    else:
+        artifact_id = upload_files(
+            src="github.com/logos-co/wakurtosis/kurtosis-module/starlark/config_files/" + wakunode_name + ".toml"
+        )
+        file_name = wakunode_name + ".toml"
+
+    return artifact_id, file_name
+
+
+
+def instantiate_waku_nodes(waku_topology, same_toml_configuration):
     services = {}
 
     # Get up all waku nodes
     for wakunode_name in waku_topology.keys():
         CONFIG_LOCATION = "/tmp"
-        artifact_id = upload_files(
-            src="github.com/logos-co/wakurtosis/kurtosis-module/starlark/config_files/" + wakunode_name + ".toml"
-        )
+
+        artifact_id, configuration_file = get_toml_configuration_artifact(wakunode_name, same_toml_configuration)
 
         waku_service = add_service(
             service_id=wakunode_name,
@@ -80,7 +98,7 @@ def instantiate_waku_nodes(waku_topology):
                 ],
                 cmd=[
                     "--topics='" + waku_topology[wakunode_name]["topics"] + "'",
-                    "--config-file=" + CONFIG_LOCATION + "/" + wakunode_name + ".toml"
+                    "--config-file=" + configuration_file
                 ]
             )
         )
@@ -115,6 +133,7 @@ def send_test_messages(topology_information):
 def run(args):
     contents = read_file(src="github.com/logos-co/wakurtosis/kurtosis-module/starlark/waku_test_topology.json")
 
+    same_toml_configuration = args.same_toml_configuration
     # decoded = json.decode(contents)
 
     decoded = {
@@ -134,7 +153,7 @@ def run(args):
         }
     }
 
-    services = instantiate_waku_nodes(decoded)
+    services = instantiate_waku_nodes(decoded, same_toml_configuration)
 
     interconnect_waku_nodes(decoded, services)
 
