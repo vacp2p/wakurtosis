@@ -10,4 +10,4 @@ scrape_configs:
     scrape_interval: 1s
     file_sd_configs:
     - files:
-      - 'targets.json'
+      - '/tmp/targets.json'
