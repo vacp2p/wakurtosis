@@ -16,7 +16,7 @@ import requests
 """ Globals """
 G_APP_NAME = 'WLS'
 G_LOG_LEVEL = logging.INFO
-G_CONFIG_FILE = './simulate_loads.yml'
+G_CONFIG_FILE = './wsl.yml'
 
 """ Custom logging formatter """
 class CustomFormatter(logging.Formatter):
