@@ -110,10 +110,6 @@ def make_payload_dist(dist_type, min_size, max_size):
 
     return '0x00'
 
-def generator():
-  while True:
-    yield
-
 def main():
     
     logger = logging.getLogger(G_APP_NAME)
@@ -162,7 +158,7 @@ def main():
             logger.info('Simulation ended. Sent %d messages (%d bytes) in %d at an avg. bandwitdth of %d Bps' %(msg_cnt, bytes_cnt, elapsed_s, bytes_cnt / elapsed_s))
             break
 
-        # Send message (sampling inter-message times from a Poisson distribution)
+        # Send message
         # BUG: There is a constant discrepancy. The average number of messages sent by time interval is slightly less than expected
         msg_elapsed = time.time() - last_msg_time
         if msg_elapsed <= next_time_to_msg:
@@ -186,8 +182,10 @@ def main():
         # else:
         #     logger.error('RPC Message failed to node_address')
 
+        # Sampling inter-message times from a Poisson distribution)
         next_time_to_msg = poisson_interval(config['general']['msg_rate'])
         last_msg_time = time.time()
+        
         msg_cnt += 1
         bytes_cnt += len(payload) / 2 - 2
         
