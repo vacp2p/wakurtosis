@@ -1,0 +1,17 @@
+general:
+    
+    prng_seed : 0
+
+    # Targets filename
+    targets : "targets.json"
+    
+    # Simulation time in seconds
+    simulation_time : 10
+
+    # Message rate in messages per second
+    msg_rate : 10
+    
+    # Packet size in bytes
+    min_packet_size : 2
+    max_packet_size : 1024
+    
