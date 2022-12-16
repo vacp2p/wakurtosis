@@ -162,7 +162,7 @@ def main():
             logger.info('Simulation ended. Sent %d messages (%d bytes) in %d at an avg. bandwitdth of %d Bps' %(msg_cnt, bytes_cnt, elapsed_s, bytes_cnt / elapsed_s))
             break
 
-        # Send message?
+        # Send message (sampling inter-message times from a Poisson distribution)
         # BUG: There is a constant discrepancy. The average number of messages sent by time interval is slightly less than expected
         msg_elapsed = time.time() - last_msg_time
         if msg_elapsed <= next_time_to_msg:
