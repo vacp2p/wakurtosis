@@ -69,7 +69,7 @@ def send_waku_msg(node_address, topic, payload, nonce=1):
         'id': 1,
         'params' : [topic, waku_msg]}
 
-    logger.info('Waku RPC: %s from %s' %(data['method'], node_address))
+    logger.debug('Waku RPC: %s from %s' %(data['method'], node_address))
     
     s_time = time.time()
     
@@ -110,6 +110,10 @@ def make_payload_dist(dist_type, min_size, max_size):
 
     return '0x00'
 
+def generator():
+  while True:
+    yield
+
 def main():
     
     logger = logging.getLogger(G_APP_NAME)
@@ -147,6 +151,9 @@ def main():
     s_time = time.time()
     last_msg_time = 0
     next_time_to_msg = 0
+
+    logger.info('Starting a simulation of %d seconds ...' %config['general']['simulation_time'])
+
     while True:
         
         # Check end condition
