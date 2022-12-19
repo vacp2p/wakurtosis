@@ -53,28 +53,30 @@ def send_waku_message(service_id, topic):
     print(response)
 
 
-def send_json_rpc(service_id, port_id, method, params):
+def send_json_rpc(service_id, port_id, method, params, extract={}):
     recipe = struct(
         service_id=service_id,
         port_id=port_id,
         endpoint="",
         method="POST",
         content_type="application/json",
-        body='{ "jsonrpc": "2.0", "method": "' + method + '", "params": [' + params + '], "id": 1}'
+        body='{ "jsonrpc": "2.0", "method": "' + method + '", "params": [' + params + '], "id": 1}',
+        extract=extract
     )
 
-    response = get_value(recipe=recipe)
+    response = request(recipe=recipe)
 
     return response
 
 
 def get_wakunode_id(service_id, port_id):
-    response = send_json_rpc(service_id, port_id, GET_WAKU_INFO_METHOD, "")
+    extract = { "waku_id" : '.result.listenAddresses | .[0] | split("/") | .[-1]'}
 
-    result = extract(response.body, '.result.listenAddresses | .[0] | split("/") | .[-1]')
-    print(result)
+    response = send_json_rpc(service_id, port_id, GET_WAKU_INFO_METHOD, "", extract)
 
-    return result
+    print(response)
+
+    return response["extract.waku_id"]
 
 
 def get_toml_configuration_artifact(wakunode_name, same_toml_configuration):
@@ -106,11 +108,11 @@ def instantiate_waku_nodes(waku_topology, same_toml_configuration):
             config=struct(
                 image=WAKU_IMAGE,
                 ports={
-                    WAKU_RPC_PORT_ID: struct(number=TCP_PORT, protocol="TCP"),
-                    PROMETHEUS_PORT_ID: struct(number=PROMETHEUS_TCP_PORT, protocol="TCP")
+                    WAKU_RPC_PORT_ID: PortSpec(number=TCP_PORT, transport_protocol ="TCP"),
+                    PROMETHEUS_PORT_ID: PortSpec(number=PROMETHEUS_TCP_PORT, transport_protocol ="TCP")
                 },
                 files={
-                    artifact_id: CONFIG_LOCATION
+                    CONFIG_LOCATION : artifact_id
                 },
                 entrypoint=[
                     "/usr/bin/wakunode", "--rpc-address=0.0.0.0",
@@ -125,7 +127,11 @@ def instantiate_waku_nodes(waku_topology, same_toml_configuration):
         )
 
         waku_info = {}
-        exec(wakunode_name, ["sleep", "10"])
+        exec_recipe = struct(
+            service_id = wakunode_name,
+            command = ["sleep", "10"]
+        )
+        exec(exec_recipe)
         id = get_wakunode_id(wakunode_name, WAKU_RPC_PORT_ID)
         waku_info["id"] = id
         waku_info["service"] = waku_service
@@ -179,7 +185,7 @@ def create_prometheus_targets(services):
                 "job": 
                 "wakurtosis"
             }, 
-            targets : {{.targets}} 
+            "targets" : {{.targets}} 
         }
     ]
     """
@@ -212,11 +218,11 @@ def set_up_prometheus(services):
         config=struct(
             image=PROMETHEUS_IMAGE,
             ports={
-                PROMETHEUS_PORT_ID: struct(number=9090, protocol="TCP")
+                PROMETHEUS_PORT_ID: PortSpec(number=9090, transport_protocol="TCP")
             },
             files={
-                artifact_id: CONFIG_LOCATION,
-                targets_artifact_id: CONFIG_LOCATION2
+                CONFIG_LOCATION : artifact_id,
+                CONFIG_LOCATION2 : targets_artifact_id
             },
             cmd=[
                 "--config.file=" + CONFIG_LOCATION + "/prometheus.yml"
@@ -274,13 +280,13 @@ def set_up_graphana(prometheus_service):
         config=struct(
             image=GRAFANA_IMAGE,
             ports={
-                GRAFANA_PORT_ID: struct(number=GRAFANA_TCP_PORT, protocol="TCP")
+                GRAFANA_PORT_ID: PortSpec(number=GRAFANA_TCP_PORT, transport_protocol="TCP")
             },
             files={
-                config_id: CONFIGURATION_GRAFANA,
+                CONFIGURATION_GRAFANA : config_id,
                 # customization_id: CUSTOMIZATION_GRAFANA,
-                dashboard_id: DASHBOARDS_GRAFANA,
-                artifact_id: "/etc/grafana/provisioning/datasources/"
+                DASHBOARDS_GRAFANA : dashboard_id,
+                "/etc/grafana/provisioning/datasources/" : artifact_id
             }
         )
     )
