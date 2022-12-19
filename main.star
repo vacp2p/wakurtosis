@@ -1,13 +1,24 @@
+# Waku Configuration
 WAKU_IMAGE = "statusteam/nim-waku:deploy-status-prod"
 WAKU_RPC_PORT_ID = "rpc"
 TCP_PORT = 8545
 
-# Waku Matrics Port
+# Prometheus Configuration
 PROMETHEUS_IMAGE = "prom/prometheus:latest"
 PROMETHEUS_PORT_ID = "prometheus"
 PROMETHEUS_TCP_PORT = 8008
 PROMETHEUS_CONFIGURATION_PATH = "github.com/logos-co/wakurtosis/prometheus.yml"
 
+# Grafana Configuration
+GRAFANA_IMAGE = "grafana/grafana:latest"
+GRAFANA_CONFIGURATION_PATH = "github.com/logos-co/wakurtosis/monitoring/configuration/config/"
+GRAFANA_CUSTOMIZATION_PATH = "github.com/logos-co/wakurtosis/monitoring/configuration/customizations/"
+GRAFANA_DASHBOARD_PATH = "github.com/logos-co/wakurtosis/monitoring/configuration/dashboards/"
+
+GRAFANA_PORT_ID = "grafana"
+GRAFANA_TCP_PORT = 3000
+
+# Waku RPC methods
 POST_RELAY_MESSAGE = "post_waku_v2_relay_v1_message"
 GET_WAKU_INFO_METHOD = "get_waku_v2_debug_v1_info"
 CONNECT_TO_PEER_METHOD = "post_waku_v2_admin_v1_peers"
@@ -86,7 +97,7 @@ def instantiate_waku_nodes(waku_topology, same_toml_configuration):
 
     # Get up all waku nodes
     for wakunode_name in waku_topology.keys():
-        CONFIG_LOCATION = "/tmp"
+        CONFIG_LOCATION = "/tmp"  # todo maybe not good idea to use /tmp
 
         artifact_id, configuration_file = get_toml_configuration_artifact(wakunode_name, same_toml_configuration)
 
@@ -106,9 +117,9 @@ def instantiate_waku_nodes(waku_topology, same_toml_configuration):
                     "--metrics-server-address=0.0.0.0"
                 ],
                 cmd=[
-                    "--topics='" + waku_topology[wakunode_name]["topics"] + "'",
-                    '--metrics-server=true',
-                    "--config-file=" + configuration_file
+                    "--topics=" + waku_topology[wakunode_name]["topics"],
+                    "--metrics-server=True",
+                    "--config-file=" + CONFIG_LOCATION + "/" + configuration_file,
                 ]
             )
         )
@@ -145,10 +156,13 @@ def generate_template_data(services):
     node_data = []
     for wakunode_name in services.keys():
         node_data.append(
-            services[wakunode_name]["service"].ip_address + ":" + str(services[wakunode_name]["service"].ports[
-                                                                          PROMETHEUS_PORT_ID].number))
+            '"' + services[wakunode_name]["service"].ip_address + ":" + str(services[wakunode_name]["service"].ports[
+                                                                                PROMETHEUS_PORT_ID].number) + '"')
 
-    template_data["targets"] = node_data
+    data_as_string = ",".join(node_data)
+    test = "[" + data_as_string + "]"
+
+    template_data["targets"] = test
 
     return template_data
 
@@ -158,38 +172,51 @@ def create_prometheus_targets(services):
     template_data = generate_template_data(services)
 
     # template
-    template = "[{\"labels\": {\"job\": \"wakurtosis\"}, \"targets\" : [{{.targets}}] } ]"
+    template = """
+    [
+        {
+            "labels": {
+                "job": 
+                "wakurtosis"
+            }, 
+            targets : {{.targets}} 
+        }
+    ]
+    """
 
     artifact_id = render_templates(
         config={
-            "/tmp/targets.json": struct(
+            "targets.json": struct(
                 template=template,
                 data=template_data,
             )
         }
     )
 
+    return artifact_id
+
 
 def set_up_prometheus(services):
     # Create targets.json
-
-    create_prometheus_targets(services)
+    targets_artifact_id = create_prometheus_targets(services)
 
     # Set up prometheus
-    CONFIG_LOCATION = "/tmp"
+    CONFIG_LOCATION = "/test"
+    CONFIG_LOCATION2 = "/tmp"
     artifact_id = upload_files(
         src=PROMETHEUS_CONFIGURATION_PATH
     )
+
     prometheus_service = add_service(
         service_id="prometheus",
         config=struct(
             image=PROMETHEUS_IMAGE,
             ports={
-                WAKU_RPC_PORT_ID: struct(number=TCP_PORT, protocol="TCP"),
-                PROMETHEUS_PORT_ID: struct(number=PROMETHEUS_TCP_PORT, protocol="TCP")
+                PROMETHEUS_PORT_ID: struct(number=9090, protocol="TCP")
             },
             files={
-                artifact_id: CONFIG_LOCATION
+                artifact_id: CONFIG_LOCATION,
+                targets_artifact_id: CONFIG_LOCATION2
             },
             cmd=[
                 "--config.file=" + CONFIG_LOCATION + "/prometheus.yml"
@@ -198,6 +225,67 @@ def set_up_prometheus(services):
     )
 
     return prometheus_service
+
+
+def set_up_graphana(prometheus_service):
+    # Set up grafana
+    CONFIGURATION_GRAFANA = "/etc/grafana/"
+    DASHBOARDS_GRAFANA = "/var/lib/grafana/dashboards/"
+    CUSTOMIZATION_GRAFANA = "/usr/share/grafana/"
+
+    config_id = upload_files(
+        src=GRAFANA_CONFIGURATION_PATH
+    )
+    customization_id = upload_files(
+        src=GRAFANA_CUSTOMIZATION_PATH
+    )
+    dashboard_id = upload_files(
+        src=GRAFANA_DASHBOARD_PATH
+    )
+
+    prometheus_url = prometheus_service.ip_address + ":" + str(prometheus_service.ports[PROMETHEUS_PORT_ID].number)
+    prometheus_info = {"prometheus_url": prometheus_url}
+
+    # template
+    template = """
+        apiVersion: 1
+        datasources:
+            - name: Prometheus
+              type: prometheus
+              access: proxy
+              org_id: 1
+              url: http://{{.prometheus_url}}
+              is_default: true
+              version: 1
+              editable: true
+    """
+
+    artifact_id = render_templates(
+        config={
+            "datasources.yaml": struct(
+                template=template,
+                data=prometheus_info,
+            )
+        }
+    )
+
+    grafana_service = add_service(
+        service_id="grafana",
+        config=struct(
+            image=GRAFANA_IMAGE,
+            ports={
+                GRAFANA_PORT_ID: struct(number=GRAFANA_TCP_PORT, protocol="TCP")
+            },
+            files={
+                config_id: CONFIGURATION_GRAFANA,
+                # customization_id: CUSTOMIZATION_GRAFANA,
+                dashboard_id: DASHBOARDS_GRAFANA,
+                artifact_id: "/etc/grafana/provisioning/datasources/"
+            }
+        )
+    )
+
+    return grafana_service
 
 
 def run(args):
@@ -226,7 +314,8 @@ def run(args):
     services = instantiate_waku_nodes(waku_topology, same_toml_configuration)
 
     # Set up prometheus + graphana
-    set_up_prometheus(services)
+    prometheus_service = set_up_prometheus(services)
+    set_up_graphana(prometheus_service)
 
     interconnect_waku_nodes(waku_topology, services)
 
