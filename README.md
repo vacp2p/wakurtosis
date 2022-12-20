@@ -15,8 +15,14 @@ Kurtosis: https://docs.kurtosis.com/
 
 If you want to use the same configuration for every node, you can use:
 
-`kurtosis run main.star '{"same_toml_configuration": true}'`
+`kurtosis run --enclave-id wakurtosis main.star '{"same_toml_configuration": true}'`
 
 This will use the file `kurtosis-module/starlark/config_files/waku_general.toml` for every node.
+
+In order to access to Prometheus or Graphana, run:
+
+`kurtosis enclave inspect wakurtosis'`
+
+With this, you will be able to see the ports exposed to your local machine.
 
 Please, any improvements/bugs that you see, create an issue, and we will work on it. 

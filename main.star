@@ -5,6 +5,8 @@ WAKU_TCP_PORT = 8545
 WAKU_LIBP2P_PORT_ID = "libp2p"
 WAKU_LIBP2P_PORT = 60000
 
+WAKU_SETUP_WAIT_TIME = "2"
+
 # Prometheus Configuration
 PROMETHEUS_IMAGE = "prom/prometheus:latest"
 PROMETHEUS_PORT_ID = "prometheus"
@@ -133,7 +135,7 @@ def instantiate_waku_nodes(waku_topology, same_toml_configuration):
         waku_info = {}
         exec_recipe = struct(
             service_id=wakunode_name,
-            command=["sleep", "10"]
+            command=["sleep", WAKU_SETUP_WAIT_TIME]
         )
         exec(exec_recipe)
         id = get_wakunode_id(wakunode_name, WAKU_RPC_PORT_ID)
@@ -308,24 +310,24 @@ def run(args):
     waku_topology = read_file(src="github.com/logos-co/wakurtosis/kurtosis-module/starlark/waku_test_topology.json")
 
     same_toml_configuration = args.same_toml_configuration
-    # waku_topology = json.decode(waku_topology)
+    waku_topology = json.decode(waku_topology)
 
-    waku_topology = {
-        "waku_0": {
-            "ports_shift": 0,
-            "topics": "test",
-            "static_nodes": [
-                "waku_1",
-            ]
-        },
-        "waku_1": {
-            "ports_shift": 1,
-            "topics": "test",
-            "static_nodes": [
-                "waku_0"
-            ]
-        }
-    }
+    # waku_topology = {
+    #     "waku_0": {
+    #         "ports_shift": 0,
+    #         "topics": "test",
+    #         "static_nodes": [
+    #             "waku_1",
+    #         ]
+    #     },
+    #     "waku_1": {
+    #         "ports_shift": 1,
+    #         "topics": "test",
+    #         "static_nodes": [
+    #             "waku_0"
+    #         ]
+    #     }
+    # }
 
     services = instantiate_waku_nodes(waku_topology, same_toml_configuration)
 
