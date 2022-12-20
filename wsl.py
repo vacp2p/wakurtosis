@@ -189,6 +189,9 @@ def main():
         msg_cnt += 1
         bytes_cnt += len(payload) / 2 - 2
         
+    # Pull messages so we can verify latency
+    # get_waku_v2_relay_v1_messagesget_waku_v2_relay_v1_messages
+    
     """ We are done """
     logger.info('Ended')
     
