@@ -5,7 +5,7 @@ WAKU_TCP_PORT = 8545
 WAKU_LIBP2P_PORT_ID = "libp2p"
 WAKU_LIBP2P_PORT = 60000
 
-WAKU_SETUP_WAIT_TIME = "2"
+WAKU_SETUP_WAIT_TIME = "5"
 
 # Prometheus Configuration
 PROMETHEUS_IMAGE = "prom/prometheus:latest"
@@ -368,5 +368,5 @@ def run(args):
 
     send_test_messages(waku_topology)
 
-    ask_connected_nodes(decoded)
+    ask_connected_nodes(waku_topology)
 
