@@ -5,9 +5,9 @@ Description: Wakurtosis load simulator
 """
 
 """ Dependencies """
-import sys, logging, yaml, json, time, random
+import sys, logging, yaml, json, time, random, os
 import requests
-
+# from pathlib import Path
 # import numpy as np
 # import pandas as pd
 # import matplotlib.pyplot as plt
@@ -110,6 +110,28 @@ def make_payload_dist(dist_type, min_size, max_size):
 
     return '0x00'
 
+def parse_targets(enclave_dump_path):
+
+    targets = []
+
+    for path_obj in os.walk(enclave_dump_path):
+        if 'waku_' in path_obj[0]:
+            print(path_obj)
+            with open(path_obj[0] + '/spec.json', "r") as read_file:
+                spec_obj = json.load(read_file)
+                spec_obj[]
+                
+
+    # pathlist = Path(str('./enclave.dump'))
+    # print(pathlist)
+    # for path in pathlist:
+    #     # because path is object not string
+    #     path_in_str = str(path)
+    #     # print(path_in_str)
+
+
+    return targets
+
 def main():
     
     logger = logging.getLogger(G_APP_NAME)
@@ -127,48 +149,49 @@ def main():
     random.seed(config['general']['prng_seed'])
     
     """ Load targets """
-    try:
-        with open(config['general']['targets']) as f:
-            targets_obj = json.load(f)
-            targets = targets_obj[0]['rpc_targets']
-    except Exception as e:
-        logger.error('%s: %s' % (e.__doc__, e))
-        sys.exit()
-    logger.info('Targets loaded: %s' %targets)
+    # try:
+    #     with open(config['general']['targets']) as f:
+    #         targets_obj = json.load(f)
+    #         targets = targets_obj[0]['rpc_targets']
+    # except Exception as e:
+    #     logger.error('%s: %s' % (e.__doc__, e))
+    #     sys.exit()
+    # logger.info('Targets loaded: %s' %targets)
+    targets = parse_targets(config['general']['enclave_dump_path'])
     
     """ Ping all nodes """
-    for i, target in enumerate(targets):
-        ping_waku_node('http://%s/' %target)
+    # for i, target in enumerate(targets):
+        # ping_waku_node('http://%s/' %target)
     
     """ Start simulation """
-    stats = {}
-    msg_cnt = 0
-    bytes_cnt = 0
-    s_time = time.time()
-    last_msg_time = 0
-    next_time_to_msg = 0
+    # stats = {}
+    # msg_cnt = 0
+    # bytes_cnt = 0
+    # s_time = time.time()
+    # last_msg_time = 0
+    # next_time_to_msg = 0
 
-    logger.info('Starting a simulation of %d seconds ...' %config['general']['simulation_time'])
+    # logger.info('Starting a simulation of %d seconds ...' %config['general']['simulation_time'])
 
-    while True:
+    # while True:
         
         # Check end condition
-        elapsed_s = time.time() - s_time
-        if  elapsed_s >= config['general']['simulation_time']:
-            logger.info('Simulation ended. Sent %d messages (%d bytes) in %d at an avg. bandwitdth of %d Bps' %(msg_cnt, bytes_cnt, elapsed_s, bytes_cnt / elapsed_s))
-            break
+        # elapsed_s = time.time() - s_time
+        # if  elapsed_s >= config['general']['simulation_time']:
+        #     logger.info('Simulation ended. Sent %d messages (%d bytes) in %d at an avg. bandwitdth of %d Bps' %(msg_cnt, bytes_cnt, elapsed_s, bytes_cnt / elapsed_s))
+        #     break
 
-        # Send message
-        # BUG: There is a constant discrepancy. The average number of messages sent by time interval is slightly less than expected
-        msg_elapsed = time.time() - last_msg_time
-        if msg_elapsed <= next_time_to_msg:
-            continue
+        # # Send message
+        # # BUG: There is a constant discrepancy. The average number of messages sent by time interval is slightly less than expected
+        # msg_elapsed = time.time() - last_msg_time
+        # if msg_elapsed <= next_time_to_msg:
+        #     continue
         
-        # Reference: https://rfc.vac.dev/spec/16/#get_waku_v2_relay_v1_messages
-        node_address = 'http://%s/' %random.choice(targets)
+        # # Reference: https://rfc.vac.dev/spec/16/#get_waku_v2_relay_v1_messages
+        # node_address = 'http://%s/' %random.choice(targets)
         
-        payload = make_payload_dist(dist_type='uniform', min_size=config['general']['min_packet_size'], max_size=config['general']['max_packet_size'])
-        response, elapsed = send_waku_msg(node_address, topic='test', payload=payload)
+        # payload = make_payload_dist(dist_type='uniform', min_size=config['general']['min_packet_size'], max_size=config['general']['max_packet_size'])
+        # response, elapsed = send_waku_msg(node_address, topic='test', payload=payload)
 
         # # Keep track of basic stats
         # if response['result']:
@@ -183,13 +206,13 @@ def main():
         #     logger.error('RPC Message failed to node_address')
 
         # Sampling inter-message times from a Poisson distribution)
-        next_time_to_msg = poisson_interval(config['general']['msg_rate'])
-        last_msg_time = time.time()
+        # next_time_to_msg = poisson_interval(config['general']['msg_rate'])
+        # last_msg_time = time.time()
         
-        msg_cnt += 1
-        bytes_cnt += len(payload) / 2 - 2
+        # msg_cnt += 1
+        # bytes_cnt += len(payload) / 2 - 2
         
-    # Pull messages so we can verify latency
+    # Pull messages 
     # get_waku_v2_relay_v1_messagesget_waku_v2_relay_v1_messages
     
     """ We are done """
