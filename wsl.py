@@ -15,8 +15,9 @@ import requests
 
 """ Globals """
 G_APP_NAME = 'WLS'
-G_LOG_LEVEL = logging.INFO
+G_LOG_LEVEL = 'INFO'
 G_CONFIG_FILE = './wsl.yml'
+G_LOGGER = None
 
 """ Custom logging formatter """
 class CustomFormatter(logging.Formatter):
@@ -46,21 +47,21 @@ def check_waku_node(node_address):
         'id': 1,
         'params' : []}
 
-    logger.info('Waku RPC: %s from %s' %(data['method'], node_address))
+    G_LOGGER.info('Waku RPC: %s from %s' %(data['method'], node_address))
     
     try:
         response = requests.post(node_address, data=json.dumps(data), headers={'content-type': 'application/json'})
     except Exception as e:
-        logger.debug('%s: %s' % (e.__doc__, e))
+        G_LOGGER.debug('%s: %s' % (e.__doc__, e))
         return False
 
     try:
         response_obj = response.json()
     except Exception as e:
-        logger.debug('%s: %s' % (e.__doc__, e))
+        G_LOGGER.debug('%s: %s' % (e.__doc__, e))
         return False
 
-    logger.debug('Response from %s: %s' %(node_address, response_obj))
+    G_LOGGER.debug('Response from %s: %s' %(node_address, response_obj))
     
     return True
 
@@ -77,7 +78,7 @@ def send_waku_msg(node_address, topic, payload, nonce=1):
         'id': 1,
         'params' : [topic, waku_msg]}
 
-    logger.debug('Waku RPC: %s from %s' %(data['method'], node_address))
+    G_LOGGER.debug('Waku RPC: %s from %s' %(data['method'], node_address))
     
     s_time = time.time()
     
@@ -87,7 +88,7 @@ def send_waku_msg(node_address, topic, payload, nonce=1):
 
     response_obj = response.json()
 
-    logger.debug('Response from %s: %s [%.4f ms.]' %(node_address, response_obj, elapsed_ms))
+    G_LOGGER.debug('Response from %s: %s [%.4f ms.]' %(node_address, response_obj, elapsed_ms))
     
     return response_obj, elapsed_ms
 
@@ -102,7 +103,7 @@ def make_payload(size):
 
     payload = '0x%s' %payload 
 
-    logger.debug('Payload of size %d bytes: %s' %(size, payload))
+    G_LOGGER.debug('Payload of size %d bytes: %s' %(size, payload))
 
     return payload
 
@@ -114,7 +115,7 @@ def make_payload_dist(dist_type, min_size, max_size):
 
     # TODO: Normal in [a,b]
 
-    logger.error('Unknown distribution type %s')
+    G_LOGGER.error('Unknown distribution type %s')
 
     return '0x00'
 
@@ -122,7 +123,7 @@ def parse_targets(enclave_dump_path, waku_port=8545):
 
     targets = []
 
-    logger.info('Extracting Waku node addresses from Kurtosus enclance dump in %s' %enclave_dump_path)            
+    G_LOGGER.info('Extracting Waku node addresses from Kurtosus enclance dump in %s' %enclave_dump_path)            
 
     for path_obj in os.walk(enclave_dump_path):
         if 'waku_' in path_obj[0]:
@@ -132,24 +133,36 @@ def parse_targets(enclave_dump_path, waku_port=8545):
                 waku_address = network_settings['Ports']['%d/tcp' %waku_port]
                 targets.append('%s:%s' %(waku_address[0]['HostIp'], waku_address[0]['HostPort']))
 
-    logger.info('Parsed %d Waku nodes' %len(targets))            
+    G_LOGGER.info('Parsed %d Waku nodes' %len(targets))            
 
     return targets
 
 def main():
+
+    global G_LOGGER
     
-    logger = logging.getLogger(G_APP_NAME)
-    logger.info('Started')
+    """ Init Logging """
+    G_LOGGER = logging.getLogger(G_APP_NAME)
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(CustomFormatter())
+    G_LOGGER.addHandler(handler)
+    
+    G_LOGGER.info('Started')
     
     """ Load config file """
     try:
         with open(G_CONFIG_FILE, 'r') as f:
             config = yaml.safe_load(f)
     except Exception as e:
-        logger.error('%s: %s' % (e.__doc__, e))
+        G_LOGGER.error('%s: %s' % (e.__doc__, e))
         sys.exit()
-    logger.info('Configuration loaded from %s' %G_CONFIG_FILE)
+    G_LOGGER.info('Configuration loaded from %s' %G_CONFIG_FILE)
 
+    # Set loglevel from config
+    G_LOGGER.setLevel(config['general']['debug_level'])
+    handler.setLevel(config['general']['debug_level'])
+
+    # Set RPNG seed from config
     random.seed(config['general']['prng_seed'])
     
     """ Dump enclave info """
@@ -164,9 +177,9 @@ def main():
     """ Check all nodes are reachable """
     for i, target in enumerate(targets):
         if not check_waku_node('http://%s/' %target):
-            logger.error('Node %d (%s) is not online. Aborted.' %(i, target))
+            G_LOGGER.error('Node %d (%s) is not online. Aborted.' %(i, target))
             sys.exit(1)
-    logger.info('All %d Waku nodes are reachable.' %len(targets))
+    G_LOGGER.info('All %d Waku nodes are reachable.' %len(targets))
 
     """ Start simulation """
     stats = {}
@@ -176,14 +189,14 @@ def main():
     last_msg_time = 0
     next_time_to_msg = 0
 
-    logger.info('Starting a simulation of %d seconds ...' %config['general']['simulation_time'])
+    G_LOGGER.info('Starting a simulation of %d seconds ...' %config['general']['simulation_time'])
 
     while True:
         
         # Check end condition
         elapsed_s = time.time() - s_time
         if  elapsed_s >= config['general']['simulation_time']:
-            logger.info('Simulation ended. Sent %d messages (%d bytes) in %d at an avg. bandwitdth of %d Bps' %(msg_cnt, bytes_cnt, elapsed_s, bytes_cnt / elapsed_s))
+            G_LOGGER.info('Simulation ended. Sent %d messages (%d bytes) in %d at an avg. bandwitdth of %d Bps' %(msg_cnt, bytes_cnt, elapsed_s, bytes_cnt / elapsed_s))
             break
 
         # Send message
@@ -208,7 +221,7 @@ def main():
         #         stats[node_address]['msg_sent'] += 1
         
         # else:
-        #     logger.error('RPC Message failed to node_address')
+        #     G_LOGGER.error('RPC Message failed to node_address')
 
         # Sampling inter-message times from a Poisson distribution)
         next_time_to_msg = poisson_interval(config['general']['msg_rate'])
@@ -221,17 +234,8 @@ def main():
     # get_waku_v2_relay_v1_messagesget_waku_v2_relay_v1_messages
     
     """ We are done """
-    logger.info('Ended')
+    G_LOGGER.info('Ended')
     
 if __name__ == "__main__":
     
-    # Init Logging
-    logger = logging.getLogger(G_APP_NAME)
-    logger.setLevel(G_LOG_LEVEL)
-    handler = logging.StreamHandler(sys.stdout)
-
-    handler.setLevel(G_LOG_LEVEL)
-    handler.setFormatter(CustomFormatter())
-    logger.addHandler(handler)
-        
     main()
