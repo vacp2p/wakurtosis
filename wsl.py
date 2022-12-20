@@ -37,7 +37,7 @@ class CustomFormatter(logging.Formatter):
         formatter = logging.Formatter(log_fmt, '%d-%m-%Y %H:%M:%S')
         return formatter.format(record)
 
-def ping_waku_node(node_address):
+def check_waku_node(node_address):
 
     data = {
         'jsonrpc': '2.0',
@@ -48,13 +48,21 @@ def ping_waku_node(node_address):
 
     logger.info('Waku RPC: %s from %s' %(data['method'], node_address))
     
-    response = requests.post(node_address, data=json.dumps(data), headers={'content-type': 'application/json'})
+    try:
+        response = requests.post(node_address, data=json.dumps(data), headers={'content-type': 'application/json'})
+    except Exception as e:
+        logger.debug('%s: %s' % (e.__doc__, e))
+        return False
 
-    response_obj = response.json()
+    try:
+        response_obj = response.json()
+    except Exception as e:
+        logger.debug('%s: %s' % (e.__doc__, e))
+        return False
 
     logger.debug('Response from %s: %s' %(node_address, response_obj))
     
-    return response_obj
+    return True
 
 def send_waku_msg(node_address, topic, payload, nonce=1):
 
@@ -110,25 +118,21 @@ def make_payload_dist(dist_type, min_size, max_size):
 
     return '0x00'
 
-def parse_targets(enclave_dump_path):
+def parse_targets(enclave_dump_path, waku_port=8545):
 
     targets = []
 
+    logger.info('Extracting Waku node addresses from Kurtosus enclance dump in %s' %enclave_dump_path)            
+
     for path_obj in os.walk(enclave_dump_path):
         if 'waku_' in path_obj[0]:
-            print(path_obj)
             with open(path_obj[0] + '/spec.json', "r") as read_file:
                 spec_obj = json.load(read_file)
-                spec_obj[]
-                
+                network_settings = spec_obj['NetworkSettings']
+                waku_address = network_settings['Ports']['%d/tcp' %waku_port]
+                targets.append('%s:%s' %(waku_address[0]['HostIp'], waku_address[0]['HostPort']))
 
-    # pathlist = Path(str('./enclave.dump'))
-    # print(pathlist)
-    # for path in pathlist:
-    #     # because path is object not string
-    #     path_in_str = str(path)
-    #     # print(path_in_str)
-
+    logger.info('Parsed %d Waku nodes' %len(targets))            
 
     return targets
 
@@ -148,50 +152,51 @@ def main():
 
     random.seed(config['general']['prng_seed'])
     
-    """ Load targets """
-    # try:
-    #     with open(config['general']['targets']) as f:
-    #         targets_obj = json.load(f)
-    #         targets = targets_obj[0]['rpc_targets']
-    # except Exception as e:
-    #     logger.error('%s: %s' % (e.__doc__, e))
-    #     sys.exit()
-    # logger.info('Targets loaded: %s' %targets)
+    """ Dump enclave info """
+    # Delete previous dump
+    os.system('rm -rf %s' %config['general']['enclave_dump_path'])
+    # Generate new dump
+    os.system('kurtosis enclave dump %s %s' %(config['general']['enclave_name'], config['general']['enclave_dump_path']))
+
+    """ Parse targets """
     targets = parse_targets(config['general']['enclave_dump_path'])
     
-    """ Ping all nodes """
-    # for i, target in enumerate(targets):
-        # ping_waku_node('http://%s/' %target)
-    
+    """ Check all nodes are reachable """
+    for i, target in enumerate(targets):
+        if not check_waku_node('http://%s/' %target):
+            logger.error('Node %d (%s) is not online. Aborted.' %(i, target))
+            sys.exit(1)
+    logger.info('All %d Waku nodes are reachable.' %len(targets))
+
     """ Start simulation """
-    # stats = {}
-    # msg_cnt = 0
-    # bytes_cnt = 0
-    # s_time = time.time()
-    # last_msg_time = 0
-    # next_time_to_msg = 0
+    stats = {}
+    msg_cnt = 0
+    bytes_cnt = 0
+    s_time = time.time()
+    last_msg_time = 0
+    next_time_to_msg = 0
 
-    # logger.info('Starting a simulation of %d seconds ...' %config['general']['simulation_time'])
+    logger.info('Starting a simulation of %d seconds ...' %config['general']['simulation_time'])
 
-    # while True:
+    while True:
         
         # Check end condition
-        # elapsed_s = time.time() - s_time
-        # if  elapsed_s >= config['general']['simulation_time']:
-        #     logger.info('Simulation ended. Sent %d messages (%d bytes) in %d at an avg. bandwitdth of %d Bps' %(msg_cnt, bytes_cnt, elapsed_s, bytes_cnt / elapsed_s))
-        #     break
+        elapsed_s = time.time() - s_time
+        if  elapsed_s >= config['general']['simulation_time']:
+            logger.info('Simulation ended. Sent %d messages (%d bytes) in %d at an avg. bandwitdth of %d Bps' %(msg_cnt, bytes_cnt, elapsed_s, bytes_cnt / elapsed_s))
+            break
 
-        # # Send message
-        # # BUG: There is a constant discrepancy. The average number of messages sent by time interval is slightly less than expected
-        # msg_elapsed = time.time() - last_msg_time
-        # if msg_elapsed <= next_time_to_msg:
-        #     continue
+        # Send message
+        # BUG: There is a constant discrepancy. The average number of messages sent by time interval is slightly less than expected
+        msg_elapsed = time.time() - last_msg_time
+        if msg_elapsed <= next_time_to_msg:
+            continue
         
-        # # Reference: https://rfc.vac.dev/spec/16/#get_waku_v2_relay_v1_messages
-        # node_address = 'http://%s/' %random.choice(targets)
+        # Reference: https://rfc.vac.dev/spec/16/#get_waku_v2_relay_v1_messages
+        node_address = 'http://%s/' %random.choice(targets)
         
-        # payload = make_payload_dist(dist_type='uniform', min_size=config['general']['min_packet_size'], max_size=config['general']['max_packet_size'])
-        # response, elapsed = send_waku_msg(node_address, topic='test', payload=payload)
+        payload = make_payload_dist(dist_type='uniform', min_size=config['general']['min_packet_size'], max_size=config['general']['max_packet_size'])
+        response, elapsed = send_waku_msg(node_address, topic='test', payload=payload)
 
         # # Keep track of basic stats
         # if response['result']:
@@ -206,11 +211,11 @@ def main():
         #     logger.error('RPC Message failed to node_address')
 
         # Sampling inter-message times from a Poisson distribution)
-        # next_time_to_msg = poisson_interval(config['general']['msg_rate'])
-        # last_msg_time = time.time()
+        next_time_to_msg = poisson_interval(config['general']['msg_rate'])
+        last_msg_time = time.time()
         
-        # msg_cnt += 1
-        # bytes_cnt += len(payload) / 2 - 2
+        msg_cnt += 1
+        bytes_cnt += len(payload) / 2 - 2
         
     # Pull messages 
     # get_waku_v2_relay_v1_messagesget_waku_v2_relay_v1_messages

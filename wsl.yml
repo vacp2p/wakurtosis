@@ -2,7 +2,9 @@ general:
     
     prng_seed : 0
 
+    enclave_name : "wakurtosis"
     enclave_dump_path : "enclave.dump"
+    waku_port : 8545
 
     # Targets filename
     targets : "targets.json"
