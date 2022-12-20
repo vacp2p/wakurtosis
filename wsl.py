@@ -207,6 +207,8 @@ def main():
         
         # Reference: https://rfc.vac.dev/spec/16/#get_waku_v2_relay_v1_messages
         node_address = 'http://%s/' %random.choice(targets)
+
+        G_LOGGER.info('Injecting message to network through Waku node %s ...' %node_address)
         
         payload = make_payload_dist(dist_type='uniform', min_size=config['general']['min_packet_size'], max_size=config['general']['max_packet_size'])
         response, elapsed = send_waku_msg(node_address, topic='test', payload=payload)
