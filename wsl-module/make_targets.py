@@ -28,33 +28,6 @@ class CustomFormatter(logging.Formatter):
         formatter = logging.Formatter(log_fmt, '%d-%m-%Y %H:%M:%S')
         return formatter.format(record)
 
-def check_waku_node(node_address):
-
-    data = {
-        'jsonrpc': '2.0',
-        # 'method': 'get_waku_v2_debug_v1_info',
-        'method' : 'get_waku_v2_debug_v1_version',
-        'id': 1,
-        'params' : []}
-
-    G_LOGGER.info('Waku RPC: %s from %s' %(data['method'], node_address))
-    
-    try:
-        response = requests.post(node_address, data=json.dumps(data), headers={'content-type': 'application/json'})
-    except Exception as e:
-        G_LOGGER.debug('%s: %s' % (e.__doc__, e))
-        return False
-
-    try:
-        response_obj = response.json()
-    except Exception as e:
-        G_LOGGER.debug('%s: %s' % (e.__doc__, e))
-        return False
-
-    G_LOGGER.debug('Response from %s: %s' %(node_address, response_obj))
-    
-    return True
-
 def parse_targets(enclave_dump_path, waku_port=8545):
 
     targets = []
@@ -65,13 +38,13 @@ def parse_targets(enclave_dump_path, waku_port=8545):
         if 'waku_' in path_obj[0]:
             with open(path_obj[0] + '/spec.json', "r") as read_file:
                 spec_obj = json.load(read_file)
-                network_settings = spec_obj['NetworkSettings']
-                waku_address = network_settings['Ports']['%d/tcp' %waku_port]
+                network_settings = spec_obj['Config']['Labels']
+                waku_address = network_settings['com.kurtosistech.private-ip']
                 
                 if len(waku_address) == 0:
                     G_LOGGER.info('No targets found in %s' %(path_obj[0]))
                 else:
-                    targets.append('%s:%s' %(waku_address[0]['HostIp'], waku_address[0]['HostPort']))
+                    targets.append('%s:%s' %(waku_address, waku_port))
 
     G_LOGGER.info('Parsed %d Waku nodes' %len(targets))            
 
@@ -105,6 +78,10 @@ def main():
     if len(targets) == 0:
         G_LOGGER.error('Cannot find valid targets. Aborting.')
         sys.exit(1)
+
+    """ Export targets """
+    with open('targets.json', 'w') as f:
+        json.dump(targets, f)
     
     """ We are done """
     G_LOGGER.info('Ended')
