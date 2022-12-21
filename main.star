@@ -158,7 +158,7 @@ def instantiate_waku_nodes(waku_topology, same_toml_configuration):
 
 def ask_connected_nodes(topology):
     for wakunode_name in topology.keys():
-        exec(wakunode_name, ["sleep", "10"])
+
         response = send_json_rpc(wakunode_name, WAKU_RPC_PORT_ID, GET_PEERS_METHOD, "")
 
         # result = extract(response.body, '.result.listenAddresses | .[0] | split("/") | .[-1]')
