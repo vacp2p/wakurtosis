@@ -17,6 +17,7 @@ import requests
 G_APP_NAME = 'WLS'
 G_LOG_LEVEL = 'INFO'
 G_CONFIG_FILE = './wsl.yml'
+G_TARGETS_FILE = './targets.json'
 G_LOGGER = None
 
 """ Custom logging formatter """
@@ -165,17 +166,19 @@ def main():
     # Set RPNG seed from config
     random.seed(config['general']['prng_seed'])
     
-    """ Dump enclave info """
-    # Delete previous dump
-    os.system('rm -rf %s' %config['general']['enclave_dump_path'])
-    # Generate new dump
-    os.system('kurtosis enclave dump %s %s' %(config['general']['enclave_name'], config['general']['enclave_dump_path']))
+    """ Load targets """
+    try:
+        with open(G_TARGETS_FILE, 'r') as read_file:
+            targets = json.load(read_file)
+    except Exception as e:
+        G_LOGGER.error('%s: %s' % (e.__doc__, e))
+        sys.exit()
 
-    """ Parse targets """
-    targets = parse_targets(config['general']['enclave_dump_path'])
     if len(targets) == 0:
         G_LOGGER.error('Cannot find valid targets. Aborting.')
         sys.exit(1)
+
+    G_LOGGER.info('%d targets loaded' %len(targets))
     
     """ Check all nodes are reachable """
     for i, target in enumerate(targets):
