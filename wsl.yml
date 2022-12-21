@@ -8,9 +8,6 @@ general:
     enclave_dump_path : "enclave.dump"
     waku_port : 8545
 
-    # Targets filename
-    targets : "targets.json"
-    
     # Simulation time in seconds
     simulation_time : 10
 
