@@ -1,0 +1,20 @@
+general:
+    
+    debug_level : "DEBUG"
+
+    prng_seed : 0
+
+    enclave_name : "wakurtosis"
+    enclave_dump_path : "enclave.dump"
+    waku_port : 8545
+
+    # Simulation time in seconds
+    simulation_time : 10
+
+    # Message rate in messages per second
+    msg_rate : 10
+    
+    # Packet size in bytes
+    min_packet_size : 2
+    max_packet_size : 1024
+    
