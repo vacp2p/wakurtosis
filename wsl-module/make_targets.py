@@ -82,6 +82,8 @@ def main():
     """ Export targets """
     with open('targets.json', 'w') as f:
         json.dump(targets, f)
+
+    G_LOGGER.info('Targets exported to .json')
     
     """ We are done """
     G_LOGGER.info('Ended')
