@@ -1,27 +1,15 @@
 {
   "waku_0": {
-    "ports_shift": 0,
-    "topics": [
-      "test"
-    ],
     "static_nodes": [
       "waku_1"
     ]
   },
   "waku_1": {
-    "ports_shift": 1,
-    "topics": [
-      "test"
-    ],
     "static_nodes": [
       "waku_0"
     ]
   },
   "waku_2": {
-    "ports_shift": 1,
-    "topics": [
-      "test"
-    ],
     "static_nodes": [
       "waku_0",
       "waku_1"
