@@ -1,3 +1,3 @@
 #!/bin/sh
 pip freeze > ./requirements.txt
-docker image build -t wakurtosis-wsl:0.0.1 ./
+docker image build -t wsl:0.0.1 ./

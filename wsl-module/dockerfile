@@ -4,5 +4,6 @@ WORKDIR /wsl
 COPY wsl.py ./
 COPY wsl.yml ./
 COPY requirements.txt ./
+COPY targets.json ./
 RUN pip install -r requirements.txt
 CMD [ "python3", "./wsl.py"], 
