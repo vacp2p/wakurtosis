@@ -25,6 +25,7 @@ def run(args):
 
     waku.interconnect_waku_nodes(waku_topology, services)
 
-    waku.send_test_messages(waku_topology, 5, "0.5")
+    waku.send_test_messages(waku_topology, system_variables.NUMBER_TEST_MESSAGES,
+                            system_variables.DELAY_BETWEEN_TEST_MESSAGE)
 
     waku.get_waku_peers(waku_topology.keys()[1])
