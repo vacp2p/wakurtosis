@@ -1,5 +1,5 @@
-system_variables = import_module("github.com/logos-co/wakurtosis/system_variables.star")
-files = import_module("github.com/logos-co/wakurtosis/file_helpers.star")
+system_variables = import_module("github.com/logos-co/wakurtosis/src/system_variables.star")
+files = import_module("github.com/logos-co/wakurtosis/src/file_helpers.star")
 
 def send_waku_json_rpc(service_id, port_id, method, params, extract={}):
     recipe = struct(

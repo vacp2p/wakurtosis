@@ -1,4 +1,4 @@
-system_variables = import_module("github.com/logos-co/wakurtosis/system_variables.star")
+system_variables = import_module("github.com/logos-co/wakurtosis/src/system_variables.star")
 
 
 def set_up_graphana(prometheus_service):

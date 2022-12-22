@@ -1,4 +1,4 @@
-system_variables = import_module("github.com/logos-co/wakurtosis/system_variables.star")
+system_variables = import_module("github.com/logos-co/wakurtosis/src/system_variables.star")
 
 
 def get_toml_configuration_artifact(wakunode_name, same_toml_configuration):
@@ -9,7 +9,7 @@ def get_toml_configuration_artifact(wakunode_name, same_toml_configuration):
         file_name = system_variables.GENERAL_TOML_CONFIGURATION_NAME
     else:
         artifact_id = upload_files(
-            src="github.com/logos-co/wakurtosis/kurtosis-module/starlark/config_files/" + wakunode_name + ".toml"
+            src="github.com/logos-co/wakurtosis/config/waku_config_files/" + wakunode_name + ".toml"
         )
         file_name = wakunode_name + ".toml"
 
@@ -21,8 +21,9 @@ def generate_template_data(services):
     node_data = []
     for wakunode_name in services.keys():
         node_data.append(
-            '"' + services[wakunode_name]["service_info"].ip_address + ":" + str(services[wakunode_name]["service"].ports[
-                                                                                system_variables.PROMETHEUS_PORT_ID].number) + '"')
+            '"' + services[wakunode_name]["service_info"].ip_address + ":" + str(
+                services[wakunode_name]["service_info"].ports[
+                    system_variables.PROMETHEUS_PORT_ID].number) + '"')
 
     data_as_string = ",".join(node_data)
     test = "[" + data_as_string + "]"
