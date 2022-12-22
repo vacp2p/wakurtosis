@@ -1,8 +1,11 @@
-waku = import_module("github.com/logos-co/wakurtosis/src/waku_methods.star")
-prometheus = import_module("github.com/logos-co/wakurtosis/src/prometheus.star")
-grafana = import_module("github.com/logos-co/wakurtosis/src/grafana.star")
+# System Imports
 system_variables = import_module("github.com/logos-co/wakurtosis/src/system_variables.star")
-parser = import_module("github.com/logos-co/wakurtosis/src/arguments_parser.star")
+
+# Module Imports
+waku = import_module(system_variables.WAKU_MODULE)
+prometheus = import_module(system_variables.PROMETHEUS_MODULE)
+grafana = import_module(system_variables.GRAFANA_MODULE)
+parser = import_module(system_variables.ARGUMENT_PARSER_MODULE)
 
 
 def run(args):

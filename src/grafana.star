@@ -1,3 +1,4 @@
+# System Imports
 system_variables = import_module("github.com/logos-co/wakurtosis/src/system_variables.star")
 
 
@@ -50,7 +51,7 @@ def set_up_graphana(prometheus_service):
             image=system_variables.GRAFANA_IMAGE,
             ports={
                 system_variables.GRAFANA_PORT_ID: PortSpec(number=system_variables.GRAFANA_TCP_PORT,
-                                                          transport_protocol="TCP")
+                                                           transport_protocol="TCP")
             },
             files={
                 CONFIGURATION_GRAFANA: config_id,

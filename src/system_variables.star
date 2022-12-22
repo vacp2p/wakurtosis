@@ -33,7 +33,14 @@ GET_PEERS_METHOD = "get_waku_v2_admin_v1_peers"
 GENERAL_TOML_CONFIGURATION_PATH = "github.com/logos-co/wakurtosis/config/waku_config_files/waku_general.toml"
 GENERAL_TOML_CONFIGURATION_NAME = "waku_general.toml"
 
-# Default arguments
+# Import locations
+WAKU_MODULE = "github.com/logos-co/wakurtosis/src/waku_methods.star"
+PROMETHEUS_MODULE = "github.com/logos-co/wakurtosis/src/prometheus.star"
+GRAFANA_MODULE = "github.com/logos-co/wakurtosis/src/grafana.star"
+ARGUMENT_PARSER_MODULE = "github.com/logos-co/wakurtosis/src/arguments_parser.star"
+FILE_HELPERS_MODULE = "github.com/logos-co/wakurtosis/src/file_helpers.star"
+
+# Default main starlark arguments
 SAME_TOML_CONFIGURATION_NAME = "same_toml_configuration"
 SAME_TOML_CONFIGURATION = True
 

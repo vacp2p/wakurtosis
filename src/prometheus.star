@@ -1,5 +1,8 @@
-files = import_module("github.com/logos-co/wakurtosis/src/file_helpers.star")
+# System Imports
 system_variables = import_module("github.com/logos-co/wakurtosis/src/system_variables.star")
+
+# Module Imports
+files = import_module(system_variables.FILE_HELPERS_MODULE)
 
 
 def set_up_prometheus(services):

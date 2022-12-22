@@ -1,4 +1,6 @@
+# System Imports
 system_variables = import_module("github.com/logos-co/wakurtosis/src/system_variables.star")
+
 
 def apply_default_to_input_args(input_args):
     same_config = system_variables.SAME_TOML_CONFIGURATION
