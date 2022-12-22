@@ -40,11 +40,27 @@ Note that, if you try to run the same kurtosis module again, you will have clash
 
 `kurtosis clean -a`
 
+
+#### What will happen
+
+Kurtosis will automatically add one Waku node as container inside the enclave. The way that nodes are interconnected is given by the topology.
+The configuration of each node is given by the configuration files. Services are being instantiated SEQUENTIALLY. After each node is set up,
+there are 5 seconds (defined in `system_variables`) of waiting time for that node to be ready, and then the ID is requested and saved.
+
+Once all nodes are ready, prometheus and grafana will be set up and connected to all waku nodes.
+
+All nodes are then interconnected.
+
+A predefined number of test messages with specific delay (defined in `system_variables`) are sent by every node to the same topic.
+
+Peers from one node are requested, just for testing.
+
+
 #### Check Prometheus+Grafana
 
 In order to know how to access to Prometheus or Grafana, run:
 
-`kurtosis enclave inspect <enclave-name>'`
+`kurtosis enclave inspect <enclave-name>`
 
 With this, you will be able to see the ports exposed to your local machine.
 
