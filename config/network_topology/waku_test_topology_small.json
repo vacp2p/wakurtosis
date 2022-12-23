@@ -1,0 +1,18 @@
+{
+  "waku_0": {
+    "static_nodes": [
+      "waku_1"
+    ]
+  },
+  "waku_1": {
+    "static_nodes": [
+      "waku_0"
+    ]
+  },
+  "waku_2": {
+    "static_nodes": [
+      "waku_0",
+      "waku_1"
+    ]
+  }
+}
