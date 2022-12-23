@@ -72,7 +72,7 @@ def set_up_wsl(services):
     wsl_service = add_service(
         service_id="wsl",
         config=struct(
-            image=WSL_IMAGE,
+            image=system_variables.WSL_IMAGE,
             ports={},
             files={
                 system_variables.WSL_CONFIG_PATH : wsl_config,
