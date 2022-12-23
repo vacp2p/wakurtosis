@@ -24,6 +24,11 @@ GRAFANA_DASHBOARD_PATH = "github.com/logos-co/wakurtosis/monitoring/configuratio
 GRAFANA_PORT_ID = "grafana"
 GRAFANA_TCP_PORT = 3000
 
+# WSL Configuration
+WSL_IMAGE = "wsl:0.0.1"
+WSL_CONFIG_PATH = "/wsl/config"
+WSL_TARGETS_PATH = "/wsl/targets"
+
 # Waku RPC methods
 POST_RELAY_MESSAGE = "post_waku_v2_relay_v1_message"
 GET_WAKU_INFO_METHOD = "get_waku_v2_debug_v1_info"
