@@ -2,14 +2,12 @@ general:
     
     debug_level : "DEBUG"
 
+    targets_file : "./targets/targets.json" 
+
     prng_seed : 0
 
-    enclave_name : "wakurtosis"
-    enclave_dump_path : "enclave.dump"
-    waku_port : 8545
-
     # Simulation time in seconds
-    simulation_time : 10
+    simulation_time : 100
 
     # Message rate in messages per second
     msg_rate : 10

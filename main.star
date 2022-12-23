@@ -7,6 +7,12 @@ WAKU_LIBP2P_PORT = 60000
 
 WAKU_SETUP_WAIT_TIME = "5"
 
+# WSL Configuration
+WSL_IMAGE = "wsl:0.0.1"
+WSL_CONFIG_PATH = "/wsl/config"
+WSL_TARGETS_PATH = "/wsl/targets"
+# WSL_CONFIGURATION_PATH = "github.com/logos-co/wakurtosis/tree/WSL/wsl-module/wsl.yml"
+
 # Prometheus Configuration
 PROMETHEUS_IMAGE = "prom/prometheus:latest"
 PROMETHEUS_PORT_ID = "prometheus"
@@ -206,7 +212,81 @@ def generate_template_data(services):
     return template_data
 
 
+def generate_wsl_targets_template_data(services):
+
+    template_data = {}
+    node_data = []
+    for wakunode_name in services.keys():
+        node_data.append(
+            '"' + services[wakunode_name]["service"].ip_address + ":" + str(services[wakunode_name]["service"].ports[
+                                                                                WAKU_RPC_PORT_ID].number) + '"')
+
+    data_as_string = ",".join(node_data)
+    targets = "[" + data_as_string + "]"
+
+    template_data["targets"] = targets
+
+    return template_data
+
+def create_wsl_config():
+    
+    template_data = None
+
+    # Traffic simulation parameters
+    wsl_yml_template = """
+        general:
+        
+            debug_level : "DEBUG"
+
+            targets_file : "./targets/targets.json"
+
+            prng_seed : 0
+
+            # Simulation time in seconds
+            simulation_time : 1000
+
+            # Message rate in messages per second
+            msg_rate : 10
+            
+            # Packet size in bytes
+            min_packet_size : 2
+            max_packet_size : 1024
+    """
+
+    artifact_id = render_templates(
+        config={
+            "wsl.yml": struct(
+                template=wsl_yml_template,
+                data=template_data,
+            )
+        }
+    )
+
+    return artifact_id
+
+def create_wsl_targets(services):
+    
+    # Get private ip and ports of all nodes
+    template_data = generate_wsl_targets_template_data(services)
+
+    # Template
+    template = """
+        {{.targets}}
+    """
+
+    artifact_id = render_templates(
+        config={
+            "targets.json": struct(
+                template=template,
+                data=template_data,
+            )
+        }
+    )
+
+    return artifact_id
+
 def create_prometheus_targets(services):
+    
     # get ip and ports of all nodes
     template_data = generate_template_data(services)
 
@@ -234,8 +314,8 @@ def create_prometheus_targets(services):
 
     return artifact_id
 
-
 def set_up_prometheus(services):
+    
     # Create targets.json
     targets_artifact_id = create_prometheus_targets(services)
 
@@ -265,6 +345,34 @@ def set_up_prometheus(services):
 
     return prometheus_service
 
+def set_up_wsl(services):
+    
+    # Generate simulation config
+    wsl_config = create_wsl_config()
+
+    # Create targets.json
+    wsl_targets = create_wsl_targets(services)
+
+    wsl_service = add_service(
+        service_id="wsl",
+        config=struct(
+            image=WSL_IMAGE,
+            ports={},
+            files={
+                WSL_CONFIG_PATH : wsl_config,
+                WSL_TARGETS_PATH : wsl_targets,
+            },
+            # cmd=["python3", "/wsl/wsl.py",],
+            cmd=["python3", "wsl.py"]
+            # cmd=["sleep 1000",],
+
+            # entrypoint = ["/bin/bash", "-l", "-c",],
+        )
+    )
+
+    print('kurtosis service logs -f wakurtosis SERVICE-GUID')
+    
+    return wsl_service
 
 def set_up_graphana(prometheus_service):
     # Set up grafana
@@ -326,14 +434,14 @@ def set_up_graphana(prometheus_service):
 
     return grafana_service
 
-
 def run(args):
+    
     waku_topology = read_file(src="github.com/logos-co/wakurtosis/kurtosis-module/starlark/waku_test_topology.json")
-
     same_toml_configuration = args.same_toml_configuration
     waku_topology = json.decode(waku_topology)
-
-    # decoded = {
+    
+    # Testing topology
+    # waku_topology = {
     #     "waku_0": {
     #         "ports_shift": 0,
     #         "topics": "test",
@@ -357,16 +465,22 @@ def run(args):
     #         ]
     #     }
     # }
+    # same_toml_configuration = waku_topology
+    # End testing topology
 
-    services = instantiate_waku_nodes(waku_topology, same_toml_configuration)
+    # Set up Waku nodes
+    waku_services = instantiate_waku_nodes(waku_topology, same_toml_configuration)
 
     # Set up prometheus + graphana
-    prometheus_service = set_up_prometheus(services)
+    prometheus_service = set_up_prometheus(waku_services)
     set_up_graphana(prometheus_service)
 
-    interconnect_waku_nodes(waku_topology, services)
+    interconnect_waku_nodes(waku_topology, waku_services)
 
-    send_test_messages(waku_topology)
+    # Set up the WSL container & start the simulation
+    set_up_wsl(waku_services)
+    
+    # send_test_messages(waku_topology)
 
-    ask_connected_nodes(waku_topology)
+    # ask_connected_nodes(waku_topology)
 
