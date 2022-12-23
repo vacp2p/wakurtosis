@@ -75,14 +75,12 @@ def set_up_wsl(services):
             image=WSL_IMAGE,
             ports={},
             files={
-                WSL_CONFIG_PATH : wsl_config,
-                WSL_TARGETS_PATH : wsl_targets,
+                system_variables.WSL_CONFIG_PATH : wsl_config,
+                system_variables.WSL_TARGETS_PATH : wsl_targets,
             },
-            # cmd=["python3", "/wsl/wsl.py",],
+        
             cmd=["python3", "wsl.py"]
-            # cmd=["sleep 1000",],
 
-            # entrypoint = ["/bin/bash", "-l", "-c",],
         )
     )
 
