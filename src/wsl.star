@@ -43,7 +43,7 @@ def create_wsl_config():
 def create_wsl_targets(services):
     
     # Get private ip and ports of all nodes
-    template_data = files.generate_template_data(services, services, system_variables.WAKU_TCP_PORT)
+    template_data = files.generate_template_data(services, system_variables.WAKU_RPC_PORT_ID)
 
     # Template
     template = """
