@@ -25,8 +25,9 @@ def generate_template_data(services, port_id):
                     port_id].number) + '"')
 
     data_as_string = ",".join(node_data)
-    test = "[" + data_as_string + "]"
+    
+    targets_payload = "[" + data_as_string + "]"
 
-    template_data["targets"] = test
+    template_data["targets"] = targets_payload
 
     return template_data
