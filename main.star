@@ -1,6 +1,5 @@
 # System Imports
-# system_variables = import_module("github.com/logos-co/wakurtosis/src/system_variables.star")
-system_variables = import_module("github.com/logos-co/wakurtosis/blob/Daimakaimura/issue13/src/system_variables.star")
+system_variables = import_module("github.com/logos-co/wakurtosis/src/system_variables.star")
 
 # Module Imports
 waku = import_module(system_variables.WAKU_MODULE)
@@ -26,10 +25,10 @@ def run(args):
 
     waku.interconnect_waku_nodes(waku_topology, waku_services)
 
-    waku.send_test_messages(waku_topology, system_variables.NUMBER_TEST_MESSAGES,
-                            system_variables.DELAY_BETWEEN_TEST_MESSAGE)
+    # waku.send_test_messages(waku_topology, system_variables.NUMBER_TEST_MESSAGES,
+    #                         system_variables.DELAY_BETWEEN_TEST_MESSAGE)
 
-    waku.get_waku_peers(waku_topology.keys()[1])
+    # waku.get_waku_peers(waku_topology.keys()[1])
 
     # Setup WSL & Start the Simulation
-    # wsl_service = wsl.set_up_wsl(waku_services)
+    wsl_service = wsl.set_up_wsl(waku_services)
