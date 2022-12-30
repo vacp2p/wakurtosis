@@ -5,7 +5,7 @@ Description: Wakurtosis load simulator
 """
 
 """ Dependencies """
-import sys, logging, yaml, json, time, random, os
+import sys, logging, yaml, json, time, random, os, argparse
 import requests
 # from pathlib import Path
 # import numpy as np
@@ -15,8 +15,8 @@ import requests
 
 """ Globals """
 G_APP_NAME = 'WLS'
-G_LOG_LEVEL = 'INFO'
-G_CONFIG_FILE = './wsl.yml'
+G_LOG_LEVEL = 'DEBUG'
+g_DEFAULT_CONFIG_FILE = './config/wsl.yml'
 G_LOGGER = None
 
 """ Custom logging formatter """
@@ -96,10 +96,13 @@ def send_waku_msg(node_address, topic, payload, nonce=1):
 def poisson_interval(rate):
     return random.expovariate(rate)
 
-def make_payload(size):
+def make_payload(size, rnd=True):
 
     # Size in bytes, supposed to be hexa, 2 hexa digits per byte
-    payload = ''.join('00' * int(size))
+    if rnd:
+        payload = ''.join(random.choices('0123456789abcdef', k=int( 2 * size - 1)))
+    else:
+        payload = ''.join('00' * int(size))
 
     payload = '0x%s' %payload 
 
@@ -148,31 +151,46 @@ def main():
     G_LOGGER.addHandler(handler)
     
     G_LOGGER.info('Started')
-    
+
+    """ Parse command line args. """
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-cfg", "--config_file", help="Config file", action="store_true", default=g_DEFAULT_CONFIG_FILE)
+    args = parser.parse_args()
+
+    config_file = args.config_file
+        
     """ Load config file """
     try:
-        with open(G_CONFIG_FILE, 'r') as f:
+        with open(config_file, 'r') as f:
             config = yaml.safe_load(f)
     except Exception as e:
         G_LOGGER.error('%s: %s' % (e.__doc__, e))
         sys.exit()
-    G_LOGGER.info('Configuration loaded from %s' %G_CONFIG_FILE)
-
+    
     # Set loglevel from config
     G_LOGGER.setLevel(config['general']['debug_level'])
     handler.setLevel(config['general']['debug_level'])
 
+    G_LOGGER.debug(config)
+    G_LOGGER.info('Configuration loaded from %s' %config_file)
+
     # Set RPNG seed from config
     random.seed(config['general']['prng_seed'])
     
-    """ Dump enclave info """
-    # Delete previous dump
-    os.system('rm -rf %s' %config['general']['enclave_dump_path'])
-    # Generate new dump
-    os.system('kurtosis enclave dump %s %s' %(config['general']['enclave_name'], config['general']['enclave_dump_path']))
+    """ Load targets """
+    try:
+        with open(config['general']['targets_file'], 'r') as read_file:
+            targets = json.load(read_file)
+    except Exception as e:
+        G_LOGGER.error('%s: %s' % (e.__doc__, e))
+        sys.exit()
 
-    """ Parse targets """
-    targets = parse_targets(config['general']['enclave_dump_path'])
+    if len(targets) == 0:
+        G_LOGGER.error('Cannot find valid targets. Aborting.')
+        sys.exit(1)
+
+    G_LOGGER.debug(targets)
+    G_LOGGER.info('%d targets loaded' %len(targets))
     
     """ Check all nodes are reachable """
     for i, target in enumerate(targets):
