@@ -4,6 +4,7 @@ system_variables = import_module("github.com/logos-co/wakurtosis/src/system_vari
 # Module Imports
 files = import_module(system_variables.FILE_HELPERS_MODULE)
 
+
 def send_waku_json_rpc(service_id, port_id, method, params, extract={}):
     recipe = struct(
         service_id=service_id,
@@ -15,7 +16,10 @@ def send_waku_json_rpc(service_id, port_id, method, params, extract={}):
         extract=extract
     )
 
-    response = request(recipe=recipe)
+    response = wait(recipe=recipe,
+                    field="code",
+                    assertion="==",
+                    target_value=200)
 
     return response
 
@@ -47,7 +51,8 @@ def post_waku_v2_relay_v1_message(service_id, topic):
     waku_message = '{"payload": "0x1a2b3c4d5e6f", "timestamp": 1626813243}'
     params = '"' + topic + '"' + ", " + waku_message
 
-    response = send_waku_json_rpc(service_id, system_variables.WAKU_RPC_PORT_ID, system_variables.POST_RELAY_MESSAGE, params)
+    response = send_waku_json_rpc(service_id, system_variables.WAKU_RPC_PORT_ID,
+                                  system_variables.POST_RELAY_MESSAGE, params)
 
     print(response)
 
@@ -55,13 +60,15 @@ def post_waku_v2_relay_v1_message(service_id, topic):
 def get_wakunode_id(service_id, port_id):
     extract = {"waku_id": '.result.listenAddresses | .[0] | split("/") | .[-1]'}
 
-    response = send_waku_json_rpc(service_id, port_id, system_variables.GET_WAKU_INFO_METHOD, "", extract)
+    response = send_waku_json_rpc(service_id, port_id, system_variables.GET_WAKU_INFO_METHOD, "",
+                                  extract)
 
     return response["extract.waku_id"]
 
 
 def add_waku_service(wakunode_name, use_general_configuration):
-    artifact_id, configuration_file = files.get_toml_configuration_artifact(wakunode_name, use_general_configuration)
+    artifact_id, configuration_file = files.get_toml_configuration_artifact(wakunode_name,
+                                                                            use_general_configuration)
 
     print("Configuration being used file is " + configuration_file)
 
@@ -72,10 +79,12 @@ def add_waku_service(wakunode_name, use_general_configuration):
             ports={
                 system_variables.WAKU_RPC_PORT_ID: PortSpec(number=system_variables.WAKU_TCP_PORT,
                                                             transport_protocol="TCP"),
-                system_variables.PROMETHEUS_PORT_ID: PortSpec(number=system_variables.PROMETHEUS_TCP_PORT,
-                                                              transport_protocol="TCP"),
-                system_variables.WAKU_LIBP2P_PORT_ID: PortSpec(number=system_variables.WAKU_LIBP2P_PORT,
-                                                               transport_protocol="TCP"),
+                system_variables.PROMETHEUS_PORT_ID: PortSpec(
+                    number=system_variables.PROMETHEUS_TCP_PORT,
+                    transport_protocol="TCP"),
+                system_variables.WAKU_LIBP2P_PORT_ID: PortSpec(
+                    number=system_variables.WAKU_LIBP2P_PORT,
+                    transport_protocol="TCP"),
             },
             files={
                 system_variables.WAKU_CONFIG_FILE_LOCATION: artifact_id
@@ -136,7 +145,6 @@ def instantiate_waku_nodes(network_topology, use_general_configuration):
     for waku_service_id in network_topology.keys():
         waku_service = add_waku_service(waku_service_id, use_general_configuration)
 
-        make_service_wait(waku_service_id, system_variables.WAKU_SETUP_WAIT_TIME)
         add_waku_service_information(waku_services_information, waku_service_id, waku_service)
 
     return waku_services_information
@@ -154,7 +162,8 @@ def get_waku_peers(waku_service_id):
 def send_test_messages(topology_information, number_of_messages, time_between_message):
     for wakunode_name in topology_information.keys():
         for i in range(number_of_messages):
-            make_service_wait(wakunode_name, time_between_message) # todo check if this stops wakunode
+            make_service_wait(wakunode_name,
+                              time_between_message)  # todo check if this stops wakunode
             post_waku_v2_relay_v1_message(wakunode_name, "test")
 
 
