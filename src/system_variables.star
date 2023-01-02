@@ -27,6 +27,11 @@ GRAFANA_DASHBOARD_PATH = "github.com/logos-co/wakurtosis/monitoring/configuratio
 GRAFANA_PORT_ID = "grafana"
 GRAFANA_TCP_PORT = 3000
 
+CONTAINER_CONFIGURATION_GRAFANA = "/etc/grafana/"
+CONTAINER_DASHBOARDS_GRAFANA = "/var/lib/grafana/dashboards/"
+CONTAINER_CUSTOMIZATION_GRAFANA = "/usr/share/grafana/"
+CONTAINER_DATASOURCES_GRAFANA = "/etc/grafana/provisioning/datasources/"
+
 # WSL Configuration
 WSL_IMAGE = "wsl:0.0.1"
 WSL_CONFIG_PATH = "/wsl/config"

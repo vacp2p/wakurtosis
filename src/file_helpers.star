@@ -21,7 +21,7 @@ def get_toml_configuration_artifact(wakunode_name, same_toml_configuration, arti
     return artifact_id, file_name
 
 
-def generate_template_targets_with_port(services, port_id):
+def generate_template_node_targets(services, port_id):
     template_data = {}
     targets_data = []
     for service_name in services.keys():
@@ -34,3 +34,24 @@ def generate_template_targets_with_port(services, port_id):
     template_data["targets"] = targets_payload
 
     return template_data
+
+def generate_template_prometheus_url(prometheus_service):
+    prometheus_url = prometheus_service.ip_address + ":" + str(
+        prometheus_service.ports[system_variables.PROMETHEUS_PORT_ID].number)
+    prometheus_info = {"prometheus_url": prometheus_url}
+
+    return prometheus_info
+
+
+def upload_files_grafana():
+    config_id = upload_files(
+        src=system_variables.GRAFANA_CONFIGURATION_PATH
+    )
+    customization_id = upload_files(
+        src=system_variables.GRAFANA_CUSTOMIZATION_PATH
+    )
+    dashboard_id = upload_files(
+        src=system_variables.GRAFANA_DASHBOARD_PATH
+    )
+
+    return config_id, customization_id, dashboard_id
