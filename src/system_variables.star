@@ -47,13 +47,12 @@ FILE_HELPERS_MODULE = "github.com/logos-co/wakurtosis/src/file_helpers.star"
 WSL_MODULE = "github.com/logos-co/wakurtosis/src/wsl.star"
 
 # Default main starlark arguments
-SAME_TOML_CONFIGURATION_NAME = "same_toml_configuration"
-SAME_TOML_CONFIGURATION = True
+SAME_TOML_CONFIGURATION_ARGUMENT_NAME = "same_toml_configuration"
+SAME_TOML_CONFIGURATION_DEFAULT_ARGUMENT_VALUE = True
 
-# Topology
-TOPOLOGY_FILE_NAME = "topology"
+TOPOLOGY_FILE_NAME_ARGUMENT_NAME = "topology_file"
+DEFAULT_TOPOLOGY_FILE_DEFAULT_ARGUMENT_VALUE = "waku_test_topology_small.json"
 TOPOLOGIES_LOCATION = "github.com/logos-co/wakurtosis/config/network_topology/"
-DEFAULT_TOPOLOGY_FILE = "waku_test_topology_small.json"
 
 NUMBER_TEST_MESSAGES = 50
 DELAY_BETWEEN_TEST_MESSAGE = "0.5"
