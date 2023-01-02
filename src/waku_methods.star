@@ -87,11 +87,11 @@ def add_waku_service(wakunode_name, use_general_configuration):
                     transport_protocol="TCP"),
             },
             files={
-                system_variables.WAKU_CONFIG_FILE_LOCATION: artifact_id
+                system_variables.WAKU_CONFIG_FILE_CONTAINER_LOCATION: artifact_id
             },
             entrypoint=system_variables.WAKU_ENTRYPOINT,
             cmd=[
-                "--config-file=" + system_variables.WAKU_CONFIG_FILE_LOCATION + "/" + configuration_file
+                "--config-file=" + system_variables.WAKU_CONFIG_FILE_CONTAINER_LOCATION + "/" + configuration_file
             ]
         )
     )

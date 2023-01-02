@@ -56,7 +56,7 @@ def create_wsl_config(simulation_time=300, message_rate=50, min_packet_size=1, m
 def create_wsl_targets(services):
     
     # Get private ip and ports of all nodes
-    template_data = files.generate_template_data(services, system_variables.WAKU_RPC_PORT_ID)
+    template_data = files.generate_template_targets_with_port(services, system_variables.WAKU_RPC_PORT_ID)
 
     # Template
     template = """

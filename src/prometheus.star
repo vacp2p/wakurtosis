@@ -38,7 +38,7 @@ def set_up_prometheus(services):
 
 def create_prometheus_targets(services):
     # get ip and ports of all nodes
-    template_data = files.generate_template_data(services, system_variables.PROMETHEUS_PORT_ID)
+    template_data = files.generate_template_targets_with_port(services, system_variables.PROMETHEUS_PORT_ID)
 
     # template
     template = """

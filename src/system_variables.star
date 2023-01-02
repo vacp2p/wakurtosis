@@ -6,7 +6,10 @@ WAKU_LIBP2P_PORT_ID = "libp2p"
 WAKU_LIBP2P_PORT = 60000
 WAKU_SETUP_WAIT_TIME = "5"
 
-WAKU_CONFIG_FILE_LOCATION = "/waku/configuration_file"
+WAKU_CONFIGURATION_FILES_LOCATION = "github.com/logos-co/wakurtosis/config/waku_config_files/"
+WAKU_CONFIGURATION_FILE_EXTENSION = ".toml"
+
+WAKU_CONFIG_FILE_CONTAINER_LOCATION = "/waku/configuration_file"
 WAKU_ENTRYPOINT = ["/usr/bin/wakunode", "--rpc-address=0.0.0.0", "--metrics-server-address=0.0.0.0"]
 
 # Prometheus Configuration
