@@ -3,34 +3,17 @@ system_variables = import_module("github.com/logos-co/wakurtosis/src/system_vari
 
 # Module Imports
 files = import_module(system_variables.FILE_HELPERS_MODULE)
-
-# todo pasar templates a .star
-def get_prometheus_template_content():
-    # template
-    prometheus_template = """
-        apiVersion: 1
-        datasources:
-            - name: Prometheus
-              type: prometheus
-              access: proxy
-              org_id: 1
-              url: http://{{.prometheus_url}}
-              is_default: true
-              version: 1
-              editable: true
-    """
-
-    return prometheus_template
+templates = import_module(system_variables.TEMPLATES_MODULE)
 
 
 def set_up_graphana(prometheus_service):
     config_id, customization_id, dashboard_id = files.upload_files_grafana()
     prometheus_data = files.generate_template_prometheus_url(prometheus_service)
-    prometheus_template = get_prometheus_template_content()
+    prometheus_template = templates.get_prometheus_template_content_for_grafana()
 
     artifact_id = render_templates(
         config={
-            "datasources.yaml": struct(
+            system_variables.CONTAINER_DATASOURCES_FILE_NAME_GRAFANA: struct(
                 template=prometheus_template,
                 data=prometheus_data,
             )
@@ -38,7 +21,7 @@ def set_up_graphana(prometheus_service):
     )
 
     grafana_service = add_service(
-        service_id="grafana",
+        service_id=system_variables.GRAFANA_SERVICE_ID,
         config=struct(
             image=system_variables.GRAFANA_IMAGE,
             ports={

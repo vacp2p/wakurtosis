@@ -14,9 +14,16 @@ WAKU_ENTRYPOINT = ["/usr/bin/wakunode", "--rpc-address=0.0.0.0", "--metrics-serv
 
 # Prometheus Configuration
 PROMETHEUS_IMAGE = "prom/prometheus:latest"
-PROMETHEUS_PORT_ID = "prometheus"
+PROMETHEUS_SERVICE_ID = "prometheus"
+PROMETHEUS_PORT_ID = "prometheus_tcp"
 PROMETHEUS_TCP_PORT = 8008
 PROMETHEUS_CONFIGURATION_PATH = "github.com/logos-co/wakurtosis/monitoring/prometheus.yml"
+
+CONTAINER_CONFIGURATION_LOCATION_PROMETHEUS = "/test/"
+CONTAINER_CONFIGURATION_LOCATION_PROMETHEUS_2 = "/tmp/"
+CONTAINER_CONFIGURATION_FILE_NAME_PROMETHEUS = "prometheus.yml"
+CONTAINER_TARGETS_FILE_NAME_PROMETHEUS = "targets.json"
+CONTAINER_PROMETHEUS_TCP_PORT = 9090
 
 # Grafana Configuration
 GRAFANA_IMAGE = "grafana/grafana:latest"
@@ -24,13 +31,15 @@ GRAFANA_CONFIGURATION_PATH = "github.com/logos-co/wakurtosis/monitoring/configur
 GRAFANA_CUSTOMIZATION_PATH = "github.com/logos-co/wakurtosis/monitoring/configuration/customizations/"
 GRAFANA_DASHBOARD_PATH = "github.com/logos-co/wakurtosis/monitoring/configuration/dashboards/"
 
-GRAFANA_PORT_ID = "grafana"
+GRAFANA_SERVICE_ID = "grafana"
+GRAFANA_PORT_ID = "grafana_tcp"
 GRAFANA_TCP_PORT = 3000
 
 CONTAINER_CONFIGURATION_GRAFANA = "/etc/grafana/"
 CONTAINER_DASHBOARDS_GRAFANA = "/var/lib/grafana/dashboards/"
 CONTAINER_CUSTOMIZATION_GRAFANA = "/usr/share/grafana/"
 CONTAINER_DATASOURCES_GRAFANA = "/etc/grafana/provisioning/datasources/"
+CONTAINER_DATASOURCES_FILE_NAME_GRAFANA = "datasources.yaml"
 
 # WSL Configuration
 WSL_IMAGE = "wsl:0.0.1"
@@ -52,6 +61,7 @@ PROMETHEUS_MODULE = "github.com/logos-co/wakurtosis/src/prometheus.star"
 GRAFANA_MODULE = "github.com/logos-co/wakurtosis/src/grafana.star"
 ARGUMENT_PARSER_MODULE = "github.com/logos-co/wakurtosis/src/arguments_parser.star"
 FILE_HELPERS_MODULE = "github.com/logos-co/wakurtosis/src/file_helpers.star"
+TEMPLATES_MODULE = "github.com/logos-co/wakurtosis/src/templates.star"
 WSL_MODULE = "github.com/logos-co/wakurtosis/src/wsl.star"
 
 # Default main starlark arguments
