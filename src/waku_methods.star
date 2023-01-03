@@ -106,6 +106,10 @@ def make_service_wait(service_id, time):
     )
     exec(exec_recipe)
 
+def _add_information(services, waku_info, waku_service_id, waku_service, waku_node_id):
+    waku_info["id"] = waku_node_id
+    waku_info["service_info"] = waku_service
+    services[waku_service_id] = waku_info
 
 def add_waku_service_information(services, waku_service_id, waku_service):
     """
@@ -132,10 +136,7 @@ def add_waku_service_information(services, waku_service_id, waku_service):
 
     waku_node_id = get_wakunode_id(waku_service_id, system_variables.WAKU_RPC_PORT_ID)
 
-    waku_info["id"] = waku_node_id
-    waku_info["service_info"] = waku_service
-
-    services[waku_service_id] = waku_info
+    _add_information(services, waku_info, waku_node_id, waku_service, waku_service_id)
 
 
 def instantiate_waku_nodes(network_topology, use_general_configuration):
