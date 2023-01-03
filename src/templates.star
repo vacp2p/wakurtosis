@@ -32,3 +32,28 @@ def  get_prometheus_template():
     """
 
     return template
+
+# WSL
+def get_wsl_template():
+    # Traffic simulation parameters
+    wsl_yml_template = """
+            general:
+
+                debug_level : "DEBUG"
+
+                targets_file : "./targets/targets.json"
+
+                prng_seed : 0
+
+                # Simulation time in seconds
+                simulation_time : 1000
+
+                # Message rate in messages per second
+                msg_rate : 10
+
+                # Packet size in bytes
+                min_packet_size : 2
+                max_packet_size : 1024
+        """
+
+    return wsl_yml_template

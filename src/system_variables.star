@@ -43,8 +43,12 @@ CONTAINER_DATASOURCES_FILE_NAME_GRAFANA = "datasources.yaml"
 
 # WSL Configuration
 WSL_IMAGE = "wsl:0.0.1"
+WSL_SERVICE_ID = "wsl"
 WSL_CONFIG_PATH = "/wsl/config"
 WSL_TARGETS_PATH = "/wsl/targets"
+
+CONTAINER_WSL_CONFIGURATION_FILE_NAME = "wsl.yml"
+CONTAINER_TARGETS_FILE_NAME_WSL = "targets.json"
 
 # Waku RPC methods
 POST_RELAY_MESSAGE = "post_waku_v2_relay_v1_message"

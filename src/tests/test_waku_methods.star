@@ -42,4 +42,3 @@ def test__add_information():
            assertion="==", target_value="1234")
     assert(value=services["waku_test"]["service_info"].ports[system_variables.WAKU_LIBP2P_PORT_ID].transport_protocol,
            assertion="==", target_value="TCP")
-
