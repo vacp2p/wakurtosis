@@ -4,9 +4,9 @@ system_variables = import_module("github.com/logos-co/wakurtosis/src/system_vari
 # Module Imports
 files = import_module(system_variables.FILE_HELPERS_MODULE)
 
-def create_wsl_config():
+def create_wsl_config(simulation_time=300, message_rate=50, min_packet_size=1, max_packet_size=1024):
     
-    template_data = None
+    template_data = {"simulation_time": simulation_time, "message_rate" : message_rate, "min_packet_size" : min_packet_size, "max_packet_size" : max_packet_size}
 
     # Traffic simulation parameters
     wsl_yml_template = """
@@ -19,14 +19,14 @@ def create_wsl_config():
             prng_seed : 0
 
             # Simulation time in seconds
-            simulation_time : 1000
+            simulation_time : {{.simulation_time}}
 
             # Message rate in messages per second
-            msg_rate : 10
+            msg_rate : {{.message_rate}}
             
             # Packet size in bytes
-            min_packet_size : 2
-            max_packet_size : 1024
+            min_packet_size : {{.min_packet_size}}
+            max_packet_size : {{.max_packet_size}}
     """
 
     artifact_id = render_templates(
@@ -37,7 +37,7 @@ def create_wsl_config():
             )
         }
     )
-
+    
     return artifact_id
 
 def create_wsl_targets(services):
@@ -61,10 +61,10 @@ def create_wsl_targets(services):
 
     return artifact_id
 
-def set_up_wsl(services):
+def set_up_wsl(services, simulation_time, message_rate, min_packet_size, max_packet_size):
     
     # Generate simulation config
-    wsl_config = create_wsl_config()
+    wsl_config = create_wsl_config(simulation_time, message_rate, min_packet_size, max_packet_size)
 
     # Create targets.json
     wsl_targets = create_wsl_targets(services)
