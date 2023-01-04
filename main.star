@@ -31,4 +31,8 @@ def run(args):
     # waku.get_waku_peers(waku_topology.keys()[1])
 
     # Setup WSL & Start the Simulation
-    wsl_service = wsl.set_up_wsl(waku_services)
+    simulation_time = args.simulation_time
+    message_rate = args.message_rate
+    min_packet_size = args.min_packet_size
+    max_packet_size = args.max_packet_size
+    wsl_service = wsl.set_up_wsl(waku_services,  simulation_time, message_rate, min_packet_size, max_packet_size)

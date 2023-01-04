@@ -23,6 +23,10 @@ If you want to run it with default arguments, if you are in the root of this rep
 There are arguments that can be modified:
 - _same_toml_configuration_: boolean. Default: **true**. If **true**, the some `.toml` file will be applied to every Waku node. If **false*, every node will use its own `.toml` file.
 - _topology_file_: string. Default: **waku_test_topology_small.json**. If defines the network topology that will be created.
+- _simulation_time_: int. Default: **300**. Specifies the simulation time in seconds.
+- _message_rate_: int. Default: **25**. Specifies the message rate in packets per second.
+- _min_packet_size_: int. Default: **1**. Specifies the minimum size of the packet in bytes.
+- _max_packet_size_: int. Default: **1024**. Specifies the maximum size of the packet in bytes.
 
 Example modifying arguments:
 
