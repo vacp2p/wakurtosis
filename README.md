@@ -20,17 +20,9 @@ If you want to run it with default arguments, if you are in the root of this rep
 
 `kurtosis run .`
 
-There are arguments that can be modified:
-- _same_toml_configuration_: boolean. Default: **true**. If **true**, the some `.toml` file will be applied to every Waku node. If **false*, every node will use its own `.toml` file.
-- _topology_file_: string. Default: **waku_test_topology_small.json**. If defines the network topology that will be created.
-- _simulation_time_: int. Default: **300**. Specifies the simulation time in seconds.
-- _message_rate_: int. Default: **25**. Specifies the message rate in packets per second.
-- _min_packet_size_: int. Default: **1**. Specifies the minimum size of the packet in bytes.
-- _max_packet_size_: int. Default: **1024**. Specifies the maximum size of the packet in bytes.
+Will load the default confiration .json file **./config/config.json**. You can also specify a different .json config file and its location:
 
-Example modifying arguments:
-
-`kurtosis run . '{"same_toml_configuration": false, "topology_file": "waku_test_topology_big.json"}'`
+`kurtosis run . '{"config_file": "config.json". "config_file_location": "github.com/logos-co/wakurtosis/config/"}'`
 
 The enclaves that will be created have randon names, that can be checked with:
 
@@ -44,6 +36,16 @@ Note that, if you try to run the same kurtosis module again, you will have clash
 
 `kurtosis clean -a`
 
+#### JSON main configuration file options
+
+There are arguments that can be modified:
+
+- _same_toml_configuration_: boolean. Default: **true**. If **true**, the some `.toml` file will be applied to every Waku node. If **false*, every node will use its own `.toml` file.
+- _topology_file_: string. Default: **waku_test_topology_small.json**. If defines the network topology that will be created.
+- _simulation_time_: int. Default: **300**. Specifies the simulation time in seconds.
+- _message_rate_: int. Default: **25**. Specifies the message rate in packets per second.
+- _min_packet_size_: int. Default: **1**. Specifies the minimum size of the packet in bytes.
+- _min_packet_size_: int. Default: **1024**. Specifies the maximum size of the packet in bytes.
 
 #### What will happen
 
