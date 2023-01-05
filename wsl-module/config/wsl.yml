@@ -19,4 +19,8 @@ general:
     # Packe size distribution
     # Values: uniform and gaussian
     dist_type : "gaussian"
+
+    # Fraction (of the total number of nodes) that inject traffic
+    # Values: [0., 1.]
+    emitters_fraction : 0.5
     

@@ -215,6 +215,15 @@ def main():
             sys.exit(1)
     G_LOGGER.info('All %d Waku nodes are reachable.' %len(targets))
 
+    """ Define the subset of emitters """
+    num_emitters = int(len(targets) * config['general']['emitters_fraction'])
+    if num_emitters == 0:
+        G_LOGGER.error('The number of emitters must be greater than zero. Try increasing the fraction of emitters.')
+        sys.exit()
+
+    emitters = random.sample(targets, num_emitters)
+    G_LOGGER.info('Selected %d emitters out of %d total nodes' %(len(emitters), len(targets)))
+    
     """ Start simulation """
     stats = {}
     msg_cnt = 0
@@ -240,7 +249,7 @@ def main():
             continue
         
         # Reference: https://rfc.vac.dev/spec/16/#get_waku_v2_relay_v1_messages
-        node_address = 'http://%s/' %random.choice(targets)
+        node_address = 'http://%s/' %random.choice(emitters)
 
         G_LOGGER.info('Injecting message to network through Waku node %s ...' %node_address)
         
