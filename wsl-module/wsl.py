@@ -98,7 +98,7 @@ def poisson_interval(rate):
 
 def make_payload(size, rnd=True):
 
-    # Size in bytes, supposed to be hexa, 2 hexa digits per byte
+    # Size in bytes (2 hex digits per byte)
     if rnd:
         payload = ''.join(random.choices('0123456789abcdef', k=int( 2 * size - 1)))
     else:
@@ -112,11 +112,21 @@ def make_payload(size, rnd=True):
 
 def make_payload_dist(dist_type, min_size, max_size):
 
+    # Payload sizes are even integers randomly uniform distributed in [min_size, max_size] 
     if dist_type == 'uniform':
         size = random.uniform(min_size, max_size)
+        # Make sure we only sample even sizes
+        while(size % 2) != 0:
+            size = random.uniform(min_size, max_size)
+            
         return make_payload(size)
 
-    # TODO: Normal in [a,b]
+    # Payload sizes are even integers randomly "normally" distributed in [min_size, max_size] 
+    # if dist_type == 'gaussian':
+    #     spread = max_size - min_size
+    #     size = random.binomial(n=spread, p=0.5, size=1) - 10
+    #     while(size % 2) != 0:
+    #         size = random.binomial(n=spread, p=0.5, size=1) - 10
 
     G_LOGGER.error('Unknown distribution type %s')
 
