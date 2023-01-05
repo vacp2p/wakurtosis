@@ -13,3 +13,4 @@ targets.json
 data/
 enclave.dump/
 wsl-module/requirements.txt
+wsl-module/__pycache__
