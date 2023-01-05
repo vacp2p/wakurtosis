@@ -268,11 +268,20 @@ def main():
         # else:
         #     G_LOGGER.error('RPC Message failed to node_address')
 
-        # Sampling inter-message times from a Poisson distribution)
-        next_time_to_msg = poisson_interval(config['general']['msg_rate'])
+        # Compute the time to next message
+        if config['general']['inter_msg_type'] == 'poisson':
+            next_time_to_msg = poisson_interval(config['general']['msg_rate'])
+        elif config['general']['inter_msg_type'] == 'uniform':
+            next_time_to_msg = config['general']['simulation_time'] / config['general']['msg_rate']
+        else:
+            G_LOGGER.error('%s is not a valid inter_msg_type. Aborting.' %config['general']['inter_msg_type'])
+            sys.exit()
+
+        G_LOGGER.debug('Next message will happen in %d ms.' %next_time_to_msg)
+        
         last_msg_time = time.time()
         
-        msg_cnt += 1
+        msg_cnt += 1 
         bytes_cnt += len(payload) / 2 - 2
         
     # Pull messages 

@@ -4,9 +4,10 @@ system_variables = import_module("github.com/logos-co/wakurtosis/src/system_vari
 # Module Imports
 files = import_module(system_variables.FILE_HELPERS_MODULE)
 
-def create_wsl_config(simulation_time=300, message_rate=50, min_packet_size=1, max_packet_size=1024, dist_type='uniform', emitters_fraction=0.5):
+def create_wsl_config(simulation_time=300, message_rate=50, min_packet_size=1, max_packet_size=1024, dist_type='uniform', emitters_fraction=0.5, inter_msg_type='uniform'):
     
-    template_data = {"simulation_time": simulation_time, "message_rate" : message_rate, "min_packet_size" : min_packet_size, "max_packet_size" : max_packet_size, "dist_type" : dist_type, "emitters_fraction" : emitters_fraction}
+    template_data = {"simulation_time": simulation_time, "message_rate" : message_rate, "min_packet_size" : min_packet_size, 
+                    "max_packet_size" : max_packet_size, "dist_type" : dist_type, "emitters_fraction" : emitters_fraction, "inter_msg_type" : inter_msg_type}
 
     # Traffic simulation parameters
     wsl_yml_template = """
@@ -35,6 +36,10 @@ def create_wsl_config(simulation_time=300, message_rate=50, min_packet_size=1, m
             # Fraction (of the total number of nodes) that inject traffic
             # Values: [0., 1.]
             emitters_fraction : {{.emitters_fraction}}
+
+            # Inter-message times
+            # Values: uniform and gaussian
+            inter_msg_type : {{.inter_msg_type}}
     """
 
     artifact_id = render_templates(
