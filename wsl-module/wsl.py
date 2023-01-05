@@ -269,6 +269,7 @@ def main():
         #     G_LOGGER.error('RPC Message failed to node_address')
 
         # Compute the time to next message
+        # NOTE: Shall we pack this into a function?
         if config['general']['inter_msg_type'] == 'poisson':
             next_time_to_msg = poisson_interval(config['general']['msg_rate'])
         elif config['general']['inter_msg_type'] == 'uniform':
