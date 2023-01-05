@@ -65,8 +65,7 @@ MIN_PACKET_SIZE = 1
 MAX_PACKET_SIZE = 1024
 
 # Global config
-CONFIG_FILE_NAME = "config.json"
-CONFIG_FILE_LOCATION = "github.com/logos-co/wakurtosis/config/"
+CONFIG_FILE = "github.com/logos-co/wakurtosis/config/config.json"
 
 
     

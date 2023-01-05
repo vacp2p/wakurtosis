@@ -11,8 +11,8 @@ wsl = import_module(system_variables.WSL_MODULE)
 def run(args):
     
     # Load global config file
-    config_params = args_parser.load_config_args(args)
-    config_json = read_file(src=config_params.config_file_location + config_params.config_file)
+    config_file = args_parser.load_config_args(args)
+    config_json = read_file(src=config_file)
     config = json.decode(config_json)
 
     print(config)

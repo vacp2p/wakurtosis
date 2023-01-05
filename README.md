@@ -22,7 +22,7 @@ If you want to run it with default arguments, if you are in the root of this rep
 
 Will load the default confiration .json file **./config/config.json**. You can also specify a different .json config file and its location:
 
-`kurtosis run . '{"config_file": "config.json", "config_file_location": "github.com/logos-co/wakurtosis/config/"}'`
+`kurtosis run . '{"config_file": "github.com/logos-co/wakurtosis/config/config.json"}'`
 
 The enclaves that will be created have randon names, that can be checked with:
 
@@ -38,7 +38,7 @@ Note that, if you try to run the same kurtosis module again, you will have clash
 
 #### JSON main configuration file options
 
-There are arguments that can be modified:
+These are arguments that can be modified:
 
 - _same_toml_configuration_: boolean. Default: **true**. If **true**, the some `.toml` file will be applied to every Waku node. If **false*, every node will use its own `.toml` file.
 - _topology_file_: string. Default: **waku_test_topology_small.json**. If defines the network topology that will be created.
