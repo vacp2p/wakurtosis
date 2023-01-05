@@ -15,4 +15,8 @@ general:
     # Packet size in bytes
     min_packet_size : 2
     max_packet_size : 1024
+
+    # Packe size distribution
+    # Values: uniform and gaussian
+    dist_type : "gaussian"
     

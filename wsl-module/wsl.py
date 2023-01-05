@@ -7,6 +7,7 @@ Description: Wakurtosis load simulator
 """ Dependencies """
 import sys, logging, yaml, json, time, random, os, argparse
 import requests
+import rtnorm
 # from pathlib import Path
 # import numpy as np
 # import pandas as pd
@@ -112,7 +113,7 @@ def make_payload(size, rnd=True):
 
 def make_payload_dist(dist_type, min_size, max_size):
 
-    # Payload sizes are even integers randomly uniform distributed in [min_size, max_size] 
+    # Payload sizes are even integers uniformly distributed in [min_size, max_size] 
     if dist_type == 'uniform':
         size = random.uniform(min_size, max_size)
         # Make sure we only sample even sizes
@@ -121,12 +122,17 @@ def make_payload_dist(dist_type, min_size, max_size):
             
         return make_payload(size)
 
-    # Payload sizes are even integers randomly "normally" distributed in [min_size, max_size] 
-    # if dist_type == 'gaussian':
-    #     spread = max_size - min_size
-    #     size = random.binomial(n=spread, p=0.5, size=1) - 10
-    #     while(size % 2) != 0:
-    #         size = random.binomial(n=spread, p=0.5, size=1) - 10
+    # Payload sizes are even integers ~"normally" distributed in [min_size, max_size] 
+    if dist_type == 'gaussian':
+        σ = (max_size - min_size) / 5.
+        μ = (max_size - min_size) / 2.
+        size = int(rtnorm.rtnorm(min_size, max_size, sigma=σ, mu=μ, size=1))
+        
+        # Reject non even sizes
+        while size % 2 != 0.0:
+            size = int(rtnorm.rtnorm(min_size, max_size, sigma=σ, mu=μ, size=1))
+
+        return size
 
     G_LOGGER.error('Unknown distribution type %s')
 
@@ -238,7 +244,7 @@ def main():
 
         G_LOGGER.info('Injecting message to network through Waku node %s ...' %node_address)
         
-        payload = make_payload_dist(dist_type='uniform', min_size=config['general']['min_packet_size'], max_size=config['general']['max_packet_size'])
+        payload = make_payload_dist(dist_type=config['general']['dist_type'].lower(), min_size=config['general']['min_packet_size'], max_size=config['general']['max_packet_size'])
         response, elapsed = send_waku_msg(node_address, topic='test', payload=payload)
 
         # # Keep track of basic stats
