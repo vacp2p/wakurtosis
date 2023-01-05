@@ -22,7 +22,7 @@ If you want to run it with default arguments, if you are in the root of this rep
 
 Will load the default confiration .json file **./config/config.json**. You can also specify a different .json config file and its location:
 
-`kurtosis run . '{"config_file": "config.json". "config_file_location": "github.com/logos-co/wakurtosis/config/"}'`
+`kurtosis run . '{"config_file": "config.json", "config_file_location": "github.com/logos-co/wakurtosis/config/"}'`
 
 The enclaves that will be created have randon names, that can be checked with:
 
