@@ -5,16 +5,23 @@ system_variables = import_module("github.com/logos-co/wakurtosis/src/system_vari
 waku = import_module(system_variables.WAKU_MODULE)
 prometheus = import_module(system_variables.PROMETHEUS_MODULE)
 grafana = import_module(system_variables.GRAFANA_MODULE)
-parser = import_module(system_variables.ARGUMENT_PARSER_MODULE)
+args_parser = import_module(system_variables.ARGUMENT_PARSER_MODULE)
 wsl = import_module(system_variables.WSL_MODULE)
 
 def run(args):
-    args = parser.apply_default_to_input_args(args)
+    
+    # Load global config file
+    config_file = args_parser.load_config_args(args)
+    config_json = read_file(src=config_file)
+    config = json.decode(config_json)
 
-    same_toml_configuration = args.same_toml_configuration
-    waku_topology = read_file(src=system_variables.TOPOLOGIES_LOCATION + args.topology_file)
+    print(config)
 
-    waku_topology = json.decode(waku_topology)
+    same_toml_configuration = config['same_toml_configuration']
+    
+    # Load network topology
+    waku_topology_json = read_file(src=system_variables.TOPOLOGIES_LOCATION + config['topology_file'])
+    waku_topology = json.decode(waku_topology_json)
 
     # Set up nodes
     waku_services = waku.instantiate_waku_nodes(waku_topology, same_toml_configuration)
@@ -31,8 +38,4 @@ def run(args):
     # waku.get_waku_peers(waku_topology.keys()[1])
 
     # Setup WSL & Start the Simulation
-    simulation_time = args.simulation_time
-    message_rate = args.message_rate
-    min_packet_size = args.min_packet_size
-    max_packet_size = args.max_packet_size
-    wsl_service = wsl.set_up_wsl(waku_services,  simulation_time, message_rate, min_packet_size, max_packet_size)
+    wsl_service = wsl.set_up_wsl(waku_services,  config['simulation_time'], config['message_rate'], config['min_packet_size'], config['max_packet_size'])
