@@ -111,10 +111,11 @@ def make_payload_dist(dist_type, min_size, max_size):
 
     # Payload sizes are even integers uniformly distributed in [min_size, max_size] 
     if dist_type == 'uniform':
-        size = random.uniform(min_size, max_size)
+        size = int(random.uniform(min_size, max_size))
+        
         # Reject non even sizes
         while(size % 2) != 0:
-            size = random.uniform(min_size, max_size)
+            size = int(random.uniform(min_size, max_size))
             
         return make_payload(size)
 
@@ -125,7 +126,7 @@ def make_payload_dist(dist_type, min_size, max_size):
         size = int(rtnorm.rtnorm(min_size, max_size, sigma=σ, mu=μ, size=1))
         
         # Reject non even sizes
-        while size % 2 != 0.0:
+        while(size % 2) != 0:
             size = int(rtnorm.rtnorm(min_size, max_size, sigma=σ, mu=μ, size=1))
 
         return size
