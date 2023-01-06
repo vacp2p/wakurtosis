@@ -4,7 +4,7 @@ system_variables = import_module("github.com/logos-co/wakurtosis/src/system_vari
 # Module Imports
 files = import_module(system_variables.FILE_HELPERS_MODULE)
 
-def create_wsl_config(simulation_time=300, message_rate=50, min_packet_size=1, max_packet_size=1024, dist_type='uniform', emitters_fraction=0.5, inter_msg_type='uniform'):
+def create_wsl_config(simulation_time=300, message_rate=50, min_packet_size=1, max_packet_size=1024, inter_msg_type='uniform', dist_type='uniform', emitters_fraction=0.5):
     
     template_data = {"simulation_time": simulation_time, "message_rate" : message_rate, "min_packet_size" : min_packet_size, 
                     "max_packet_size" : max_packet_size, "dist_type" : dist_type, "emitters_fraction" : emitters_fraction, "inter_msg_type" : inter_msg_type}
@@ -74,10 +74,10 @@ def create_wsl_targets(services):
 
     return artifact_id
 
-def set_up_wsl(services, simulation_time, message_rate, min_packet_size, max_packet_size):
+def set_up_wsl(services, simulation_time, message_rate, min_packet_size, max_packet_size, inter_msg_type, dist_type, emitters_fraction):
     
     # Generate simulation config
-    wsl_config = create_wsl_config(simulation_time, message_rate, min_packet_size, max_packet_size)
+    wsl_config = create_wsl_config(simulation_time, message_rate, min_packet_size, max_packet_size, inter_msg_type, dist_type, emitters_fraction)
 
     # Create targets.json
     wsl_targets = create_wsl_targets(services)
