@@ -1,0 +1,8 @@
+{
+    "same_toml_configuration": true,
+    "topology_file": "waku_test_topology_small.json",
+    "simulation_time": 1,
+    "message_rate": 50,
+    "min_packet_size": 8,
+    "max_packet_size": 8
+}

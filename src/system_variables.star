@@ -50,6 +50,7 @@ WSL_MODULE = "github.com/logos-co/wakurtosis/src/wsl.star"
 SAME_TOML_CONFIGURATION_NAME = "same_toml_configuration"
 SAME_TOML_CONFIGURATION = True
 
+# Topology
 TOPOLOGY_FILE_NAME = "topology"
 TOPOLOGIES_LOCATION = "github.com/logos-co/wakurtosis/config/network_topology/"
 DEFAULT_TOPOLOGY_FILE = "waku_test_topology_small.json"
@@ -62,4 +63,9 @@ SIMULATION_TIME = 300
 MESSAGE_RATE = 25
 MIN_PACKET_SIZE = 1
 MAX_PACKET_SIZE = 1024
+
+# Global config
+CONFIG_FILE = "github.com/logos-co/wakurtosis/config/config.json"
+
+
     
