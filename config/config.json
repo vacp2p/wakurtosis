@@ -4,5 +4,8 @@
     "simulation_time": 1,
     "message_rate": 50,
     "min_packet_size": 8,
-    "max_packet_size": 8
+    "max_packet_size": 8,
+    "inter_msg_type": "poisson",
+    "dist_type": "uniform",
+    "emitters_fraction": 0.5
 }
