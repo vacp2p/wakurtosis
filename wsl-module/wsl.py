@@ -97,26 +97,22 @@ def send_waku_msg(node_address, topic, payload, nonce=1):
 def poisson_interval(rate):
     return random.expovariate(rate)
 
-def make_payload(size, rnd=True):
-
-    # Size in bytes (2 hex digits per byte)
-    if rnd:
-        payload = ''.join(random.choices('0123456789abcdef', k=int( 2 * size - 1)))
-    else:
-        payload = ''.join('00' * int(size))
-
-    payload = '0x%s' %payload 
-
+def make_payload(size):
+    payload = hex(random.getrandbits(4*size))     
     G_LOGGER.debug('Payload of size %d bytes: %s' %(size, payload))
-
     return payload
 
 def make_payload_dist(dist_type, min_size, max_size):
 
+    # Check if min and max packet sizes are the same
+    if min_size == max_size:
+        G_LOGGER.warning('Packet size is constant: min_size=max_size=%d' %min_size)
+        return make_payload(min_size)
+
     # Payload sizes are even integers uniformly distributed in [min_size, max_size] 
     if dist_type == 'uniform':
         size = random.uniform(min_size, max_size)
-        # Make sure we only sample even sizes
+        # Reject non even sizes
         while(size % 2) != 0:
             size = random.uniform(min_size, max_size)
             
@@ -223,7 +219,7 @@ def main():
 
     emitters = random.sample(targets, num_emitters)
     G_LOGGER.info('Selected %d emitters out of %d total nodes' %(len(emitters), len(targets)))
-    
+
     """ Start simulation """
     stats = {}
     msg_cnt = 0
