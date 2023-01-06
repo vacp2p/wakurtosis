@@ -38,7 +38,7 @@ def create_wsl_config(simulation_time=300, message_rate=50, min_packet_size=1, m
             emitters_fraction : {{.emitters_fraction}}
 
             # Inter-message times
-            # Values: uniform and gaussian
+            # Values: uniform and poisson
             inter_msg_type : {{.inter_msg_type}}
     """
 
