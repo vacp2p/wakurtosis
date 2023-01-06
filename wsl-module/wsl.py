@@ -236,7 +236,7 @@ def main():
         # Check end condition
         elapsed_s = time.time() - s_time
         if  elapsed_s >= config['general']['simulation_time']:
-            G_LOGGER.info('Simulation ended. Sent %d messages (%d bytes) in %d at an avg. bandwitdth of %d Bps' %(msg_cnt, bytes_cnt, elapsed_s, bytes_cnt / elapsed_s))
+            G_LOGGER.info('Simulation ended. Sent %d messages (%d bytes) in %ds. an avg. bandwitdth of %dBps' %(msg_cnt, bytes_cnt, elapsed_s, bytes_cnt / elapsed_s))
             break
 
         # Send message
@@ -244,6 +244,8 @@ def main():
         msg_elapsed = time.time() - last_msg_time
         if msg_elapsed <= next_time_to_msg:
             continue
+
+        G_LOGGER.debug('Time Δ: %d ms.' %((msg_elapsed - next_time_to_msg) * 1000.0))
         
         # Reference: https://rfc.vac.dev/spec/16/#get_waku_v2_relay_v1_messages
         node_address = 'http://%s/' %random.choice(emitters)
@@ -268,14 +270,14 @@ def main():
         # Compute the time to next message
         # NOTE: Shall we pack this into a function?
         if config['general']['inter_msg_type'] == 'poisson':
-            next_time_to_msg = poisson_interval(config['general']['msg_rate'])
+            next_time_to_msg = poisson_interval(config['general']['msg_rate']) 
         elif config['general']['inter_msg_type'] == 'uniform':
             next_time_to_msg = config['general']['simulation_time'] / config['general']['msg_rate']
         else:
             G_LOGGER.error('%s is not a valid inter_msg_type. Aborting.' %config['general']['inter_msg_type'])
             sys.exit()
 
-        G_LOGGER.debug('Next message will happen in %d ms.' %next_time_to_msg)
+        G_LOGGER.debug('Next message will happen in %d ms.' %(next_time_to_msg * 1000.0))
         
         last_msg_time = time.time()
         
