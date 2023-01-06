@@ -5,8 +5,6 @@ system_variables = import_module("github.com/logos-co/wakurtosis/src/system_vari
 files = import_module(system_variables.FILE_HELPERS_MODULE)
 
 
-# todo: Would be nice to mock upload files
-
 def test_get_toml_configuration_artifact_same_config_true():
     artifact_id, file_name = files.get_toml_configuration_artifact("test", True, "id_1")
 
@@ -48,3 +46,9 @@ def test_generate_template_prometheus_url():
     result = files.generate_template_prometheus_url(prometheus_service_struct)
     assert(value=result["prometheus_url"], assertion="==", target_value="1.2.3.4:8008")
 
+def test_prepare_artifact_files_grafana():
+    config, custom, dashboard = files.prepare_artifact_files_grafana("a", "b", "c")
+
+    assert(value=config, assertion="==", target_value="a")
+    assert (value=custom, assertion="==", target_value="b")
+    assert (value=dashboard, assertion="==", target_value="c")

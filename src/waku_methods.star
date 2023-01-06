@@ -45,6 +45,7 @@ def connect_wakunode_to_peers(service_id, port_id, peer_ids):
     response = send_waku_json_rpc(service_id, port_id, method, params)
 
     print(response)
+    assert(value=response["code"],assertion="==",target_value = 200)
 
 
 def post_waku_v2_relay_v1_message(service_id, topic):
@@ -55,6 +56,7 @@ def post_waku_v2_relay_v1_message(service_id, topic):
                                   system_variables.POST_RELAY_MESSAGE, params)
 
     print(response)
+    assert(value=response["code"], assertion="==", target_value=200)
 
 
 def get_wakunode_id(service_id, port_id):
@@ -107,9 +109,9 @@ def make_service_wait(service_id, time):
     exec(exec_recipe)
 
 def _add_information(services, waku_info, waku_service_id, waku_service, waku_node_id):
-    waku_info["id"] = waku_node_id
+    waku_info["id"] = waku_service_id
     waku_info["service_info"] = waku_service
-    services[waku_service_id] = waku_info
+    services[waku_node_id] = waku_info
 
 def add_waku_service_information(services, waku_service_id, waku_service):
     """
@@ -152,12 +154,14 @@ def instantiate_waku_nodes(network_topology, use_general_configuration):
 
 
 def get_waku_peers(waku_service_id):
+    extract = {"peers": '.result | length'}
+
     response = send_waku_json_rpc(waku_service_id, system_variables.WAKU_RPC_PORT_ID,
-                                  system_variables.GET_PEERS_METHOD, "")
-
+                                  system_variables.GET_PEERS_METHOD, "", extract)
     print(response)
+    assert(value=response["code"], assertion="==", target_value=200)
 
-    return response
+    return response["extract.peers"]
 
 
 def send_test_messages(topology_information, number_of_messages, time_between_message):

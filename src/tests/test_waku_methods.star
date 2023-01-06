@@ -5,6 +5,27 @@ system_variables = import_module("github.com/logos-co/wakurtosis/src/system_vari
 waku = import_module(system_variables.WAKU_MODULE)
 
 
+def test_network_creation():
+
+    waku_topology = read_file(src=system_variables.TOPOLOGIES_LOCATION +
+                                  system_variables.DEFAULT_TOPOLOGY_FILE_DEFAULT_ARGUMENT_VALUE)
+    waku_topology = json.decode(waku_topology)
+
+    print(waku_topology)
+    waku_test_services = waku.instantiate_waku_nodes(waku_topology, True)
+    print(waku_test_services)
+    waku.interconnect_waku_nodes(waku_topology, waku_test_services)
+    waku.send_test_messages(waku_topology, system_variables.NUMBER_TEST_MESSAGES,
+                            system_variables.DELAY_BETWEEN_TEST_MESSAGE)
+    _test_node_neighbours(waku_topology)
+
+
+def _test_node_neighbours(topology_information):
+    for wakunode_name in topology_information.keys():
+        peers = waku.get_waku_peers(wakunode_name)
+        assert(value=peers, assertion="==", target_value=2)
+
+
 def test_create_waku_id():
     service_struct = struct(ip_address="1.1.1.1",
                             ports={system_variables.WAKU_LIBP2P_PORT_ID: PortSpec(number=1234)})

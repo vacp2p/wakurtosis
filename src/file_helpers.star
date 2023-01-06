@@ -43,15 +43,18 @@ def generate_template_prometheus_url(prometheus_service):
     return prometheus_info
 
 
-def upload_files_grafana():
+def prepare_artifact_files_grafana(artifact_config_id="", artifact_custom_id="", artifact_dashboard_id=""):
     config_id = upload_files(
-        src=system_variables.GRAFANA_CONFIGURATION_PATH
+        src=system_variables.GRAFANA_CONFIGURATION_PATH,
+        artifact_id=artifact_config_id
     )
     customization_id = upload_files(
-        src=system_variables.GRAFANA_CUSTOMIZATION_PATH
+        src=system_variables.GRAFANA_CUSTOMIZATION_PATH,
+        artifact_id=artifact_custom_id
     )
     dashboard_id = upload_files(
-        src=system_variables.GRAFANA_DASHBOARD_PATH
+        src=system_variables.GRAFANA_DASHBOARD_PATH,
+        artifact_id=artifact_dashboard_id
     )
 
     return config_id, customization_id, dashboard_id

@@ -6,8 +6,8 @@ files = import_module(system_variables.FILE_HELPERS_MODULE)
 templates = import_module(system_variables.TEMPLATES_MODULE)
 
 
-def set_up_graphana(prometheus_service):
-    config_id, customization_id, dashboard_id = files.upload_files_grafana()
+def set_up_grafana(prometheus_service):
+    config_id, customization_id, dashboard_id = files.prepare_artifact_files_grafana()
     prometheus_data = files.generate_template_prometheus_url(prometheus_service)
     prometheus_template = templates.get_prometheus_template_content_for_grafana()
 
