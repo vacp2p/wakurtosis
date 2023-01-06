@@ -97,6 +97,6 @@ def set_up_wsl(services, simulation_time, message_rate, min_packet_size, max_pac
         )
     )
 
-    print('kurtosis service logs -f wakurtosis SERVICE-GUID')
+    print('kurtosis service logs wakurtosis SERVICE-GUID')
     
     return wsl_service
