@@ -153,7 +153,18 @@ def parse_targets(enclave_dump_path, waku_port=8545):
 
     return targets
 
-def main():
+def get_next_time_to_msg(inter_msg_type, msg_rate, simulation_time):
+    
+    if inter_msg_type == 'poisson':
+        return poisson_interval(msg_rate) 
+    
+    if inter_msg_type == 'uniform':
+        return simulation_time / msg_rate
+        
+    G_LOGGER.error('%s is not a valid inter_msg_type. Aborting.' %inter_msg_type)
+    sys.exit()
+
+def main(): 
 
     global G_LOGGER
     
@@ -268,15 +279,7 @@ def main():
         #     G_LOGGER.error('RPC Message failed to node_address')
 
         # Compute the time to next message
-        # NOTE: Shall we pack this into a function?
-        if config['general']['inter_msg_type'] == 'poisson':
-            next_time_to_msg = poisson_interval(config['general']['msg_rate']) 
-        elif config['general']['inter_msg_type'] == 'uniform':
-            next_time_to_msg = config['general']['simulation_time'] / config['general']['msg_rate']
-        else:
-            G_LOGGER.error('%s is not a valid inter_msg_type. Aborting.' %config['general']['inter_msg_type'])
-            sys.exit()
-
+        next_time_to_msg = get_next_time_to_msg(config['general']['inter_msg_type'], config['general']['msg_rate'], config['general']['simulation_time']) 
         G_LOGGER.debug('Next message will happen in %d ms.' %(next_time_to_msg * 1000.0))
         
         last_msg_time = time.time()
