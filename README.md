@@ -46,7 +46,7 @@ These are arguments that can be modified:
 - _message_rate_: int. Default: **25**. Specifies the message rate in packets per second.
 - _min_packet_size_: int. Default: **1**. Specifies the minimum size of the packet in bytes. Must be an even number (Waku constrain).
 - _min_packet_size_: int. Default: **1024**. Specifies the maximum size of the packet in bytes. Must be an even number (Waku constrain).
-- _dist_type_: int. Default: **1024**. Specifies the size distribution of the messages being injected into the network. Options are: **gaussian** and **uniform**
+- _dist_type_: int. Default: **uniform**. Specifies the size distribution of the messages being injected into the network. Options are: **gaussian** and **uniform**
 - _emitters_fraction_: int. Default: **0.5**. Specifies the fraction of nodes that will be injecting traffic.
 - _inter_msg_type_: int. Default: **poisson**. Specifies the inter-message times. Options are: **poisson** and **uniform**
 
