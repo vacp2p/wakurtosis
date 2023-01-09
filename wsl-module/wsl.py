@@ -129,7 +129,7 @@ def make_payload_dist(dist_type, min_size, max_size):
         while(size % 2) != 0:
             size = int(rtnorm.rtnorm(min_size, max_size, sigma=σ, mu=μ, size=1))
 
-        return size
+        return make_payload(size)
 
     G_LOGGER.error('Unknown distribution type %s')
 
@@ -236,7 +236,7 @@ def main():
         # Check end condition
         elapsed_s = time.time() - s_time
         if  elapsed_s >= config['general']['simulation_time']:
-            G_LOGGER.info('Simulation ended. Sent %d messages (%d bytes) in %ds. an avg. bandwitdth of %dBps' %(msg_cnt, bytes_cnt, elapsed_s, bytes_cnt / elapsed_s))
+            G_LOGGER.info('Simulation ended. Sent %d messages (%d bytes) in %ds.' %(msg_cnt, bytes_cnt, elapsed_s))
             break
 
         # Send message
@@ -245,7 +245,7 @@ def main():
         if msg_elapsed <= next_time_to_msg:
             continue
 
-        G_LOGGER.debug('Time Δ: %d ms.' %((msg_elapsed - next_time_to_msg) * 1000.0))
+        G_LOGGER.debug('Time Δ: %.6f ms.' %((msg_elapsed - next_time_to_msg) * 1000.0))
         
         # Reference: https://rfc.vac.dev/spec/16/#get_waku_v2_relay_v1_messages
         node_address = 'http://%s/' %random.choice(emitters)
@@ -282,7 +282,6 @@ def main():
         last_msg_time = time.time()
         
         msg_cnt += 1 
-        bytes_cnt += len(payload) / 2 - 2
         
     # Pull messages 
     # get_waku_v2_relay_v1_messagesget_waku_v2_relay_v1_messages
