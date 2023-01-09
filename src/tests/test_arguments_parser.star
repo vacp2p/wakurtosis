@@ -1,6 +1,8 @@
 # System Imports
-arg_parser = import_module("github.com/logos-co/wakurtosis/src/arguments_parser.star")
 system_variables = import_module("github.com/logos-co/wakurtosis/src/system_variables.star")
+
+# Module Imports
+arg_parser = import_module(system_variables.ARGUMENT_PARSER_MODULE)
 
 
 def test_apply_default_to_input_args_default():
@@ -23,7 +25,7 @@ def test_apply_default_to_input_args_with_input():
                         topology_file="test_topology")
 
     parsed = arg_parser.apply_default_to_input_args(input_args)
-    print(parsed.topology_file)
+
     number_attributes = len(json.decode(json.encode(parsed)))
 
     assert (value=str(parsed.same_toml_configuration),

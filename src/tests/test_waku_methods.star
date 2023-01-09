@@ -11,13 +11,12 @@ def test_network_creation():
                                   system_variables.DEFAULT_TOPOLOGY_FILE_DEFAULT_ARGUMENT_VALUE)
     waku_topology = json.decode(waku_topology)
 
-    print(waku_topology)
     waku_test_services = waku.instantiate_waku_nodes(waku_topology, True)
-    print(waku_test_services)
+
     waku.interconnect_waku_nodes(waku_topology, waku_test_services)
-    waku.send_test_messages(waku_topology, system_variables.NUMBER_TEST_MESSAGES,
+    waku.send_test_messages(waku_test_services, system_variables.NUMBER_TEST_MESSAGES,
                             system_variables.DELAY_BETWEEN_TEST_MESSAGE)
-    _test_node_neighbours(waku_topology)
+    _test_node_neighbours(waku_test_services)
 
 
 def _test_node_neighbours(topology_information):
@@ -52,7 +51,7 @@ def test__add_information():
 
     services = {}
 
-    waku._add_information(services, {}, "waku_test", service_struct, "IDTEST")
+    waku._add_information(services, {}, "IDTEST", service_struct, "waku_test")
 
     assert(value=str(len(services)), assertion="==", target_value="1")
     assert(value="waku_test", assertion="IN", target_value=services.keys())
@@ -60,6 +59,6 @@ def test__add_information():
     assert(value=services["waku_test"]["service_info"].ip_address,
             assertion="==", target_value="1.1.1.1")
     assert(value=str(services["waku_test"]["service_info"].ports[system_variables.WAKU_LIBP2P_PORT_ID].number),
-           assertion="==", target_value="1234")
+            assertion="==", target_value="1234")
     assert(value=services["waku_test"]["service_info"].ports[system_variables.WAKU_LIBP2P_PORT_ID].transport_protocol,
-           assertion="==", target_value="TCP")
+            assertion="==", target_value="TCP")

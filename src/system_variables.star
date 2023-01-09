@@ -68,6 +68,10 @@ FILE_HELPERS_MODULE = "github.com/logos-co/wakurtosis/src/file_helpers.star"
 TEMPLATES_MODULE = "github.com/logos-co/wakurtosis/src/templates.star"
 WSL_MODULE = "github.com/logos-co/wakurtosis/src/wsl.star"
 
+TEST_ARGUMENTS_MODULE = "github.com/logos-co/wakurtosis/src/tests/test_arguments_parser.star"
+TEST_FILES_MODULE = "github.com/logos-co/wakurtosis/src/tests/test_file_helpers.star"
+TEST_WAKU_MODULE = "github.com/logos-co/wakurtosis/src/tests/test_waku_methods.star"
+
 # Default main starlark arguments
 SAME_TOML_CONFIGURATION_ARGUMENT_NAME = "same_toml_configuration"
 SAME_TOML_CONFIGURATION_DEFAULT_ARGUMENT_VALUE = True
