@@ -4,6 +4,9 @@
 *.iml
 *.ipr
 
+# default network gen directory
+WakuNetwork
+
 # VS Code
 *.vscode
 
