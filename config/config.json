@@ -1,8 +1,11 @@
 {
     "same_toml_configuration": true,
     "topology_file": "waku_test_topology_small.json",
-    "simulation_time": 1,
-    "message_rate": 50,
-    "min_packet_size": 8,
-    "max_packet_size": 8
+    "simulation_time": 60,
+    "message_rate": 10,
+    "min_packet_size": 2,
+    "max_packet_size": 1024,
+    "inter_msg_type": "poisson",
+    "dist_type": "gaussian",
+    "emitters_fraction": 1.0
 }

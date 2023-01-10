@@ -97,28 +97,25 @@ def send_waku_msg(node_address, topic, payload, nonce=1):
 def poisson_interval(rate):
     return random.expovariate(rate)
 
-def make_payload(size, rnd=True):
-
-    # Size in bytes (2 hex digits per byte)
-    if rnd:
-        payload = ''.join(random.choices('0123456789abcdef', k=int( 2 * size - 1)))
-    else:
-        payload = ''.join('00' * int(size))
-
-    payload = '0x%s' %payload 
-
+def make_payload(size):
+    payload = hex(random.getrandbits(4*size))     
     G_LOGGER.debug('Payload of size %d bytes: %s' %(size, payload))
-
     return payload
 
 def make_payload_dist(dist_type, min_size, max_size):
 
+    # Check if min and max packet sizes are the same
+    if min_size == max_size:
+        G_LOGGER.warning('Packet size is constant: min_size=max_size=%d' %min_size)
+        return make_payload(min_size)
+
     # Payload sizes are even integers uniformly distributed in [min_size, max_size] 
     if dist_type == 'uniform':
-        size = random.uniform(min_size, max_size)
-        # Make sure we only sample even sizes
+        size = int(random.uniform(min_size, max_size))
+        
+        # Reject non even sizes
         while(size % 2) != 0:
-            size = random.uniform(min_size, max_size)
+            size = int(random.uniform(min_size, max_size))
             
         return make_payload(size)
 
@@ -129,10 +126,10 @@ def make_payload_dist(dist_type, min_size, max_size):
         size = int(rtnorm.rtnorm(min_size, max_size, sigma=σ, mu=μ, size=1))
         
         # Reject non even sizes
-        while size % 2 != 0.0:
+        while(size % 2) != 0:
             size = int(rtnorm.rtnorm(min_size, max_size, sigma=σ, mu=μ, size=1))
 
-        return size
+        return make_payload(size)
 
     G_LOGGER.error('Unknown distribution type %s')
 
@@ -156,7 +153,18 @@ def parse_targets(enclave_dump_path, waku_port=8545):
 
     return targets
 
-def main():
+def get_next_time_to_msg(inter_msg_type, msg_rate, simulation_time):
+    
+    if inter_msg_type == 'poisson':
+        return poisson_interval(msg_rate) 
+    
+    if inter_msg_type == 'uniform':
+        return simulation_time / msg_rate
+        
+    G_LOGGER.error('%s is not a valid inter_msg_type. Aborting.' %inter_msg_type)
+    sys.exit()
+
+def main(): 
 
     global G_LOGGER
     
@@ -223,7 +231,7 @@ def main():
 
     emitters = random.sample(targets, num_emitters)
     G_LOGGER.info('Selected %d emitters out of %d total nodes' %(len(emitters), len(targets)))
-    
+
     """ Start simulation """
     stats = {}
     msg_cnt = 0
@@ -239,7 +247,7 @@ def main():
         # Check end condition
         elapsed_s = time.time() - s_time
         if  elapsed_s >= config['general']['simulation_time']:
-            G_LOGGER.info('Simulation ended. Sent %d messages (%d bytes) in %d at an avg. bandwitdth of %d Bps' %(msg_cnt, bytes_cnt, elapsed_s, bytes_cnt / elapsed_s))
+            G_LOGGER.info('Simulation ended. Sent %d messages (%d bytes) in %ds.' %(msg_cnt, bytes_cnt, elapsed_s))
             break
 
         # Send message
@@ -247,6 +255,8 @@ def main():
         msg_elapsed = time.time() - last_msg_time
         if msg_elapsed <= next_time_to_msg:
             continue
+
+        G_LOGGER.debug('Time Δ: %.6f ms.' %((msg_elapsed - next_time_to_msg) * 1000.0))
         
         # Reference: https://rfc.vac.dev/spec/16/#get_waku_v2_relay_v1_messages
         node_address = 'http://%s/' %random.choice(emitters)
@@ -268,12 +278,13 @@ def main():
         # else:
         #     G_LOGGER.error('RPC Message failed to node_address')
 
-        # Sampling inter-message times from a Poisson distribution)
-        next_time_to_msg = poisson_interval(config['general']['msg_rate'])
+        # Compute the time to next message
+        next_time_to_msg = get_next_time_to_msg(config['general']['inter_msg_type'], config['general']['msg_rate'], config['general']['simulation_time']) 
+        G_LOGGER.debug('Next message will happen in %d ms.' %(next_time_to_msg * 1000.0))
+        
         last_msg_time = time.time()
         
-        msg_cnt += 1
-        bytes_cnt += len(payload) / 2 - 2
+        msg_cnt += 1 
         
     # Pull messages 
     # get_waku_v2_relay_v1_messagesget_waku_v2_relay_v1_messages
