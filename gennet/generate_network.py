@@ -200,9 +200,9 @@ def generate_and_write_files(dirname, num_topics, num_subnets, G):
     for node in G.nodes:
         write_toml(dirname, node, generate_toml(topics))        # per node toml
         json_dump[node] = {}
-        json_dump[node]["static-nodes"] = []
+        json_dump[node]["static_nodes"] = []
         for edge in G.edges(node):
-            json_dump[node]["static-nodes"].append(edge[1])
+            json_dump[node]["static_nodes"].append(edge[1])
         json_dump[node][SUBNET_PREFIX] = subnets[node]
     write_json(dirname, json_dump)                              # network wide json
 
