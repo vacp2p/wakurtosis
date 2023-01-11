@@ -53,7 +53,7 @@ SAME_TOML_CONFIGURATION = True
 # Topology
 TOPOLOGY_FILE_NAME = "topology"
 TOPOLOGIES_LOCATION = "github.com/logos-co/wakurtosis/config/network_topology/"
-DEFAULT_TOPOLOGY_FILE = "waku_test_topology_small.json"
+DEFAULT_TOPOLOGY_FILE = "network_data.json"
 
 NUMBER_TEST_MESSAGES = 50
 DELAY_BETWEEN_TEST_MESSAGE = "0.5"
