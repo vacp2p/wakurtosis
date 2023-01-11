@@ -87,7 +87,7 @@ MIN_PACKET_SIZE = 1
 MAX_PACKET_SIZE = 1024
 
 # Global config
-CONFIG_FILE = "github.com/logos-co/wakurtosis/config/config.json"
+DEFAULT_CONFIG_FILE = "github.com/logos-co/wakurtosis/config/config.json"
 
 # Tests
 NUMBER_TEST_MESSAGES = 5
