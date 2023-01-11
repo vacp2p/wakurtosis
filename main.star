@@ -15,12 +15,11 @@ def run(args):
     config_json = read_file(src=config_file)
     config = json.decode(config_json)
 
-    print(config)
-
     same_toml_configuration = config['same_toml_configuration']
     
     # Load network topology
-    waku_topology_json = read_file(src=system_variables.TOPOLOGIES_LOCATION + config['topology_file'])
+    # waku_topology_json = read_file(src=system_variables.TOPOLOGIES_LOCATION + 'network_data.json')
+    waku_topology_json = read_file(src="github.com/logos-co/wakurtosis/" + config['topology_path'] + 'network_data.json')
     waku_topology = json.decode(waku_topology_json)
 
     # Set up nodes
