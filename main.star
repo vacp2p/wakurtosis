@@ -11,7 +11,7 @@ wsl = import_module(system_variables.WSL_MODULE)
 def run(args):
     
     # Load global config file
-    config_file = args_parser.load_config_args(args)
+    config_file = args_parser.get_configuration_file_name(args)
     config_json = read_file(src=config_file)
     config = json.decode(config_json)
 
@@ -26,16 +26,11 @@ def run(args):
     # Set up nodes
     waku_services = waku.instantiate_waku_nodes(waku_topology, same_toml_configuration)
 
-    # Set up prometheus + graphana
+    # Set up prometheus + grafana
     prometheus_service = prometheus.set_up_prometheus(waku_services)
-    grafana_service = grafana.set_up_graphana(prometheus_service)
+    grafana_service = grafana.set_up_grafana(prometheus_service)
 
     waku.interconnect_waku_nodes(waku_topology, waku_services)
-
-    # waku.send_test_messages(waku_topology, system_variables.NUMBER_TEST_MESSAGES,
-    #                         system_variables.DELAY_BETWEEN_TEST_MESSAGE)
-
-    # waku.get_waku_peers(waku_topology.keys()[1])
 
     # Setup WSL & Start the Simulation
     wsl_service = wsl.set_up_wsl(waku_services,  config['simulation_time'], config['message_rate'], config['min_packet_size'], config['max_packet_size'], config['inter_msg_type'], config['dist_type'], config['emitters_fraction'])
