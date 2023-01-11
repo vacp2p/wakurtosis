@@ -2,3 +2,4 @@ topics="test"
 rpc-admin=true
 keep-alive=true
 metrics-server=true
+nodekey="80fb8f9b71c808bc186bc8c6639a12446e667d031e8ac4896efad603e21728b2"

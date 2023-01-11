@@ -11,7 +11,7 @@ def test_network_creation():
                                   system_variables.DEFAULT_TOPOLOGY_FILE_DEFAULT_ARGUMENT_VALUE)
     waku_topology = json.decode(waku_topology)
 
-    waku_test_services = waku.instantiate_waku_nodes(waku_topology, True)
+    waku_test_services = waku.instantiate_waku_nodes(waku_topology, False)
 
     waku.interconnect_waku_nodes(waku_topology, waku_test_services)
     waku.send_test_messages(waku_test_services, system_variables.NUMBER_TEST_MESSAGES,
