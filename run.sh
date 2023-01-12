@@ -36,7 +36,7 @@ eval $kurtosis_cmd
 # Fetch the WSL service id and display the log of the simulation
 wsl_service_id=$(kurtosis enclave inspect wakurtosis | grep wsl- | awk '{print $1}')
 kurtosis service logs wakurtosis $wsl_service_id
-echo "--> To see simulation logs run: kurtosis enclave inspect wakurtosis $wsl_service_id <--"
+echo "--> To see simulation logs run: kurtosis service logs wakurtosis $wsl_service_id <--"
 
 # Fetch the Grafana address & port
 grafana_host=$(kurtosis enclave inspect wakurtosis | grep grafana- | awk '{print $6}')
