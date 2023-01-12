@@ -64,11 +64,7 @@ there are 5 seconds (defined in `system_variables`) of waiting time for that nod
 
 Once all nodes are ready, prometheus and grafana will be set up and connected to all waku nodes.
 
-All nodes are then interconnected.
-
-A predefined number of test messages with specific delay (defined in `system_variables`) are sent by every node to the same topic.
-
-Peers from one node are requested, just for testing.
+Once all nodes have been interconnected the simulation starts and will inject traffic into the network following the parameters specified in the configuration file.
 
 #### Check Prometheus+Grafana+Logs
 
