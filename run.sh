@@ -1,7 +1,11 @@
 #!/bin/sh
 
+# Parse arg if any
+ARGS1=${1:-"./config/config.json"}
+echo $ARGS1
+
 # Main .json configuration file
-config_file="./config/config.json"
+config_file=$ARGS1
 
 # Needs JQ to parse the main .json config file: 
 # sudo apt-get install jq
@@ -26,7 +30,8 @@ echo "Generating ./generate_network.py --dirname $topology_path --num-nodes $num
 kurtosis enclave rm -f $enclave_name
 
 # Create the new enclave and run the simulation
-kurtosis run --enclave-id $enclave_name .
+kurtosis_cmd="kurtosis run --enclave-id ${enclave_name} . '{\"config_file\" : \"github.com/logos-co/wakurtosis/${config_file}\"}'"
+eval $kurtosis_cmd
 
 # Fetch the WSL service id and display the log of the simulation
 wsl_service_id=$(kurtosis enclave inspect wakurtosis | grep wsl- | awk '{print $1}')
