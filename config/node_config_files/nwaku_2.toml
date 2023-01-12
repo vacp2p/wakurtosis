@@ -1,0 +1,4 @@
+topics="test"
+rpc-admin=true
+keep-alive=true
+metrics-server=true
