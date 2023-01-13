@@ -16,30 +16,19 @@ More info about Kurtosis: https://docs.kurtosis.com/
 
 #### How to run
 
-If you want to run it with default arguments, if you are in the root of this repository, you can simply run:
+From the root of the repo run:
 
-`kurtosis run .`
+`sh ./run.sh` 
 
-Will load the default confiration .json file **./config/config.json**. You can also specify a different .json config file and its location:
+This will load the default confiration .json file **./config/config.json**. You can also specify a different .json config file and its location with:
 
-`kurtosis run . '{"config_file": "github.com/logos-co/wakurtosis/config/config.json"}'`
-
-The enclaves that will be created have randon names, that can be checked with:
-
-`kurtosis enclave ls`
-
-You can set up a pre-defined enclave name, for example:
-
-`kurtosis run --enclave-id wakurtosis .`
-
-Note that, if you try to run the same kurtosis module again, you will have clashes. You can clean previous enclaves with:
-
-`kurtosis clean -a`
+`sh ./run.sh ./config/config.json`
 
 #### JSON main configuration file options
 
 These are arguments that can be modified:
 
+- _enclave_name_: string. Default: **wakurtosis**. Defines the name of the Kurtosis enclave being created.
 - _same_toml_configuration_: boolean. Default: **true**. If **true**, the some `.toml` file will be applied to every Waku node. If **false*, every node will use its own `.toml` file.
 - _topology_file_: string. Default: **waku_test_topology_small.json**. If defines the network topology that will be created.
 - _simulation_time_: int. Default: **300**. Specifies the simulation time in seconds.
@@ -60,6 +49,13 @@ dist_type : "gaussian"
     # Values: uniform and gaussian
     inter_msg_type : "uniform"
 
+- _num_nodes_: int. Number of nodes in the enclave.
+- _num_topics_: int. Number of topics.
+- _node_type_: string. Type of node. Options are **desktop and **mobile**
+- _network_type_: string. Network topology. Options are **configmodel**, **scalefree**, **newmanwattsstrogatz**, **barbell**, **balancedtree**, and **star**
+- _num_partitions_: int. Number of partitions within the network.
+- _num_subnets_: int. Number of subnetworks.
+
 #### What will happen
 
 Kurtosis will automatically add one Waku node as container inside the enclave. The way that nodes are interconnected is given by the topology.
@@ -68,19 +64,20 @@ there are 5 seconds (defined in `system_variables`) of waiting time for that nod
 
 Once all nodes are ready, prometheus and grafana will be set up and connected to all waku nodes.
 
-All nodes are then interconnected.
+Once all nodes have been interconnected the simulation starts and will inject traffic into the network following the parameters specified in the configuration file.
 
-A predefined number of test messages with specific delay (defined in `system_variables`) are sent by every node to the same topic.
+#### Check Prometheus+Grafana+Logs
 
-Peers from one node are requested, just for testing.
+- Simulation log:
 
+'kurtosis service logs wakurtosis $(kurtosis enclave inspect <enclave-name> | grep wsl- | awk '{print $1}')'
 
-#### Check Prometheus+Grafana
+- Grafana server:
 
-In order to know how to access to Prometheus or Grafana, run:
+To display the IP address and Port of the Grafana server on your local machine run:
 
-`kurtosis enclave inspect <enclave-name>`
+'kurtosis enclave inspect <enclave-name> | grep grafana- | awk '{print $6}'
 
-With this, you will be able to see the ports exposed to your local machine.
+Remember that by default <enclave-name> is 'wakurtosis'.
 
 Please, any improvements/bugs that you see, create an issue, and we will work on it.
