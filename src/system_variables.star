@@ -52,8 +52,8 @@ CONTAINER_TARGETS_FILE_NAME_WSL = "targets.json"
 # Gennet Configuration
 GENNET_IMAGE = "gennet:0.0.1"
 GENNET_SERVICE_ID = "gennet"
-# GENNET_CONFIG_PATH = "/wsl/config"
-# GENNET_TARGETS_PATH = "/wsl/targets"
+GENNET_CONFIG_PATH = "/gennet/config"
+CONTAINER_GENNET_CONFIGURATION_FILE_NAME = "gennet.yml"
 
 # Waku RPC methods
 POST_RELAY_MESSAGE = "post_waku_v2_relay_v1_message"
