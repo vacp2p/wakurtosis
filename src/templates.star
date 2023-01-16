@@ -54,6 +54,43 @@ def get_wsl_template():
                 # Packet size in bytes
                 min_packet_size : 2
                 max_packet_size : 1024
+
+                # Packe size distribution
+                # Values: uniform and gaussian
+                dist_type : "gaussian"
+
+                # Fraction (of the total number of nodes) that inject traffic
+                # Values: [0., 1.]
+                emitters_fraction : 0.5
+
+                # Inter-message times
+                # Values: uniform and poisson
+                inter_msg_type : "uniform"
         """
 
     return wsl_yml_template
+
+# Gennet
+def get_gennet_template():
+    # Network generation parameters
+    gennet_yml_template = """
+            general:
+
+                # The total number of nodes in the network
+                num_nodes : 3
+                
+                # The number of simulatenous topics beeing propagated throught the network
+                num_topics : 1
+                
+                # The type of the node
+                node_type : "desktop"
+                
+                # Network topology
+                network_type : "scalefree"
+                
+                num_partitions : 1
+                
+                num_subnets" : 1
+    """
+
+    return gennet_yml_template
