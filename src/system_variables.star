@@ -53,6 +53,7 @@ CONTAINER_TARGETS_FILE_NAME_WSL = "targets.json"
 GENNET_IMAGE = "gennet:0.0.1"
 GENNET_SERVICE_ID = "gennet"
 GENNET_CONFIG_PATH = "/gennet/config"
+GENNET_TOPOLOGY_PATH = "/gennet/topology"
 CONTAINER_GENNET_CONFIGURATION_FILE_NAME = "gennet.yml"
 
 # Waku RPC methods
