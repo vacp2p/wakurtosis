@@ -18,3 +18,4 @@ enclave.dump/
 wsl-module/requirements.txt
 wsl-module/__pycache__
 config/network_topology_auto/
+gennet-module/topology/

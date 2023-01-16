@@ -218,25 +218,27 @@ def main(config_file: str = './config/gennet.yml'):
     except Exception as e:
         print(e)
         sys.exit(1)
+
+    print(config_obj)
     
     # sanity checks
-    if config_obj['num_partitions'] > 1:
-        raise ValueError(f"--num-partitions {config_obj['num_partitions']}, Sorry, we do not yet support partitions")
-    if config_obj['num_subnets'] > config_obj['num_nodes']:
-        raise ValueError(f"num_subnets must be <= num_nodes: num_subnets={config_obj['num_subnets']}, num_nodes={config_obj['num_nodes']}")
-    if  config_obj['num_subnets'] == -1:
-        config_obj['num_subnets'] = config_obj['num_nodes']
+    if config_obj['general']['num_partitions'] > 1:
+        raise ValueError(f"--num-partitions {config_obj['general']['num_partitions']}, Sorry, we do not yet support partitions")
+    if config_obj['general']['num_subnets'] > config_obj['general']['num_nodes']:
+        raise ValueError(f"num_subnets must be <= num_nodes: num_subnets={config_obj['general']['num_subnets']}, num_nodes={config_obj['general']['num_nodes']}")
+    if  config_obj['general']['num_subnets'] == -1:
+        config_obj['general']['num_subnets'] = config_obj['general']['num_nodes']
 
     # Generate the network
-    G = generate_network(config_obj['num_nodes'], networkType(config_obj['network_type']))
+    G = generate_network(config_obj['general']['num_nodes'], networkType(config_obj['general']['network_type']))
 
     # Refuse to overwrite non-empty dirs
-    if exists_or_nonempty(config_obj['topology_path']):
+    if exists_or_nonempty(config_obj['general']['topology_path']):
         sys.exit(1)
-    os.makedirs(config_obj['topology_path'], exist_ok=True)
+    os.makedirs(config_obj['general']['topology_path'], exist_ok=True)
 
     # Generate file format specific data structs and write the files; optionally, draw the network
-    generate_and_write_files(config_obj['topology_path'], config_obj['num_topics'], config_obj['num_subnets'], G)
+    generate_and_write_files(config_obj['general']['topology_path'], config_obj['general']['num_topics'], config_obj['general']['num_subnets'], G)
     #draw(dirname, G)
 
 
