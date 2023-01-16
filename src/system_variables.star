@@ -46,9 +46,14 @@ WSL_IMAGE = "wsl:0.0.1"
 WSL_SERVICE_ID = "wsl"
 WSL_CONFIG_PATH = "/wsl/config"
 WSL_TARGETS_PATH = "/wsl/targets"
-
 CONTAINER_WSL_CONFIGURATION_FILE_NAME = "wsl.yml"
 CONTAINER_TARGETS_FILE_NAME_WSL = "targets.json"
+
+# Gennet Configuration
+GENNET_IMAGE = "gennet:0.0.1"
+GENNET_SERVICE_ID = "gennet"
+# GENNET_CONFIG_PATH = "/wsl/config"
+# GENNET_TARGETS_PATH = "/wsl/targets"
 
 # Waku RPC methods
 POST_RELAY_MESSAGE = "post_waku_v2_relay_v1_message"
@@ -67,6 +72,7 @@ ARGUMENT_PARSER_MODULE = "github.com/logos-co/wakurtosis/src/arguments_parser.st
 FILE_HELPERS_MODULE = "github.com/logos-co/wakurtosis/src/file_helpers.star"
 TEMPLATES_MODULE = "github.com/logos-co/wakurtosis/src/templates.star"
 WSL_MODULE = "github.com/logos-co/wakurtosis/src/wsl.star"
+GENNET_MODULE = "github.com/logos-co/wakurtosis/src/gennet.star"
 
 TEST_ARGUMENTS_MODULE = "github.com/logos-co/wakurtosis/src/tests/test_arguments_parser.star"
 TEST_FILES_MODULE = "github.com/logos-co/wakurtosis/src/tests/test_file_helpers.star"
@@ -84,12 +90,19 @@ DEFAULT_TOPOLOGY_FILE = "network_data.json"
 NUMBER_TEST_MESSAGES = 50
 DELAY_BETWEEN_TEST_MESSAGE = "0.5"
 
-
 # Default Simulation Parameters
 SIMULATION_TIME = 300
 MESSAGE_RATE = 25
 MIN_PACKET_SIZE = 1
 MAX_PACKET_SIZE = 1024
+
+# Default Network / Topology parameters
+NUM_NODES = 3
+NUM_TOPICS = 1
+NODE_TYPE = "desktop"
+NETWORK_TYPE = "scalefree"
+NUM_PARTITIONS = 1
+NUM_SUBNETS = 1
 
 # Global config
 DEFAULT_CONFIG_FILE = "github.com/logos-co/wakurtosis/config/config.json"
