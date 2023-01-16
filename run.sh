@@ -7,25 +7,6 @@ echo $ARGS1
 # Main .json configuration file
 config_file=$ARGS1
 
-# Needs JQ to parse the main .json config file: 
-# sudo apt-get install jq
-# brew install jq
-
-enclave_name=$(cat $config_file | jq -r ".enclave_name")
-topology_path=$(cat $config_file | jq -r ".topology_path")
-num_nodes=$(cat $config_file | jq -r ".num_nodes")
-num_topics=$(cat $config_file | jq -r ".num_topics")
-node_type=$(cat $config_file | jq -r ".node_type")
-network_type=$(cat $config_file | jq -r ".network_type")
-num_partitions=$(cat $config_file | jq -r ".num_partitions")
-num_subnets=$(cat $config_file | jq -r ".num_subnets")
-
-# Generate the topology
-echo "Deleting previously generted topology in $topology_path ..."
-rm -rf $topology_path
-echo "Generating ./generate_network.py --dirname $topology_path --num-nodes $num_nodes --num-topics $num_topics --nw-type $network_type --node-type $node_type --num-partitions $num_partitions --num-subnets $num_subnets ...."
-./gennet/generate_network.py --dirname $topology_path --num-nodes $num_nodes --num-topics $num_topics --network-type $network_type --node-type $node_type --num-partitions $num_partitions --num-subnets $num_subnets
-
 # Delete the enclave 
 kurtosis enclave rm -f $enclave_name
 
