@@ -1,0 +1,6 @@
+FROM python:3.11.0
+LABEL Maintainer="Daimakaimura"
+WORKDIR /gennet
+COPY gennet.py .
+COPY requirements.txt ./
+RUN pip install -r requirements.txt
