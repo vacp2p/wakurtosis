@@ -232,13 +232,13 @@ def main(config_file: str = './config/gennet.yml'):
     # Generate the network
     G = generate_network(config_obj['general']['num_nodes'], networkType(config_obj['general']['network_type']))
 
-    # Refuse to overwrite non-empty dirs
-    if exists_or_nonempty(config_obj['general']['topology_path']):
-        sys.exit(1)
-    os.makedirs(config_obj['general']['topology_path'], exist_ok=True)
+    # # Refuse to overwrite non-empty dirs
+    # if exists_or_nonempty(config_obj['general']['topology_path']):
+    #     sys.exit(1)
+    os.makedirs('./topology/', exist_ok=True)
 
     # Generate file format specific data structs and write the files; optionally, draw the network
-    generate_and_write_files(config_obj['general']['topology_path'], config_obj['general']['num_topics'], config_obj['general']['num_subnets'], G)
+    generate_and_write_files('./topology/', config_obj['general']['num_topics'], config_obj['general']['num_subnets'], G)
     #draw(dirname, G)
 
 
