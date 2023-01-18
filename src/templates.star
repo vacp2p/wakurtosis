@@ -69,28 +69,3 @@ def get_wsl_template():
         """
 
     return wsl_yml_template
-
-# Gennet
-def get_gennet_template():
-    # Network generation parameters
-    gennet_yml_template = """
-            general:
-
-                # The total number of nodes in the network
-                num_nodes : 3
-                
-                # The number of simulatenous topics beeing propagated throught the network
-                num_topics : 1
-                
-                # The type of the node
-                node_type : "desktop"
-                
-                # Network topology
-                network_type : "scalefree"
-                
-                num_partitions : 1
-                
-                num_subnets" : 1
-    """
-
-    return gennet_yml_template

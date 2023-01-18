@@ -7,7 +7,6 @@ prometheus = import_module(system_variables.PROMETHEUS_MODULE)
 grafana = import_module(system_variables.GRAFANA_MODULE)
 args_parser = import_module(system_variables.ARGUMENT_PARSER_MODULE)
 wsl = import_module(system_variables.WSL_MODULE)
-gennet = import_module(system_variables.GENNET_MODULE)
 
 def run(args):
     
