@@ -15,32 +15,21 @@ def run(args):
     config_file = args_parser.get_configuration_file_name(args)
     config_json = read_file(src=config_file)
     config = json.decode(config_json)
-
-     # # Setup Gennet & generate topology
-    gennet_service = gennet.init(config['num_nodes'], config['num_topics'], config['node_type'], config['max_packet_size'], config['inter_msg_type'], config['dist_type'], config['emitters_fraction'])
-    
-    # Copy the topology from the service
-    topology_artifact = plan.store_service_files(
-        # Gennet Service Id
-        service_id = "example-service-id",
-        src = "/gennet/topology",
-        name = "topology-artifact-id",
-    )
     
     # Load network topology
-    # waku_topology_json = read_file(src=system_variables.TOPOLOGIES_LOCATION + 'network_data.json')
-    # waku_topology_json = read_file(src="github.com/logos-co/wakurtosis/" + config['topology_path'] + 'network_data.json')
-    # waku_topology = json.decode(waku_topology_json)
+    waku_topology_json = read_file(src=system_variables.TOPOLOGIES_LOCATION + 'network_data.json')
+    waku_topology_json = read_file(src="github.com/logos-co/wakurtosis/" + config['topology_path'] + 'network_data.json')
+    waku_topology = json.decode(waku_topology_json)
 
     # # Set up nodes
-    # same_toml_configuration = config['same_toml_configuration']
-    # waku_services = waku.instantiate_waku_nodes(waku_topology, same_toml_configuration)
+    same_toml_configuration = config['same_toml_configuration']
+    waku_services = waku.instantiate_waku_nodes(waku_topology, same_toml_configuration)
 
     # # Set up prometheus + grafana
-    # prometheus_service = prometheus.set_up_prometheus(waku_services)
-    # grafana_service = grafana.set_up_grafana(prometheus_service)
+    prometheus_service = prometheus.set_up_prometheus(waku_services)
+    grafana_service = grafana.set_up_grafana(prometheus_service)
 
-    # waku.interconnect_waku_nodes(waku_topology, waku_services)
+    waku.interconnect_waku_nodes(waku_topology, waku_services)
 
     # # Setup WSL & Start the Simulation
-    # wsl_service = wsl.init(waku_services,  config['simulation_time'], config['message_rate'], config['min_packet_size'], config['max_packet_size'], config['inter_msg_type'], config['dist_type'], config['emitters_fraction'])
+    wsl_service = wsl.init(waku_services,  config['simulation_time'], config['message_rate'], config['min_packet_size'], config['max_packet_size'], config['inter_msg_type'], config['dist_type'], config['emitters_fraction'])

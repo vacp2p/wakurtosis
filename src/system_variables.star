@@ -88,9 +88,6 @@ DEFAULT_TOPOLOGY_FILE_DEFAULT_ARGUMENT_VALUE = "waku_test_topology_small.json"
 TOPOLOGIES_LOCATION = "github.com/logos-co/wakurtosis/config/network_topology/"
 DEFAULT_TOPOLOGY_FILE = "network_data.json"
 
-NUMBER_TEST_MESSAGES = 50
-DELAY_BETWEEN_TEST_MESSAGE = "0.5"
-
 # Default Simulation Parameters
 SIMULATION_TIME = 300
 MESSAGE_RATE = 25
