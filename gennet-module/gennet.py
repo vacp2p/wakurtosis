@@ -235,10 +235,10 @@ def main(config_file: str = './config/gennet.yml'):
     # # Refuse to overwrite non-empty dirs
     # if exists_or_nonempty(config_obj['general']['topology_path']):
     #     sys.exit(1)
-    os.makedirs('./topology/', exist_ok=True)
+    os.makedirs('./config/topology_generated/', exist_ok=True)
 
     # Generate file format specific data structs and write the files; optionally, draw the network
-    generate_and_write_files('./topology/', config_obj['general']['num_topics'], config_obj['general']['num_subnets'], G)
+    generate_and_write_files('./config/topology_generated/', config_obj['general']['num_topics'], config_obj['general']['num_subnets'], G)
     #draw(dirname, G)
 
 

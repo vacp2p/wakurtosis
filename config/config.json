@@ -1,6 +1,6 @@
 {
     "enclave_name" : "wakurtosis",
-    "topology_path" : "./config/network_topology_auto/",
+    "topology_path" : "./config/network_topology/",
     "same_toml_configuration": true,
     
     "simulation_time": 60,
