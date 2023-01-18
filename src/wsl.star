@@ -5,7 +5,7 @@ system_variables = import_module("github.com/logos-co/wakurtosis/src/system_vari
 files = import_module(system_variables.FILE_HELPERS_MODULE)
 templates = import_module(system_variables.TEMPLATES_MODULE)
 
-def create_wsl_config(simulation_time=300, message_rate=50, min_packet_size=1, max_packet_size=1024, inter_msg_type='uniform', dist_type='uniform', emitters_fraction=0.5):
+def create_wsl_config(simulation_time, message_rate, min_packet_size, max_packet_size, inter_msg_type, dist_type, emitters_fraction):
     
     template_data = {"simulation_time": simulation_time, "message_rate" : message_rate, "min_packet_size" : min_packet_size, 
                     "max_packet_size" : max_packet_size, "dist_type" : dist_type, "emitters_fraction" : emitters_fraction, "inter_msg_type" : inter_msg_type}

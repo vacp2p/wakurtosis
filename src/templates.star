@@ -46,14 +46,26 @@ def get_wsl_template():
                 prng_seed : 0
 
                 # Simulation time in seconds
-                simulation_time : 1000
+                simulation_time : {{.simulation_time}} 
 
                 # Message rate in messages per second
-                msg_rate : 10
+                msg_rate : {{.message_rate}} 
 
                 # Packet size in bytes
-                min_packet_size : 2
-                max_packet_size : 1024
-        """
+                min_packet_size : {{.min_packet_size}} 
+                max_packet_size : {{.max_packet_size}} 
+
+                # Packe size distribution
+                # Values: uniform and gaussian
+                dist_type : {{.dist_type}} 
+
+                # Fraction (of the total number of nodes) that inject traffic
+                # Values: [0., 1.]
+                emitters_fraction : {{.emitters_fraction}} 
+
+                # Inter-message times
+                # Values: uniform and poisson
+                inter_msg_type : {{.inter_msg_type}} 
+            """
 
     return wsl_yml_template
