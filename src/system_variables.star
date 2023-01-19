@@ -8,7 +8,11 @@ WAKU_LIBP2P_PORT_ID = "libp2p"
 WAKU_LIBP2P_PORT = 60000
 WAKU_SETUP_WAIT_TIME = "5"
 
-NODE_CONFIG_FILE_LOCATION = "/node/configuration_file"
+
+NODE_CONFIG_FILE_LOCATION = "github.com/logos-co/wakurtosis/config/node_config_files/"
+
+CONTAINER_NODE_CONFIG_FILE_LOCATION = "/node/configuration_file/"
+NODE_CONFIGURATION_FILE_EXTENSION = ".toml"
 NWAKU_ENTRYPOINT = ["/usr/bin/wakunode", "--rpc-address=0.0.0.0", "--metrics-server-address=0.0.0.0"]
 GOWAKU_ENTRYPOINT = ["/usr/bin/waku", "--rpc-address=0.0.0.0", "--metrics-server-address=0.0.0.0"]
 

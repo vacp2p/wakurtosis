@@ -6,13 +6,14 @@ waku = import_module(system_variables.WAKU_MODULE)
 files = import_module(system_variables.FILE_HELPERS_MODULE)
 
 
-def add_nwaku_service(nwakunode_name, use_general_configuration):
-    artifact_id, configuration_file = files.get_toml_configuration_artifact(nwakunode_name,
-                                                                            use_general_configuration)
+def add_nwaku_service(plan, nwakunode_name, use_general_configuration):
+    artifact_id, configuration_file = files.get_toml_configuration_artifact(plan, nwakunode_name,
+                                                                            use_general_configuration,
+                                                                            nwakunode_name)
 
-    print("Configuration being used file is " + configuration_file)
+    plan.print("Configuration being used file is " + configuration_file)
 
-    nwaku_service = add_service(
+    nwaku_service = plan.add_service(
         service_id=nwakunode_name,
         config=struct(
             image=system_variables.NWAKU_IMAGE,
@@ -27,11 +28,11 @@ def add_nwaku_service(nwakunode_name, use_general_configuration):
                     transport_protocol="TCP"),
             },
             files={
-                system_variables.NODE_CONFIG_FILE_LOCATION: artifact_id
+                system_variables.CONTAINER_NODE_CONFIG_FILE_LOCATION: artifact_id
             },
             entrypoint=system_variables.NWAKU_ENTRYPOINT,
             cmd=[
-                "--config-file=" + system_variables.NODE_CONFIG_FILE_LOCATION + "/" + configuration_file
+                "--config-file=" + system_variables.CONTAINER_NODE_CONFIG_FILE_LOCATION + "/" + configuration_file
             ]
         )
     )
@@ -39,14 +40,15 @@ def add_nwaku_service(nwakunode_name, use_general_configuration):
     return nwaku_service
 
 
-def add_gowaku_service(gowakunode_name, use_general_configuration):
-    artifact_id, configuration_file = files.get_toml_configuration_artifact(gowakunode_name,
-                                                                            use_general_configuration)
+def add_gowaku_service(plan, gowakunode_name, use_general_configuration):
+    artifact_id, configuration_file = files.get_toml_configuration_artifact(plan, gowakunode_name,
+                                                                            use_general_configuration,
+                                                                            gowakunode_name)
 
-    print("Configuration being used file is " + configuration_file)
-    print("Entrypoint is "+ str(system_variables.GOWAKU_ENTRYPOINT))
+    plan.print("Configuration being used file is " + configuration_file)
+    plan.print("Entrypoint is "+ str(system_variables.GOWAKU_ENTRYPOINT))
 
-    gowaku_service = add_service(
+    gowaku_service = plan.add_service(
         service_id=gowakunode_name,
         config=struct(
             image=system_variables.GOWAKU_IMAGE,
@@ -61,25 +63,23 @@ def add_gowaku_service(gowakunode_name, use_general_configuration):
                     transport_protocol="TCP"),
             },
             files={
-                system_variables.NODE_CONFIG_FILE_LOCATION: artifact_id
+                system_variables.CONTAINER_NODE_CONFIG_FILE_LOCATION: artifact_id
             },
             entrypoint=system_variables.GOWAKU_ENTRYPOINT,
             cmd=[
-                "--config-file=" + system_variables.NODE_CONFIG_FILE_LOCATION + "/" + configuration_file
+                "--config-file=" + system_variables.CONTAINER_NODE_CONFIG_FILE_LOCATION + "/" + configuration_file
             ]
         )
     )
 
     return gowaku_service
 
-def add_jswaku_service(test, test2):
-    print("jswaku")
 
-def add_nomos_service(test, test2):
-    print("nomos")
+def add_nomos_service(plan, test, test2):
+    plan.print("nomos")
 
 
-def instantiate_services(network_topology, use_general_configuration):
+def instantiate_services(plan, network_topology, use_general_configuration):
     """
     As we will need to access for the service information later, the structure is the following:
 
@@ -111,18 +111,18 @@ def instantiate_services(network_topology, use_general_configuration):
 
         service_builder, information_builder = service_dispatcher[image]
 
-        service_information = service_builder(service_id, use_general_configuration)
+        service_information = service_builder(plan, service_id, use_general_configuration)
 
-        information_builder(services_information, service_id, service_information)
+        information_builder(plan, services_information, service_id, service_information)
 
     return services_information
 
 
-def _add_waku_service_information(services_information, new_service_id, service_information):
+def _add_waku_service_information(plan, services_information, new_service_id, service_information):
 
     new_service_information = {}
 
-    wakunode_peer_id = waku.get_wakunode_peer_id(new_service_id, system_variables.WAKU_RPC_PORT_ID)
+    wakunode_peer_id = waku.get_wakunode_peer_id(plan, new_service_id, system_variables.WAKU_RPC_PORT_ID)
 
     new_service_information["peer_id"] = wakunode_peer_id
     new_service_information["service_info"] = service_information
@@ -133,6 +133,5 @@ def _add_waku_service_information(services_information, new_service_id, service_
 service_dispatcher = {
     "go-waku": (add_gowaku_service, _add_waku_service_information),
     "nim-waku": (add_nwaku_service, _add_waku_service_information),
-    "js-waku": (add_jswaku_service, _add_waku_service_information),
     "nomos": (add_nomos_service, "test")
 }
