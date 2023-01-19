@@ -11,7 +11,7 @@ More info about Kurtosis: https://docs.kurtosis.com/
 
 - **You are using Kurtosis version 0.62.0**. This is important, as they are working on it and changes can be huge depending on different versions. You can find all Kurtosis versions [here](https://github.com/kurtosis-tech/kurtosis-cli-release-artifacts/releases).
 - The topology files that will be used by default are defined in `config/network_topology/`. This topology is created with https://github.com/logos-co/Waku-topology-test
-- Each node will need its own configuration file in `config/waku_config_files/waku_X.toml` being `waku_X` the same name that is defined in the topology.
+- Each node will need its own configuration file in `config/node_config_files/waku_X.toml` being `waku_X` the same name that is defined in the topology.
 - Only `kurtosis` and `docker` are needed to run this.
 
 #### How to run
