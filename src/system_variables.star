@@ -1,16 +1,16 @@
 # Waku Configuration
-WAKU_IMAGE = "statusteam/nim-waku:019f357d"
+NWAKU_IMAGE = "statusteam/nim-waku:019f357d"
+GOWAKU_IMAGE = "gowaku"
+
 WAKU_RPC_PORT_ID = "rpc"
 WAKU_TCP_PORT = 8545
 WAKU_LIBP2P_PORT_ID = "libp2p"
 WAKU_LIBP2P_PORT = 60000
 WAKU_SETUP_WAIT_TIME = "5"
 
-WAKU_CONFIGURATION_FILES_LOCATION = "github.com/logos-co/wakurtosis/config/waku_config_files/"
-WAKU_CONFIGURATION_FILE_EXTENSION = ".toml"
-
-WAKU_CONFIG_FILE_CONTAINER_LOCATION = "/waku/configuration_file"
-WAKU_ENTRYPOINT = ["/usr/bin/wakunode", "--rpc-address=0.0.0.0", "--metrics-server-address=0.0.0.0"]
+NODE_CONFIG_FILE_LOCATION = "/node/configuration_file"
+NWAKU_ENTRYPOINT = ["/usr/bin/wakunode", "--rpc-address=0.0.0.0", "--metrics-server-address=0.0.0.0"]
+GOWAKU_ENTRYPOINT = ["/usr/bin/waku", "--rpc-address=0.0.0.0", "--metrics-server-address=0.0.0.0"]
 
 # Prometheus Configuration
 PROMETHEUS_IMAGE = "prom/prometheus:latest"
@@ -56,13 +56,14 @@ GET_WAKU_INFO_METHOD = "get_waku_v2_debug_v1_info"
 CONNECT_TO_PEER_METHOD = "post_waku_v2_admin_v1_peers"
 GET_PEERS_METHOD = "get_waku_v2_admin_v1_peers"
 
-GENERAL_TOML_CONFIGURATION_PATH = "github.com/logos-co/wakurtosis/config/waku_config_files/waku_general.toml"
+GENERAL_TOML_CONFIGURATION_PATH = "github.com/logos-co/wakurtosis/config/node_config_files/waku_general.toml"
 GENERAL_TOML_CONFIGURATION_NAME = "waku_general.toml"
 
 # Import locations
-WAKU_MODULE = "github.com/logos-co/wakurtosis/src/waku_methods.star"
-PROMETHEUS_MODULE = "github.com/logos-co/wakurtosis/src/prometheus.star"
-GRAFANA_MODULE = "github.com/logos-co/wakurtosis/src/grafana.star"
+WAKU_MODULE = "github.com/logos-co/wakurtosis/src/waku.star"
+NODE_BUILDERS_MODULE = "github.com/logos-co/wakurtosis/src/node_builders.star"
+PROMETHEUS_MODULE = "github.com/logos-co/wakurtosis/src/monitoring/prometheus.star"
+GRAFANA_MODULE = "github.com/logos-co/wakurtosis/src/monitoring/grafana.star"
 ARGUMENT_PARSER_MODULE = "github.com/logos-co/wakurtosis/src/arguments_parser.star"
 FILE_HELPERS_MODULE = "github.com/logos-co/wakurtosis/src/file_helpers.star"
 TEMPLATES_MODULE = "github.com/logos-co/wakurtosis/src/templates.star"

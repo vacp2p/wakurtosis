@@ -1,18 +1,21 @@
 {
-  "waku_0": {
+  "nwaku_0": {
     "static_nodes": [
-      "waku_1"
-    ]
+      "nwaku_1"
+    ],
+    "image": "nim-waku"
   },
-  "waku_1": {
+  "nwaku_1": {
     "static_nodes": [
-      "waku_0"
-    ]
+      "nwaku_0"
+    ],
+    "image": "nim-waku"
   },
-  "waku_2": {
+  "nwaku_2": {
     "static_nodes": [
-      "waku_0",
-      "waku_1"
-    ]
+      "nwaku_0",
+      "nwaku_1"
+    ],
+    "image": "nim-waku"
   }
 }
