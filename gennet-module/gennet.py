@@ -15,24 +15,25 @@ from enum import Enum
 
 # To add a new node type, add appropriate entries to the nodeType and nodeTypeSwitch
 class nodeType(Enum):
-    DESKTOP = "desktop" # waku desktop config
-    MOBILE  = "mobile"  # waku mobile config
+    DESKTOP = "desktop"  # waku desktop config
+    MOBILE = "mobile"  # waku mobile config
+
 
 nodeTypeSwitch = {
-        nodeType.DESKTOP : "rpc-admin = true\nkeep-alive = true\n",
-        nodeType.MOBILE  : "rpc-admin = true\nkeep-alive = true\n"
-    }
+    nodeType.DESKTOP: "rpc-admin = true\nkeep-alive = true\n",
+    nodeType.MOBILE: "rpc-admin = true\nkeep-alive = true\n"
+}
 
 
 # To add a new network type, add appropriate entries to the networkType and networkTypeSwitch
 # the networkTypeSwitch is placed before generate_network(): fwd declaration mismatch with typer/python :/
 class networkType(Enum):
-    CONFIGMODEL         = "configmodel"
-    SCALEFREE           = "scalefree"           # power law
-    NEWMANWATTSSTROGATZ = "newmanwattsstrogatz" # mesh, smallworld
-    BARBELL             = "barbell"             # partition
-    BALANCEDTREE        = "balancedtree"        # committees?
-    STAR                = "star"                # spof
+    CONFIGMODEL = "configmodel"
+    SCALEFREE = "scalefree"  # power law
+    NEWMANWATTSSTROGATZ = "newmanwattsstrogatz"  # mesh, smallworld
+    BARBELL = "barbell"  # partition
+    BALANCEDTREE = "balancedtree"  # committees?
+    STAR = "star"  # spof
 
 
 NW_DATA_FNAME = "network_data.json"
@@ -93,7 +94,7 @@ def generate_random_string(n):
 
 # Generate the topics - topic followed by random UC chars - Eg, topic_XY"
 def generate_topics(num_topics):
-    topic_len = int(math.log(num_topics)/math.log(26)) + 1  # base is 26 - upper case letters
+    topic_len = int(math.log(num_topics) / math.log(26)) + 1  # base is 26 - upper case letters
     topics = {i: f"topic_{generate_random_string(topic_len)}" for i in range(num_topics)}
     return topics
 
@@ -113,15 +114,15 @@ def get_random_sublist(topics):
 
 # Network Types
 def generate_config_model(n):
-    #degrees = nx.random_powerlaw_tree_sequence(n, tries=10000)
+    # degrees = nx.random_powerlaw_tree_sequence(n, tries=10000)
     degrees = [random.randint(1, n) for i in range(n)]
-    if (sum(degrees)) % 2 != 0:         # adjust the degree to be even
+    if (sum(degrees)) % 2 != 0:  # adjust the degree to be even
         degrees[-1] += 1
-    return nx.configuration_model(degrees) # generate the graph
+    return nx.configuration_model(degrees)  # generate the graph
 
 
 def generate_scalefree_graph(n):
-    return  nx.scale_free_graph(n)
+    return nx.scale_free_graph(n)
 
 
 # n must be larger than k=D=3
@@ -130,11 +131,11 @@ def generate_newmanwattsstrogatz_graph(n):
 
 
 def generate_barbell_graph(n):
-    return nx.barbell_graph(int(n/2), 1)
+    return nx.barbell_graph(int(n / 2), 1)
 
 
 def generate_balanced_tree(n, fanout=3):
-    height = int(math.log(n)/math.log(fanout))
+    height = int(math.log(n) / math.log(fanout))
     return nx.balanced_tree(fanout, height)
 
 
@@ -143,13 +144,13 @@ def generate_star_graph(n):
 
 
 networkTypeSwitch = {
-        networkType.CONFIGMODEL : generate_config_model,
-        networkType.SCALEFREE   : generate_scalefree_graph,
-        networkType.NEWMANWATTSSTROGATZ : generate_newmanwattsstrogatz_graph,
-        networkType.BARBELL     : generate_barbell_graph,
-        networkType.BALANCEDTREE: generate_balanced_tree,
-        networkType.STAR        : generate_star_graph
-    }
+    networkType.CONFIGMODEL: generate_config_model,
+    networkType.SCALEFREE: generate_scalefree_graph,
+    networkType.NEWMANWATTSSTROGATZ: generate_newmanwattsstrogatz_graph,
+    networkType.BARBELL: generate_barbell_graph,
+    networkType.BALANCEDTREE: generate_balanced_tree,
+    networkType.STAR: generate_star_graph
+}
 
 
 # Generate the network from nw type
@@ -159,37 +160,37 @@ def generate_network(n, network_type):
 
 # Label the generated network with prefix
 def postprocess_network(G):
-    G = nx.Graph(G)                             # prune out parallel/multi edges
-    G.remove_edges_from(nx.selfloop_edges(G))   # remove the self-loops
+    G = nx.Graph(G)  # prune out parallel/multi edges
+    G.remove_edges_from(nx.selfloop_edges(G))  # remove the self-loops
     mapping = {i: f"{NODE_PREFIX}_{i}" for i in range(len(G))}
-    return nx.relabel_nodes(G, mapping)         # label the nodes
+    return nx.relabel_nodes(G, mapping)  # label the nodes
 
 
 def generate_subnets(G, num_subnets):
     n = len(G.nodes)
-    if num_subnets == n:   # if num_subnets == size of the network
+    if num_subnets == n:  # if num_subnets == size of the network
         return {f"{NODE_PREFIX}_{i}": f"{SUBNET_PREFIX}_{i}" for i in range(n)}
 
     lst = list(range(n))
     random.shuffle(lst)
     offsets = sorted(random.sample(range(0, n), num_subnets - 1))
-    offsets.append(n-1)
+    offsets.append(n - 1)
 
     start = 0
     subnets = {}
-    subnet_id =  0
+    subnet_id = 0
     for end in offsets:
-        for i in range(start, end+1):
+        for i in range(start, end + 1):
             subnets[f"{NODE_PREFIX}_{lst[i]}"] = f"{SUBNET_PREFIX}_{subnet_id}"
         start = end
         subnet_id += 1
-    return subnets 
+    return subnets
 
 
 ### file format related fns ###########################################################
-#Generate per node toml configs
+# Generate per node toml configs
 def generate_toml(topics, node_type=nodeType.DESKTOP):
-    topic_str = " ".join(get_random_sublist(topics))   # space separated topics
+    topic_str = " ".join(get_random_sublist(topics))  # space separated topics
     return f"{nodeTypeSwitch.get(node_type)}topics = \"{topic_str}\"\n"
 
 
@@ -199,38 +200,63 @@ def generate_and_write_files(dirname, num_topics, num_subnets, G):
     subnets = generate_subnets(G, num_subnets)
     json_dump = {}
     for node in G.nodes:
-        write_toml(dirname, node, generate_toml(topics))        # per node toml
+        write_toml(dirname, node, generate_toml(topics))  # per node toml
         json_dump[node] = {}
         json_dump[node]["static_nodes"] = []
         for edge in G.edges(node):
             json_dump[node]["static_nodes"].append(edge[1])
         json_dump[node][SUBNET_PREFIX] = subnets[node]
-    write_json(dirname, json_dump)                              # network wide json
+    write_json(dirname, json_dump)  # network wide json
+
+
+def update_file_from_cli(dirname, num_nodes, num_topics,
+         network_type, node_type, num_subnets, num_partitions,
+                         config_obj):
+
+    config_obj["topology_path"] = dirname
+    config_obj["gennet"]["num_nodes"] = num_nodes
+    config_obj["gennet"]["num_topics"] = num_topics
+    config_obj["gennet"]["network_type"] = network_type
+    config_obj["gennet"]["node_type"] = node_type
+    config_obj["gennet"]["num_partitions"] = num_partitions
+    config_obj["gennet"]["num_subnets"] = num_subnets
+
 
 
 ### the main ##########################################################################
-def main(config_file: str = './config/gennet.yml'):
+def main(dirname: str = "WakuNetwork", num_nodes: int = 4, num_topics: int = 1,
+         network_type: networkType = networkType.NEWMANWATTSSTROGATZ.value,
+         node_type: nodeType = nodeType.DESKTOP.value,
+         num_subnets: int = -1,
+         num_partitions: int = 1,
+         config_file: str = './config/config.json'):
 
     """ Load config file """
     try:
-        with open(config_file, 'r') as f:
-            config_obj = yaml.safe_load(f)
+        with open(config_file, 'r') as file:
+            config_obj = json.load(file)
     except Exception as e:
         print(e)
         sys.exit(1)
 
     print(config_obj)
-    
-    # sanity checks
+
+    update_file_from_cli(dirname, num_nodes, num_topics, network_type, node_type, num_subnets,
+                         num_partitions, config_obj)
+
+    # Sanity checks
     if config_obj['general']['num_partitions'] > 1:
-        raise ValueError(f"--num-partitions {config_obj['general']['num_partitions']}, Sorry, we do not yet support partitions")
+        raise ValueError(
+            f"--num-partitions {config_obj['general']['num_partitions']}, Sorry, we do not yet support partitions")
     if config_obj['general']['num_subnets'] > config_obj['general']['num_nodes']:
-        raise ValueError(f"num_subnets must be <= num_nodes: num_subnets={config_obj['general']['num_subnets']}, num_nodes={config_obj['general']['num_nodes']}")
-    if  config_obj['general']['num_subnets'] == -1:
+        raise ValueError(
+            f"num_subnets must be <= num_nodes: num_subnets={config_obj['general']['num_subnets']}, num_nodes={config_obj['general']['num_nodes']}")
+    if config_obj['general']['num_subnets'] == -1:
         config_obj['general']['num_subnets'] = config_obj['general']['num_nodes']
 
     # Generate the network
-    G = generate_network(config_obj['general']['num_nodes'], networkType(config_obj['general']['network_type']))
+    G = generate_network(config_obj['general']['num_nodes'],
+                         networkType(config_obj['general']['network_type']))
 
     # # Refuse to overwrite non-empty dirs
     # if exists_or_nonempty(config_obj['general']['topology_path']):
@@ -238,8 +264,9 @@ def main(config_file: str = './config/gennet.yml'):
     os.makedirs('./config/topology_generated/', exist_ok=True)
 
     # Generate file format specific data structs and write the files; optionally, draw the network
-    generate_and_write_files('./config/topology_generated/', config_obj['general']['num_topics'], config_obj['general']['num_subnets'], G)
-    #draw(dirname, G)
+    generate_and_write_files('./config/topology_generated/', config_obj['general']['num_topics'],
+                             config_obj['general']['num_subnets'], G)
+    # draw(dirname, G)
 
 
 if __name__ == "__main__":
