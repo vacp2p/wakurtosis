@@ -20,10 +20,9 @@ def run(args):
     same_toml_configuration = config['same_toml_configuration']
 
     # Load network topology
-    # waku_topology_json = read_file(src=system_variables.TOPOLOGIES_LOCATION + 'network_data.json')
+    waku_topology_json = read_file(src=system_variables.TOPOLOGIES_LOCATION + 'network_data.json')
     waku_topology_json = read_file(src="github.com/logos-co/wakurtosis/" + config['topology_path'] + 'network_data.json')
     waku_topology = json.decode(waku_topology_json)
-
 
     # Set up nodes
     services = nodes.instantiate_services(waku_topology, same_toml_configuration)
@@ -34,5 +33,5 @@ def run(args):
 
     waku.interconnect_waku_nodes(waku_topology, services)
 
-    # Setup WSL & Start the Simulation
-    wsl_service = wsl.set_up_wsl(services,  config['simulation_time'], config['message_rate'], config['min_packet_size'], config['max_packet_size'], config['inter_msg_type'], config['dist_type'], config['emitters_fraction'])
+    # # Setup WSL & Start the Simulation
+    wsl_service = wsl.init(waku_services,  config['simulation_time'], config['message_rate'], config['min_packet_size'], config['max_packet_size'], config['inter_msg_type'], config['dist_type'], config['emitters_fraction'])

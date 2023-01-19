@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 import matplotlib.pyplot as plt
+import yaml
 import networkx as nx
 import random, math
 import json
@@ -208,31 +209,36 @@ def generate_and_write_files(dirname, num_topics, num_subnets, G):
 
 
 ### the main ##########################################################################
-def main(
-        dirname: str = "WakuNetwork", num_nodes: int = 4, num_topics: int = 1, 
-        network_type: networkType = networkType.NEWMANWATTSSTROGATZ.value, 
-        node_type: nodeType = nodeType.DESKTOP.value,
-        num_subnets: int = -1,
-        num_partitions: int = 1):
+def main(config_file: str = './config/gennet.yml'):
 
+    """ Load config file """
+    try:
+        with open(config_file, 'r') as f:
+            config_obj = yaml.safe_load(f)
+    except Exception as e:
+        print(e)
+        sys.exit(1)
+
+    print(config_obj)
+    
     # sanity checks
-    if num_partitions > 1:
-        raise ValueError(f"--num-partitions {num_partitions}, Sorry, we do not yet support partitions")
-    if num_subnets > num_nodes:
-        raise ValueError(f"num_subnets must be <= num_nodes: num_subnets={num_subnets}, num_nodes={num_nodes}")
-    if num_subnets == -1:
-        num_subnets = num_nodes
+    if config_obj['general']['num_partitions'] > 1:
+        raise ValueError(f"--num-partitions {config_obj['general']['num_partitions']}, Sorry, we do not yet support partitions")
+    if config_obj['general']['num_subnets'] > config_obj['general']['num_nodes']:
+        raise ValueError(f"num_subnets must be <= num_nodes: num_subnets={config_obj['general']['num_subnets']}, num_nodes={config_obj['general']['num_nodes']}")
+    if  config_obj['general']['num_subnets'] == -1:
+        config_obj['general']['num_subnets'] = config_obj['general']['num_nodes']
 
     # Generate the network
-    G = generate_network(num_nodes, network_type)
+    G = generate_network(config_obj['general']['num_nodes'], networkType(config_obj['general']['network_type']))
 
-    # Refuse to overwrite non-empty dirs
-    if exists_or_nonempty(dirname) :
-        sys.exit(1)
-    os.makedirs(dirname, exist_ok=True)
+    # # Refuse to overwrite non-empty dirs
+    # if exists_or_nonempty(config_obj['general']['topology_path']):
+    #     sys.exit(1)
+    os.makedirs('./config/topology_generated/', exist_ok=True)
 
     # Generate file format specific data structs and write the files; optionally, draw the network
-    generate_and_write_files(dirname, num_topics, num_subnets, G)
+    generate_and_write_files('./config/topology_generated/', config_obj['general']['num_topics'], config_obj['general']['num_subnets'], G)
     #draw(dirname, G)
 
 

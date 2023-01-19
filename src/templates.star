@@ -54,6 +54,18 @@ def get_wsl_template():
                 # Packet size in bytes
                 min_packet_size : 2
                 max_packet_size : 1024
+
+                # Packe size distribution
+                # Values: uniform and gaussian
+                dist_type : "gaussian"
+
+                # Fraction (of the total number of nodes) that inject traffic
+                # Values: [0., 1.]
+                emitters_fraction : 0.5
+
+                # Inter-message times
+                # Values: uniform and poisson
+                inter_msg_type : "uniform"
         """
 
     return wsl_yml_template

@@ -46,7 +46,6 @@ WSL_IMAGE = "wsl:0.0.1"
 WSL_SERVICE_ID = "wsl"
 WSL_CONFIG_PATH = "/wsl/config"
 WSL_TARGETS_PATH = "/wsl/targets"
-
 CONTAINER_WSL_CONFIGURATION_FILE_NAME = "wsl.yml"
 CONTAINER_TARGETS_FILE_NAME_WSL = "targets.json"
 
@@ -81,10 +80,6 @@ TOPOLOGY_FILE_NAME_ARGUMENT_NAME = "topology_file"
 DEFAULT_TOPOLOGY_FILE_DEFAULT_ARGUMENT_VALUE = "waku_test_topology_small.json"
 TOPOLOGIES_LOCATION = "github.com/logos-co/wakurtosis/config/network_topology/"
 DEFAULT_TOPOLOGY_FILE = "network_data.json"
-
-NUMBER_TEST_MESSAGES = 50
-DELAY_BETWEEN_TEST_MESSAGE = "0.5"
-
 
 # Default Simulation Parameters
 SIMULATION_TIME = 300

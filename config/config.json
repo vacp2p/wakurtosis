@@ -1,7 +1,8 @@
 {
     "enclave_name" : "wakurtosis",
-    "topology_path" : "./config/network_topology_auto/",
+    "topology_path" : "./config/network_topology/",
     "same_toml_configuration": true,
+    
     "simulation_time": 60,
     "message_rate": 10,
     "min_packet_size": 2,
@@ -9,6 +10,7 @@
     "inter_msg_type": "poisson",
     "dist_type": "gaussian",
     "emitters_fraction": 1.0,
+
     "num_nodes": 3,
     "num_topics": 1,
     "node_type": "desktop",
