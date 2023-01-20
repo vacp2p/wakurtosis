@@ -3,6 +3,7 @@
 *.iws
 *.iml
 *.ipr
+*.log
 
 # default network gen directory
 WakuNetwork
@@ -18,3 +19,4 @@ enclave.dump/
 wsl-module/requirements.txt
 wsl-module/__pycache__
 config/network_topology_auto/
+config/config.json
