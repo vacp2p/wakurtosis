@@ -3,62 +3,91 @@ system_variables = import_module("github.com/logos-co/wakurtosis/src/system_vari
 
 # Module Imports
 waku = import_module(system_variables.WAKU_MODULE)
+node_builders = import_module(system_variables.NODE_BUILDERS_MODULE)
 
 
-def test_network_creation():
+# We have to encapsulate all tests into one function, so we can use the same service for all tests,
+# instead having to create one for each test, and in order to create a node we need access to "plan"
+# parameter, so we cannot have it as a global variable as it was intented.
+def test_waku_methods(plan):
+    NWAKU_TEST_SERVICE_ID = "nwaku_global_test"
+    NWAKU_TEST_SERVICE_ID_2 = "nwaku_test_2"
+    NWAKU_TEST_SERVICE = node_builders.add_nwaku_service(plan, NWAKU_TEST_SERVICE_ID, False)
+    NWAKU_TEST_SERVICE_2 = node_builders.add_nwaku_service(plan, NWAKU_TEST_SERVICE_ID_2, False)
 
-    waku_topology = read_file(src=system_variables.TOPOLOGIES_LOCATION +
-                                  system_variables.DEFAULT_TOPOLOGY_FILE_DEFAULT_ARGUMENT_VALUE)
-    waku_topology = json.decode(waku_topology)
+    test_send_json_rpc(plan, NWAKU_TEST_SERVICE_ID)
+    test_get_wakunode_peer_id(plan, NWAKU_TEST_SERVICE_ID)
+    test_create_waku_id(plan)
+    test__merge_peer_ids(plan)
+    test_connect_wakunode_to_peers(plan, NWAKU_TEST_SERVICE_ID)
+    test_post_waku_v2_relay_v1_message(plan, NWAKU_TEST_SERVICE_ID)
+    test_get_waku_peers(plan)
+    test_interconnect_waku_nodes(plan)
 
-    waku_test_services = waku.instantiate_waku_nodes(waku_topology, False)
+    plan.remove_service(NWAKU_TEST_SERVICE_ID)
+    plan.remove_service(NWAKU_TEST_SERVICE_ID_2)
 
-    waku.interconnect_waku_nodes(waku_topology, waku_test_services)
-    waku.send_test_messages(waku_test_services, system_variables.NUMBER_TEST_MESSAGES,
-                            system_variables.DELAY_BETWEEN_TEST_MESSAGE)
-    _test_node_neighbours(waku_test_services)
+def test_send_json_rpc(plan, service_id):
+    waku_message = '{"payload": "0x1a2b3c4d5e6f", "timestamp": 1626813243}'
+    params = "test, " + waku_message
 
-
-def _test_node_neighbours(topology_information):
-    for wakunode_name in topology_information.keys():
-        peers = waku.get_waku_peers(wakunode_name)
-        assert(value=peers, assertion="==", target_value=2)
+    # Automatically waits for 200
+    waku.send_json_rpc(plan, service_id, system_variables.WAKU_RPC_PORT_ID,
+                       system_variables.POST_RELAY_MESSAGE_METHOD, params)
 
 
-def test_create_waku_id():
+def test_get_wakunode_peer_id(plan, service_id):
+    peer_id = waku.get_wakunode_peer_id(plan, service_id, system_variables.WAKU_RPC_PORT_ID)
+    plan.print(peer_id)
+    plan.assert(value=peer_id, assertion="==",
+            target_value="16Uiu2HAm7ZPmRY3ECVz7fAJQdxEDrBw3ToneYgUryKDJPtz25R2n")
+
+
+def test_create_waku_id(plan):
     service_struct = struct(ip_address="1.1.1.1",
                             ports={system_variables.WAKU_LIBP2P_PORT_ID: PortSpec(number=1234)})
-    services_example = {"service_info": service_struct, "id": "ASDFGHJKL"}
+    services_example = {"service_info": service_struct, "peer_id": "ASDFGHJKL"}
 
     waku_id = waku.create_waku_id(services_example)
 
-    assert (value=waku_id, assertion="==", target_value='"/ip4/1.1.1.1/tcp/1234/p2p/ASDFGHJKL"')
+    plan.assert(value=waku_id, assertion="==", target_value='"/ip4/1.1.1.1/tcp/1234/p2p/ASDFGHJKL"')
 
 
-def test__merge_peer_ids():
+def test__merge_peer_ids(plan):
     waku_ids = ["/ip4/1.1.1.1/tcp/1234/p2p/ASDFGHJKL", "/ip4/2.2.2.2/tcp/1234/p2p/QWERTYUIOP"]
 
     ids = waku._merge_peer_ids(waku_ids)
 
-    assert (value=ids,
+    plan.assert(value=ids,
             assertion="==",
             target_value="[/ip4/1.1.1.1/tcp/1234/p2p/ASDFGHJKL,/ip4/2.2.2.2/tcp/1234/p2p/QWERTYUIOP]")
 
 
-def test__add_information():
-    service_struct = struct(ip_address="1.1.1.1",
-                            ports={system_variables.WAKU_LIBP2P_PORT_ID: PortSpec(number=1234)})
+def test_connect_wakunode_to_peers(plan, service_id):
+    # It will print an error but 200 code
+    waku.connect_wakunode_to_peers(plan, service_id, system_variables.WAKU_RPC_PORT_ID, ["asd"])
 
-    services = {}
+def test_post_waku_v2_relay_v1_message(plan, service_id):
+    waku.post_waku_v2_relay_v1_message_test(plan, service_id, "test")
 
-    waku._add_information(services, {}, "IDTEST", service_struct, "waku_test")
 
-    assert(value=str(len(services)), assertion="==", target_value="1")
-    assert(value="waku_test", assertion="IN", target_value=services.keys())
-    assert(value=services["waku_test"]["id"], assertion="==", target_value="IDTEST")
-    assert(value=services["waku_test"]["service_info"].ip_address,
-            assertion="==", target_value="1.1.1.1")
-    assert(value=str(services["waku_test"]["service_info"].ports[system_variables.WAKU_LIBP2P_PORT_ID].number),
-            assertion="==", target_value="1234")
-    assert(value=services["waku_test"]["service_info"].ports[system_variables.WAKU_LIBP2P_PORT_ID].transport_protocol,
-            assertion="==", target_value="TCP")
+def test_get_waku_peers(plan):
+    num_peers = waku.get_waku_peers(plan, "nwaku_global_test")
+
+    plan.assert(value=num_peers, assertion="==", target_value=0)
+
+def test_interconnect_waku_nodes(plan):
+    topology = read_file(src=system_variables.TOPOLOGIES_LOCATION +
+                                  system_variables.TOPOLOGY_FOR_TESTS)
+    topology = json.decode(topology)
+
+    node_test_services = node_builders.instantiate_services(plan, topology, True)
+
+    waku.interconnect_waku_nodes(plan, topology, node_test_services)
+
+    for service_id in topology:
+        neighbours = waku.get_waku_peers(plan, service_id)
+        plan.assert(value=neighbours, assertion="==", target_value=1)
+
+    for service_id in topology:
+        plan.remove_service(service_id)
