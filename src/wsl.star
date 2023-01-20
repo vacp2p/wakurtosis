@@ -24,7 +24,7 @@ def create_wsl_config(simulation_time, message_rate, min_packet_size, max_packet
     
     return artifact_id
 
-def create_wsl_targets(services):
+def create_targets(services):
     
     # Get private ip and ports of all nodes
     template_data = files.generate_template_node_targets(services, system_variables.WAKU_RPC_PORT_ID)
@@ -45,13 +45,13 @@ def create_wsl_targets(services):
 
     return artifact_id
 
-def set_up_wsl(services, simulation_time, message_rate, min_packet_size, max_packet_size, inter_msg_type, dist_type, emitters_fraction):
+def init(services, simulation_time, message_rate, min_packet_size, max_packet_size, inter_msg_type, dist_type, emitters_fraction):
     
     # Generate simulation config
-    wsl_config = create_wsl_config(simulation_time, message_rate, min_packet_size, max_packet_size, inter_msg_type, dist_type, emitters_fraction)
+    wsl_config = create_config(simulation_time, message_rate, min_packet_size, max_packet_size, inter_msg_type, dist_type, emitters_fraction)
 
     # Create targets.json
-    wsl_targets = create_wsl_targets(services)
+    wsl_targets = create_targets(services)
 
     wsl_service = add_service(
         service_id=system_variables.WSL_SERVICE_ID,
