@@ -43,8 +43,8 @@ def check_waku_node(node_address):
 
     data = {
         'jsonrpc': '2.0',
-        # 'method': 'get_waku_v2_debug_v1_info',
-        'method' : 'get_waku_v2_debug_v1_version',
+        'method': 'get_waku_v2_debug_v1_info',
+        # 'method' : 'get_waku_v2_debug_v1_version',
         'id': 1,
         'params' : []}
 
@@ -66,12 +66,68 @@ def check_waku_node(node_address):
     
     return True
 
+def get_waku_msgs(node_address, topic, cursor=None):
+
+    data = {
+        'jsonrpc': '2.0',
+        'method': 'get_waku_v2_store_v1_messages',
+        'id': 1,
+        'params' : [topic, None, None, None, {"pageSize": 100, "cursor": cursor,"forward": True}]
+    }
+
+    G_LOGGER.debug('Waku RPC: %s from %s' %(data['method'], node_address))
+    
+    s_time = time.time()
+    
+    response = requests.post(node_address, data=json.dumps(data), headers={'content-type': 'application/json'})
+
+    elapsed_ms =(time.time() - s_time) * 1000
+
+    response_obj = response.json()
+
+    # G_LOGGER.debug('Response from %s: %s [%.4f ms.]' %(node_address, response_obj, elapsed_ms))
+    
+    return response_obj, elapsed_ms
+
+# https://rfc.vac.dev/spec/16/#get_waku_v2_relay_v1_messages
+def get_last_waku_msgs(node_address, topic):
+
+    data = {
+        'jsonrpc': '2.0',
+        'method': 'get_waku_v2_relay_v1_messages',
+        'id': 1,
+        'params' : [topic]}
+
+    G_LOGGER.debug('Waku RPC: %s from %s' %(data['method'], node_address))
+    
+    s_time = time.time()
+    
+    response = requests.post(node_address, data=json.dumps(data), headers={'content-type': 'application/json'})
+
+    elapsed_ms =(time.time() - s_time) * 1000
+
+    response_obj = response.json()
+
+    # G_LOGGER.debug('Response from %s: %s [%.4f ms.]' %(node_address, response_obj, elapsed_ms))
+    
+    return response_obj, elapsed_ms
+
 def send_waku_msg(node_address, topic, payload, nonce=1):
 
-    waku_msg = {
+    # waku_msg = {
+    #     'nonce' : nonce,
+    #     'timestamp' : time.time_ns(),
+    #     'payload' : payload}
+
+    my_payload = {
         'nonce' : nonce,
         'timestamp' : time.time_ns(),
-        'payload' : payload}
+        'payload' : payload
+    }
+
+    waku_msg = {
+        'payload' : json.dumps(my_payload).encode('utf-8').hex()
+    }
 
     data = {
         'jsonrpc': '2.0',
@@ -164,6 +220,45 @@ def get_next_time_to_msg(inter_msg_type, msg_rate, simulation_time):
     G_LOGGER.error('%s is not a valid inter_msg_type. Aborting.' %inter_msg_type)
     sys.exit()
 
+def get_all_messages_from_node(node_address, topic):
+
+    page_cnt = 0
+    msg_cnt = 0
+
+    # Retrieve the first page
+    response, elapsed = get_waku_msgs(node_address, topic)
+    if 'error' in response:
+        G_LOGGER.error(response['error'])
+        return 0
+    
+    messages = response['result']['messages']
+    msg_cnt += len(messages)
+    G_LOGGER.debug('Got page %d with %d messages from node %s' %(page_cnt, len(messages), node_address))
+
+    for msg_idx, msg in enumerate(messages):
+        # Decode the payload
+        payload_obj = json.loads(''.join(map(chr, msg['payload'])))
+        
+    # Retrieve further pages
+    while(response['result']['pagingOptions']):
+        page_cnt += 1
+        cursor = response['result']['pagingOptions']['cursor']
+        index = {"digest" : cursor['digest'], "receivedTime" : cursor['receiverTime']}
+        response, elapsed = get_waku_msgs(node_address, topic, cursor)
+        if 'error' in response:
+            G_LOGGER.error(response['error'])
+            break
+
+        messages = response['result']['messages']
+        msg_cnt += len(messages)
+        G_LOGGER.debug('Got page %d with %d messages from node %s' %(page_cnt, len(messages), node_address))
+
+        for msg_idx, msg in enumerate(messages):
+            # Decode the payload
+            payload_obj = json.loads(''.join(map(chr, msg['payload'])))
+    
+    return msg_cnt
+
 def main(): 
 
     global G_LOGGER
@@ -235,6 +330,7 @@ def main():
     """ Start simulation """
     stats = {}
     msg_cnt = 0
+    failed_cnt = 0
     bytes_cnt = 0
     s_time = time.time()
     last_msg_time = 0
@@ -258,37 +354,56 @@ def main():
 
         G_LOGGER.debug('Time Δ: %.6f ms.' %((msg_elapsed - next_time_to_msg) * 1000.0))
         
-        # Reference: https://rfc.vac.dev/spec/16/#get_waku_v2_relay_v1_messages
         node_address = 'http://%s/' %random.choice(emitters)
 
         G_LOGGER.info('Injecting message to network through Waku node %s ...' %node_address)
         
         payload = make_payload_dist(dist_type=config['general']['dist_type'].lower(), min_size=config['general']['min_packet_size'], max_size=config['general']['max_packet_size'])
-        response, elapsed = send_waku_msg(node_address, topic='test', payload=payload)
-
-        # # Keep track of basic stats
-        # if response['result']:
-        #     if node_address in stats:
-        #         stats[node_address]['msg_cnt'] += 1
-        #         stats[node_address]['msg_sent'] += 1
-        #     else:
-        #         stats[node_address] = { 'msg_cnt' = 1 }
-        #         stats[node_address]['msg_sent'] += 1
+        response, elapsed = send_waku_msg(node_address, topic='test', payload=payload, nonce=msg_cnt)
         
-        # else:
-        #     G_LOGGER.error('RPC Message failed to node_address')
-
+        if response['result']:
+            msg_cnt += 1 
+        else:
+            G_LOGGER.info('Message failed!')    
+            failed_cnt += 1 
+        
         # Compute the time to next message
         next_time_to_msg = get_next_time_to_msg(config['general']['inter_msg_type'], config['general']['msg_rate'], config['general']['simulation_time']) 
         G_LOGGER.debug('Next message will happen in %d ms.' %(next_time_to_msg * 1000.0))
         
         last_msg_time = time.time()
-        
-        msg_cnt += 1 
-        
-    # Pull messages 
-    # get_waku_v2_relay_v1_messagesget_waku_v2_relay_v1_messages
     
+    elapsed_s = time.time() - s_time
+        
+    # Retrieve messages from every node
+    G_LOGGER.info('Retriving messages from the enclave ...')
+    lost_msg_cnt = 0
+    for node_idx, target in enumerate(targets):
+        node_address = 'http://%s/' %target
+        node_msg_cnt = get_all_messages_from_node(node_address, 'test')
+        node_lost_msg_cnt = msg_cnt - node_msg_cnt
+        lost_msg_cnt += lost_msg_cnt
+        G_LOGGER.info('Retrieved %d messages from node %s. Lost %d message(s).' %(node_msg_cnt, node_address, node_lost_msg_cnt))
+        
+    # Output
+    summary = {
+        "end_ts" : time.time(),
+        "params" : config['general'],
+        "topics" : ['test'],
+        "simulation_time" : elapsed_s,
+        "total_messages" : msg_cnt,
+        "failed_messages" : failed_cnt,
+        "lost_messages" : lost_msg_cnt,
+        "avg_latency" : 0, 
+        "max_latency" : 0,
+        "min_latency" : 0
+    }
+
+    G_LOGGER.info('Simulation sumnmary: %s' %summary)
+
+    with open('./summary.json', 'w') as summary_file:
+        summary_file.write(json.dumps(summary, indent=4))
+
     """ We are done """
     G_LOGGER.info('Ended')
     
