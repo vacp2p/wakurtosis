@@ -30,6 +30,8 @@ def get_wakunode_peer_id(plan, service_id, port_id):
     response = send_json_rpc(plan, service_id, port_id,
                              system_variables.GET_WAKU_INFO_METHOD, "", extract)
 
+    plan.assert(value=response["code"], assertion="==", target_value = 200)
+
     return response["extract.peer_id"]
 
 
@@ -53,26 +55,19 @@ def connect_wakunode_to_peers(plan, service_id, port_id, peer_ids):
 
     response = send_json_rpc(plan, service_id, port_id, method, params)
 
+    plan.assert(value=response["code"], assertion="==", target_value = 200)
+
     plan.print(response)
 
 
-def post_waku_v2_relay_v1_message(plan, service_id, topic):
+def post_waku_v2_relay_v1_message_test(plan, service_id, topic):
     waku_message = '{"payload": "0x1a2b3c4d5e6f", "timestamp": 1626813243}'
     params = '"' + topic + '"' + ", " + waku_message
 
-    response = send_json_rpc(service_id, system_variables.WAKU_RPC_PORT_ID,
-                                  system_variables.POST_RELAY_MESSAGE, params)
+    response = send_json_rpc(plan, service_id, system_variables.WAKU_RPC_PORT_ID,
+                             system_variables.POST_RELAY_MESSAGE_METHOD, params)
 
-    plan.print(response)
-
-
-def get_wakunode_id(service_id, port_id):
-    extract = {"waku_id": '.result.listenAddresses | .[0] | split("/") | .[-1]'}
-
-    response = send_json_rpc(service_id, port_id, system_variables.GET_WAKU_INFO_METHOD, "",
-                                  extract)
-
-    return response["extract.waku_id"]
+    plan.assert(value=response["code"], assertion="==", target_value = 200)
 
 
 def make_service_wait(plan,service_id, time):
@@ -84,25 +79,19 @@ def make_service_wait(plan,service_id, time):
 
 
 def get_waku_peers(plan, waku_service_id):
+    extract = {"peers": '.result | length'}
+
     response = send_json_rpc(plan, waku_service_id, system_variables.WAKU_RPC_PORT_ID,
-                                  system_variables.GET_PEERS_METHOD, "")
+                                  system_variables.GET_PEERS_METHOD, "", extract)
 
-    plan.print(response)
+    plan.assert(value=response["code"], assertion="==", target_value=200)
 
-    return response
-
-
-def send_test_messages(topology_information, number_of_messages, time_between_message):
-    for wakunode_name in topology_information.keys():
-        for i in range(number_of_messages):
-            make_service_wait(wakunode_name,
-                              time_between_message)  # todo check if this stops wakunode
-            post_waku_v2_relay_v1_message(wakunode_name, "test")
+    return response["extract.peers"]
 
 
 def interconnect_waku_nodes(plan, topology_information, services):
     # Interconnect them
-    for waku_service_id in topology_information.keys():
+    for waku_service_id in services.keys():
         peers = topology_information[waku_service_id]["static_nodes"]
 
         peer_ids = [create_waku_id(services[peer]) for peer in peers]
