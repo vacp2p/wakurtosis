@@ -84,7 +84,7 @@ SAME_TOML_CONFIGURATION_DEFAULT_ARGUMENT_VALUE = True
 TOPOLOGY_FILE_NAME_ARGUMENT_NAME = "topology_file"
 DEFAULT_TOPOLOGY_FILE_DEFAULT_ARGUMENT_VALUE = "waku_test_topology_small.json"
 TOPOLOGY_FOR_TESTS = "test_network_data.json"
-TOPOLOGIES_LOCATION = "github.com/logos-co/wakurtosis/config/network_topology/"
+TOPOLOGIES_LOCATION = "github.com/logos-co/wakurtosis/config/topology_generated/"
 DEFAULT_TOPOLOGY_FILE = "network_data.json"
 
 # Default Simulation Parameters
