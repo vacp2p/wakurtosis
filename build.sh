@@ -8,3 +8,11 @@ tar -xf kurtosis-cli_0.64.2_linux_amd64.tar.gz
 mv kurtosis /usr/bin
 rm -r scripts
 rm kurtosis-cli_0.64.2_linux_amd64.tar.gz
+
+# Build WSL and Gennet docker image
+cd wsl-module
+docker build -t gennet .
+cd ..
+
+cd gennet-module
+docker build -t wsl:0.0.1 .

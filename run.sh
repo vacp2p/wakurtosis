@@ -16,7 +16,7 @@ echo "- Enclave name: " enclave_name
 echo "- Configuration file: " kurtosis_config_file
 echo "- Topology configuration: " gennet_config_file
 
-# Create and run gennet docker container
+# Create and run Gennet docker container
 echo -e "\nRunning topology generation with configuration:"
 cd gennet-module
 docker run --name gennet-container -v ${dir}/gennet-module/config:/gennet/config gennet
