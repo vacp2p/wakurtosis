@@ -236,26 +236,35 @@ def conf_callback(ctx: typer.Context, param: typer.CallbackParam, value: str):
     return value
 
 
+# Sanity checks
+def _num_partitions_callback(num_partitions: int):
+    if num_partitions > 1:
+        raise ValueError(
+            f"--num-partitions {num_partitions}, Sorry, we do not yet support partitions")
+
+    return num_partitions
+
+
+def _num_subnets_callback(ctx: typer, Context, num_subnets: int):
+    num_nodes = ctx.params["num_nodes"]
+    if num_subnets > num_nodes:
+        raise ValueError(
+            f"num_subnets must be <= num_nodes: num_subnets={num_subnets}, num_nodes={1}")
+    if num_subnets == -1:
+        num_subnets = num_nodes
+
+    return num_subnets
+
 
 ### the main ##########################################################################
-def main(dirname: str = "WakuNetwork",
+def main(output_dir: str = "WakuNetwork",
          num_nodes: int = 4,
          num_topics: int = 1,
          network_type: networkType = networkType.NEWMANWATTSSTROGATZ.value,
          node_type: nodeType = nodeType.DESKTOP.value,
-         num_subnets: int = -1,
-         num_partitions: int = 1,
+         num_subnets: int = typer.Option(-1, callback=_num_subnets_callback),
+         num_partitions: int = typer.Option(1, callback=_num_partitions_callback),
          config_file: str = typer.Option("", callback=conf_callback, is_eager=True)):
-
-    # Sanity checks
-    if num_partitions > 1:
-        raise ValueError(
-            f"--num-partitions {num_partitions}, Sorry, we do not yet support partitions")
-    if num_subnets > num_nodes:
-        raise ValueError(
-            f"num_subnets must be <= num_nodes: num_subnets={num_subnets}, num_nodes={num_nodes}")
-    if num_subnets == -1:
-        num_subnets = num_nodes
 
     # Generate the network
     G = generate_network(num_nodes, networkType(network_type))
