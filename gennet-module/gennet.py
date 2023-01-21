@@ -209,19 +209,6 @@ def generate_and_write_files(dirname, num_topics, num_subnets, G):
     write_json(dirname, json_dump)  # network wide json
 
 
-def update_file_from_cli(dirname, num_nodes, num_topics,
-         network_type, node_type, num_subnets, num_partitions,
-                         config_obj):
-
-    config_obj["topology_path"] = dirname
-    config_obj["gennet"]["num_nodes"] = num_nodes
-    config_obj["gennet"]["num_topics"] = num_topics
-    config_obj["gennet"]["network_type"] = network_type
-    config_obj["gennet"]["node_type"] = node_type
-    config_obj["gennet"]["num_partitions"] = num_partitions
-    config_obj["gennet"]["num_subnets"] = num_subnets
-
-
 def conf_callback(ctx: typer.Context, param: typer.CallbackParam, value: str):
     if value:
         typer.echo(f"Loading config file: {value}")
@@ -256,8 +243,7 @@ def _num_subnets_callback(ctx: typer, Context, num_subnets: int):
     return num_subnets
 
 
-### the main ##########################################################################
-def main(output_dir: str = "WakuNetwork",
+def main(output_dir: str = "topology_generated",
          num_nodes: int = 4,
          num_topics: int = 1,
          network_type: networkType = networkType.NEWMANWATTSSTROGATZ.value,
@@ -269,14 +255,11 @@ def main(output_dir: str = "WakuNetwork",
     # Generate the network
     G = generate_network(num_nodes, networkType(network_type))
 
-    # # Refuse to overwrite non-empty dirs
-    # if exists_or_nonempty(config_obj['general']['topology_path']):
-    #     sys.exit(1)
-    os.makedirs('./config/topology_generated/', exist_ok=True)
+    # Do not complain if folder exists already
+    os.makedirs(output_dir, exist_ok=True)
 
-    # Generate file format specific data structs and write the files; optionally, draw the network
-    generate_and_write_files('./config/topology_generated/', num_topics, num_subnets, G)
-    # draw(dirname, G)
+    # Generate file format specific data structs and write the files
+    generate_and_write_files(output_dir, num_topics, num_subnets, G)
 
 
 if __name__ == "__main__":
