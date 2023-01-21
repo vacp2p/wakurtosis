@@ -5,7 +5,7 @@
     "same_toml_configuration": false
   },
   "gennet": {
-    "num_nodes": 3,
+    "num_nodes": 5,
     "num_topics": 1,
     "node_type": "desktop",
     "network_type": "scalefree",

@@ -222,41 +222,43 @@ def update_file_from_cli(dirname, num_nodes, num_topics,
     config_obj["gennet"]["num_subnets"] = num_subnets
 
 
+def conf_callback(ctx: typer.Context, param: typer.CallbackParam, value: str):
+    if value:
+        typer.echo(f"Loading config file: {value}")
+        try:
+            with open(value, 'r') as f:  # Load config file
+                conf = json.load(f)
+                conf = conf["gennet"]
+            ctx.default_map = ctx.default_map or {}  # Initialize the default map
+            ctx.default_map.update(conf)  # Merge the config dict into default_map
+        except Exception as ex:
+            raise typer.BadParameter(str(ex))
+    return value
+
+
 
 ### the main ##########################################################################
-def main(dirname: str = "WakuNetwork", num_nodes: int = 4, num_topics: int = 1,
+def main(dirname: str = "WakuNetwork",
+         num_nodes: int = 4,
+         num_topics: int = 1,
          network_type: networkType = networkType.NEWMANWATTSSTROGATZ.value,
          node_type: nodeType = nodeType.DESKTOP.value,
          num_subnets: int = -1,
          num_partitions: int = 1,
-         config_file: str = './config/config.json'):
-
-    """ Load config file """
-    try:
-        with open(config_file, 'r') as file:
-            config_obj = json.load(file)
-    except Exception as e:
-        print(e)
-        sys.exit(1)
-
-    print(config_obj)
-
-    update_file_from_cli(dirname, num_nodes, num_topics, network_type, node_type, num_subnets,
-                         num_partitions, config_obj)
+         config_file: str = typer.Option("", callback=conf_callback, is_eager=True)):
 
     # Sanity checks
-    if config_obj['general']['num_partitions'] > 1:
+    if num_partitions > 1:
         raise ValueError(
-            f"--num-partitions {config_obj['general']['num_partitions']}, Sorry, we do not yet support partitions")
-    if config_obj['general']['num_subnets'] > config_obj['general']['num_nodes']:
+            f"--num-partitions {num_partitions}, Sorry, we do not yet support partitions")
+    if num_subnets > num_nodes:
         raise ValueError(
-            f"num_subnets must be <= num_nodes: num_subnets={config_obj['general']['num_subnets']}, num_nodes={config_obj['general']['num_nodes']}")
-    if config_obj['general']['num_subnets'] == -1:
-        config_obj['general']['num_subnets'] = config_obj['general']['num_nodes']
+            f"num_subnets must be <= num_nodes: num_subnets={num_subnets}, num_nodes={num_nodes}")
+    if num_subnets == -1:
+        num_subnets = num_nodes
 
     # Generate the network
-    G = generate_network(config_obj['general']['num_nodes'],
-                         networkType(config_obj['general']['network_type']))
+    G = generate_network(num_nodes, networkType(network_type))
 
     # # Refuse to overwrite non-empty dirs
     # if exists_or_nonempty(config_obj['general']['topology_path']):
@@ -264,8 +266,7 @@ def main(dirname: str = "WakuNetwork", num_nodes: int = 4, num_topics: int = 1,
     os.makedirs('./config/topology_generated/', exist_ok=True)
 
     # Generate file format specific data structs and write the files; optionally, draw the network
-    generate_and_write_files('./config/topology_generated/', config_obj['general']['num_topics'],
-                             config_obj['general']['num_subnets'], G)
+    generate_and_write_files('./config/topology_generated/', num_topics, num_subnets, G)
     # draw(dirname, G)
 
 
