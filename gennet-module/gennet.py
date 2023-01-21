@@ -206,6 +206,7 @@ def generate_and_write_files(dirname, num_topics, num_subnets, G):
         for edge in G.edges(node):
             json_dump[node]["static_nodes"].append(edge[1])
         json_dump[node][SUBNET_PREFIX] = subnets[node]
+        json_dump[node]["image"] = random.choice(["go-waku", "nim-waku"])  # todo quick patch, do propperly
     write_json(dirname, json_dump)  # network wide json
 
 
