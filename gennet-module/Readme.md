@@ -1,5 +1,4 @@
-Module to generate network models (in JSON) and waku configuration files (in TOMLs) for wakurtosis runs. 
-
+Module to generate network models (in JSON) and node configuration files (in TOMLs) for wakurtosis runs. 
 
 ## generate_network.py
 generate_network.py generates one network and per-node configuration files. The tool is configurable with specified number of nodes, topics, network types, node types and number of subnets.
@@ -38,6 +37,16 @@ Example of configuration file:
   }
 }
 ```
+
+It has also a Dockerfile to run it in a docker container. Example assuming our configiguration file is in `config` folder:
+
+```commandline
+> docker build -t gennet .
+
+> docker run --name gennet-container -v ${dir}/config/:/config gennet --config-file /config/my_config_file.json --output-dir /config/topology_generated
+```
+
+In this way, it will mount `config` as a volume, allowing the docker container to get our `my_config_file.json`, and writing the results on a new folder called `topology_generated` which as it will be in `config`, the host will have access to it.
 
 
 ## batch_gen.sh
