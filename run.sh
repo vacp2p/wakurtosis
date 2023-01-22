@@ -10,8 +10,8 @@ ARGS2=${2:-"config.json"}
 enclave_name=$ARGS1
 wakurtosis_config_file=$ARGS2
 
-echo "- Enclave name: " enclave_name
-echo "- Configuration file: " wakurtosis_config_file
+echo "- Enclave name: " $enclave_name
+echo "- Configuration file: " $wakurtosis_config_file
 
 # Create and run Gennet docker container
 echo -e "\nRunning topology generation"
