@@ -26,7 +26,7 @@ kurtosis enclave rm -f $enclave_name > /dev/null 2>&1
 
 # Create the new enclave and run the simulation
 echo -e "\nInitiating enclave "$enclave_name
-kurtosis_cmd="kurtosis run --enclave-id ${enclave_name} . '{\"wakurtosis_config_file\" : \"config/${wakurtosis_config_file}\"}' > kurtosis_log.txt 2>&1"
+kurtosis_cmd="kurtosis run --enclave-id ${enclave_name} . '{\"wakurtosis_config_file\" : \"config/${wakurtosis_config_file}\"}' > kurtosisrun_log.txt 2>&1"
 eval $kurtosis_cmd
 echo -e "Enclave " $enclave_name " is up and running"
 
@@ -38,3 +38,5 @@ echo -e "\n--> To see simulation logs run: kurtosis service logs wakurtosis $wsl
 # Fetch the Grafana address & port
 grafana_host=$(kurtosis enclave inspect wakurtosis 2>/dev/null | grep grafana- | awk '{print $6}')
 echo -e "\n--> Statistics in Grafana server at http://$grafana_host/ <--"
+
+echo "Output of kurtosis run command written in kurtosisrun_log.txt"
