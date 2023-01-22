@@ -15,15 +15,22 @@ from enum import Enum
 
 # To add a new node type, add appropriate entries to the nodeType and nodeTypeSwitch
 class nodeType(Enum):
-    DESKTOP = "desktop"  # waku desktop config
-    MOBILE = "mobile"  # waku mobile config
+    NWAKU = "nwaku"  # waku desktop config
+    GOWAKU = "gowaku"  # waku mobile config
 
 
-nodeTypeSwitch = {
-    nodeType.DESKTOP: "rpc-admin = true\nkeep-alive = true\n",
-    nodeType.MOBILE: "rpc-admin = true\nkeep-alive = true\n"
+nodeTomlSwitch = {
+    nodeType.NWAKU: "rpc-admin = true\nkeep-alive = true\nmetrics-server=true\n",
+    nodeType.GOWAKU: "rpc-admin = true\nmetrics-server=true\nrpc=true\n"
 }
 
+nodeDockerImageSwitch = {
+    nodeType.NWAKU: "nim-waku",
+    nodeType.GOWAKU: "go-waku"
+}
+
+NODES = [nodeType.NWAKU, nodeType.GOWAKU]
+NODE_PROBABILITIES = (50, 50)
 
 # To add a new network type, add appropriate entries to the networkType and networkTypeSwitch
 # the networkTypeSwitch is placed before generate_network(): fwd declaration mismatch with typer/python :/
@@ -37,7 +44,7 @@ class networkType(Enum):
 
 
 NW_DATA_FNAME = "network_data.json"
-NODE_PREFIX = "waku"
+NODE_PREFIX = "node"
 SUBNET_PREFIX = "subnetwork"
 
 
@@ -64,7 +71,7 @@ def draw(dirname, H):
     plt.show()
 
 
-# Has trouble with non-integer/non-hashable keys 
+# Has trouble with non-integer/non-hashable keys
 def read_json(fname):
     with open(fname) as f:
         jdata = json.load(f)
@@ -111,7 +118,6 @@ def get_random_sublist(topics):
 
 
 ### network processing related fns #################################################
-
 # Network Types
 def generate_config_model(n):
     # degrees = nx.random_powerlaw_tree_sequence(n, tries=10000)
@@ -189,24 +195,29 @@ def generate_subnets(G, num_subnets):
 
 ### file format related fns ###########################################################
 # Generate per node toml configs
-def generate_toml(topics, node_type=nodeType.DESKTOP):
+def generate_toml(topics, node_type=nodeType.NWAKU):
     topic_str = " ".join(get_random_sublist(topics))  # space separated topics
-    return f"{nodeTypeSwitch.get(node_type)}topics = \"{topic_str}\"\n"
+    if node_type == nodeType.GOWAKU:
+        topic_str = [topic_str]
+    else:
+        topic_str = f"\"{topic_str}\""
+    return f"{nodeTomlSwitch.get(node_type)}topics = {topic_str}\n"
 
 
-# Generates network-wide json and per-node toml and writes them 
+# Generates network-wide json and per-node toml and writes them
 def generate_and_write_files(dirname, num_topics, num_subnets, G):
     topics = generate_topics(num_topics)
     subnets = generate_subnets(G, num_subnets)
     json_dump = {}
     for node in G.nodes:
-        write_toml(dirname, node, generate_toml(topics))  # per node toml
+        node_type = random.choices(NODES, weights=NODE_PROBABILITIES)[0]
+        write_toml(dirname, node, generate_toml(topics, node_type))  # per node toml
         json_dump[node] = {}
         json_dump[node]["static_nodes"] = []
         for edge in G.edges(node):
             json_dump[node]["static_nodes"].append(edge[1])
         json_dump[node][SUBNET_PREFIX] = subnets[node]
-        json_dump[node]["image"] = random.choice(["go-waku", "nim-waku"])  # todo quick patch, do propperly
+        json_dump[node]["image"] = nodeDockerImageSwitch.get(node_type)
     write_json(dirname, json_dump)  # network wide json
 
 
@@ -252,7 +263,6 @@ def main(output_dir: str = "topology_generated",
          num_nodes: int = 4,
          num_topics: int = 1,
          network_type: networkType = networkType.NEWMANWATTSSTROGATZ.value,
-         node_type: nodeType = nodeType.DESKTOP.value,
          num_subnets: int = typer.Option(-1, callback=_num_subnets_callback),
          num_partitions: int = typer.Option(1, callback=_num_partitions_callback),
          config_file: str = typer.Option("", callback=conf_callback, is_eager=True)):
