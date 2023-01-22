@@ -16,3 +16,10 @@ cd ..
 
 cd gennet-module
 docker build -t wsl:0.0.1 .
+cd ..
+
+git clone git@github.com:waku-org/go-waku.git
+cd go-waku
+docker build -t gowaku .
+cd ..
+rm -rf go-waku
