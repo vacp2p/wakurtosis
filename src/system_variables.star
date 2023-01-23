@@ -8,7 +8,10 @@ WAKU_LIBP2P_PORT_ID = "libp2p"
 WAKU_LIBP2P_PORT = 60000
 WAKU_SETUP_WAIT_TIME = "5"
 
-NODE_CONFIG_FILE_LOCATION = "/node/configuration_file"
+NODE_CONFIG_FILE_LOCATION = "github.com/logos-co/wakurtosis/config/topology_generated/"
+
+CONTAINER_NODE_CONFIG_FILE_LOCATION = "/node/configuration_file/"
+NODE_CONFIGURATION_FILE_EXTENSION = ".toml"
 NWAKU_ENTRYPOINT = ["/usr/bin/wakunode", "--rpc-address=0.0.0.0", "--metrics-server-address=0.0.0.0"]
 GOWAKU_ENTRYPOINT = ["/usr/bin/waku", "--rpc-address=0.0.0.0", "--metrics-server-address=0.0.0.0"]
 
@@ -50,7 +53,7 @@ CONTAINER_WSL_CONFIGURATION_FILE_NAME = "wsl.yml"
 CONTAINER_TARGETS_FILE_NAME_WSL = "targets.json"
 
 # Waku RPC methods
-POST_RELAY_MESSAGE = "post_waku_v2_relay_v1_message"
+POST_RELAY_MESSAGE_METHOD = "post_waku_v2_relay_v1_message"
 GET_WAKU_INFO_METHOD = "get_waku_v2_debug_v1_info"
 CONNECT_TO_PEER_METHOD = "post_waku_v2_admin_v1_peers"
 GET_PEERS_METHOD = "get_waku_v2_admin_v1_peers"
@@ -70,6 +73,7 @@ WSL_MODULE = "github.com/logos-co/wakurtosis/src/wsl.star"
 
 TEST_ARGUMENTS_MODULE = "github.com/logos-co/wakurtosis/src/tests/test_arguments_parser.star"
 TEST_FILES_MODULE = "github.com/logos-co/wakurtosis/src/tests/test_file_helpers.star"
+TEST_NODE_BUILDERS_MODULE = "github.com/logos-co/wakurtosis/src/tests/test_node_builders.star"
 TEST_WAKU_MODULE = "github.com/logos-co/wakurtosis/src/tests/test_waku_methods.star"
 
 # Default main starlark arguments
@@ -78,7 +82,8 @@ SAME_TOML_CONFIGURATION_DEFAULT_ARGUMENT_VALUE = True
 
 TOPOLOGY_FILE_NAME_ARGUMENT_NAME = "topology_file"
 DEFAULT_TOPOLOGY_FILE_DEFAULT_ARGUMENT_VALUE = "waku_test_topology_small.json"
-TOPOLOGIES_LOCATION = "github.com/logos-co/wakurtosis/config/network_topology/"
+TOPOLOGY_FOR_TESTS = "test_network_data.json"
+TOPOLOGIES_LOCATION = "github.com/logos-co/wakurtosis/config/topology_generated/"
 DEFAULT_TOPOLOGY_FILE = "network_data.json"
 
 # Default Simulation Parameters
@@ -89,7 +94,3 @@ MAX_PACKET_SIZE = 1024
 
 # Global config
 DEFAULT_CONFIG_FILE = "github.com/logos-co/wakurtosis/config/config.json"
-
-# Tests
-NUMBER_TEST_MESSAGES = 5
-DELAY_BETWEEN_TEST_MESSAGE = "0.5"

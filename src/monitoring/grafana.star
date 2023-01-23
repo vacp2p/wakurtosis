@@ -6,21 +6,23 @@ files = import_module(system_variables.FILE_HELPERS_MODULE)
 templates = import_module(system_variables.TEMPLATES_MODULE)
 
 
-def set_up_grafana(prometheus_service):
-    config_id, customization_id, dashboard_id = files.prepare_artifact_files_grafana()
+def set_up_grafana(plan, prometheus_service):
+    config_id, customization_id, dashboard_id = files.prepare_artifact_files_grafana(plan,
+        "grafana_config", "grafana_customization", "grafana_dashboard")
     prometheus_data = files.generate_template_prometheus_url(prometheus_service)
     prometheus_template = templates.get_prometheus_template_content_for_grafana()
 
-    artifact_id = render_templates(
+    artifact_id = plan.render_templates(
         config={
             system_variables.CONTAINER_DATASOURCES_FILE_NAME_GRAFANA: struct(
                 template=prometheus_template,
                 data=prometheus_data,
             )
-        }
+        },
+        name="grafana_target"
     )
 
-    grafana_service = add_service(
+    grafana_service = plan.add_service(
         service_id=system_variables.GRAFANA_SERVICE_ID,
         config=struct(
             image=system_variables.GRAFANA_IMAGE,
