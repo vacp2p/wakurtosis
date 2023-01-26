@@ -21,3 +21,5 @@ wsl-module/__pycache__
 config/network_topology_auto/
 config/config.json
 gennet-module/topology/
+kurtosis_log.txt
+config/network_topology/
