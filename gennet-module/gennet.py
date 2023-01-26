@@ -20,8 +20,8 @@ class nodeType(Enum):
 
 
 nodeTomlSwitch = {
-    nodeType.NWAKU: "rpc-admin = true\nkeep-alive = true\nmetrics-server=true\nstore=true\nstorenode=/dns4/waku_0\n",
-    nodeType.GOWAKU: "rpc-admin = true\nmetrics-server=true\nrpc=true\nmetrics-server=true\nstore=true\nstorenode=/dns4/waku_0\n"
+    nodeType.NWAKU: "rpc-admin = true\nkeep-alive = true\nmetrics-server=true\n",
+    nodeType.GOWAKU: "rpc-admin = true\nmetrics-server=true\nrpc=true\n"
 }
 
 nodeDockerImageSwitch = {
