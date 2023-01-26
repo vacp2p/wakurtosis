@@ -12,8 +12,8 @@ NODE_CONFIG_FILE_LOCATION = "github.com/logos-co/wakurtosis/config/topology_gene
 
 CONTAINER_NODE_CONFIG_FILE_LOCATION = "/node/configuration_file/"
 NODE_CONFIGURATION_FILE_EXTENSION = ".toml"
-NWAKU_ENTRYPOINT = ["/usr/bin/wakunode", "--rpc-address=0.0.0.0", "--metrics-server-address=0.0.0.0"]
-GOWAKU_ENTRYPOINT = ["/usr/bin/waku", "--rpc-address=0.0.0.0", "--metrics-server-address=0.0.0.0"]
+NWAKU_ENTRYPOINT = ["/usr/bin/wakunode", "--rpc-address=0.0.0.0", "--metrics-server-address=0.0.0.0", "--store=true", "--storenode=/dns4/waku_0"]
+GOWAKU_ENTRYPOINT = ["/usr/bin/waku", "--rpc-address=0.0.0.0", "--metrics-server-address=0.0.0.0", "--store=true", "--storenode=/dns4/waku_0"]
 
 # Prometheus Configuration
 PROMETHEUS_IMAGE = "prom/prometheus:latest"
