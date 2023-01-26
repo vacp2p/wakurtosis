@@ -2,21 +2,21 @@
 system_variables = import_module("github.com/logos-co/wakurtosis/src/system_variables.star")
 
 
-def get_toml_configuration_artifact(wakunode_name, same_toml_configuration, artifact_id=""):
+def get_toml_configuration_artifact(plan, wakunode_name, same_toml_configuration, name):
     if same_toml_configuration:
-        artifact_id = upload_files(
+        artifact_id = plan.upload_files(
             src=system_variables.GENERAL_TOML_CONFIGURATION_PATH,
-            artifact_id=artifact_id
+            name=name
         )
         file_name = system_variables.GENERAL_TOML_CONFIGURATION_NAME
     else:
-        artifact_id = upload_files(
-            src=system_variables.WAKU_CONFIGURATION_FILES_LOCATION +
+        artifact_id = plan.upload_files(
+            src=system_variables.NODE_CONFIG_FILE_LOCATION +
                 wakunode_name +
-                system_variables.WAKU_CONFIGURATION_FILE_EXTENSION,
-            artifact_id=artifact_id
+                system_variables.NODE_CONFIGURATION_FILE_EXTENSION,
+            name=name
         )
-        file_name = wakunode_name + system_variables.WAKU_CONFIGURATION_FILE_EXTENSION
+        file_name = wakunode_name + system_variables.NODE_CONFIGURATION_FILE_EXTENSION
 
     return artifact_id, file_name
 
@@ -35,6 +35,7 @@ def generate_template_node_targets(services, port_id):
 
     return template_data
 
+
 def generate_template_prometheus_url(prometheus_service):
     prometheus_url = prometheus_service.ip_address + ":" + str(
         prometheus_service.ports[system_variables.PROMETHEUS_PORT_ID].number)
@@ -43,18 +44,19 @@ def generate_template_prometheus_url(prometheus_service):
     return prometheus_info
 
 
-def prepare_artifact_files_grafana(artifact_config_id="", artifact_custom_id="", artifact_dashboard_id=""):
-    config_id = upload_files(
+def prepare_artifact_files_grafana(plan, artifact_config_name, artifact_customization_name,
+                                   artifact_dashboard_name):
+    config_id = plan.upload_files(
         src=system_variables.GRAFANA_CONFIGURATION_PATH,
-        artifact_id=artifact_config_id
+        name=artifact_config_name
     )
-    customization_id = upload_files(
+    customization_id = plan.upload_files(
         src=system_variables.GRAFANA_CUSTOMIZATION_PATH,
-        artifact_id=artifact_custom_id
+        name=artifact_customization_name
     )
-    dashboard_id = upload_files(
+    dashboard_id = plan.upload_files(
         src=system_variables.GRAFANA_DASHBOARD_PATH,
-        artifact_id=artifact_dashboard_id
+        name=artifact_dashboard_name
     )
 
     return config_id, customization_id, dashboard_id
