@@ -30,7 +30,7 @@ nodeDockerImageSwitch = {
 }
 
 NODES = [nodeType.NWAKU, nodeType.GOWAKU]
-NODE_PROBABILITIES = (50, 50)
+NODE_PROBABILITIES = (100, 0)
 
 # To add a new network type, add appropriate entries to the networkType and networkTypeSwitch
 # the networkTypeSwitch is placed before generate_network(): fwd declaration mismatch with typer/python :/
