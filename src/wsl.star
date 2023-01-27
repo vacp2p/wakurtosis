@@ -49,6 +49,11 @@ def init(plan, services, wsl_config):
     # Generate simulation config
     wsl_config = create_config(plan, wsl_config)
 
+    tomls_artifact = plan.upload_files(
+        src = system_variables.NODE_CONFIG_FILE_LOCATION,
+        name = "tomls_artifact",
+    )
+
     # Create targets.json
     wsl_targets = create_targets(plan, services)
 
@@ -60,6 +65,7 @@ def init(plan, services, wsl_config):
             files={
                 system_variables.WSL_CONFIG_PATH : wsl_config,
                 system_variables.WSL_TARGETS_PATH : wsl_targets,
+                system_variables.WSL_TOMLS_PATH : tomls_artifact
             },
         
             cmd=["python3", "wsl.py"]
