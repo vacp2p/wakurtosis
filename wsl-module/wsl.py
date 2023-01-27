@@ -5,7 +5,7 @@ Description: Wakurtosis load simulator
 """
 
 """ Dependencies """
-import sys, logging, yaml, json, time, random, os, argparse
+import sys, logging, yaml, json, time, random, os, argparse, tomllib, glob
 import requests
 import rtnorm
 # from pathlib import Path
@@ -17,7 +17,7 @@ import rtnorm
 """ Globals """
 G_APP_NAME = 'WLS'
 G_LOG_LEVEL = 'DEBUG'
-g_DEFAULT_CONFIG_FILE = './config/wsl.yml'
+G_DEFAULT_CONFIG_FILE = './config/wsl.yml'
 G_LOGGER = None
 
 """ Custom logging formatter """
@@ -135,7 +135,7 @@ def send_waku_msg(node_address, topic, payload, nonce=1):
         'id': 1,
         'params' : [topic, waku_msg]}
 
-    G_LOGGER.debug('Waku RPC: %s from %s' %(data['method'], node_address))
+    G_LOGGER.debug('Waku RPC: %s from %s Topic: %s' %(data['method'], node_address, topic))
     
     s_time = time.time()
     
@@ -220,7 +220,7 @@ def get_next_time_to_msg(inter_msg_type, msg_rate, simulation_time):
     G_LOGGER.error('%s is not a valid inter_msg_type. Aborting.' %inter_msg_type)
     sys.exit()
 
-def get_all_messages_from_node(node_address, topic):
+def get_all_messages_from_node_from_topic(node_address, topic):
 
     page_cnt = 0
     msg_cnt = 0
@@ -233,7 +233,7 @@ def get_all_messages_from_node(node_address, topic):
     
     messages = response['result']['messages']
     msg_cnt += len(messages)
-    G_LOGGER.debug('Got page %d with %d messages from node %s' %(page_cnt, len(messages), node_address))
+    G_LOGGER.debug('Got page %d with %d messages from node %s and topic: %s' %(page_cnt, len(messages), node_address, topic))
 
     for msg_idx, msg in enumerate(messages):
         # Decode the payload
@@ -251,7 +251,7 @@ def get_all_messages_from_node(node_address, topic):
 
         messages = response['result']['messages']
         msg_cnt += len(messages)
-        G_LOGGER.debug('Got page %d with %d messages from node %s' %(page_cnt, len(messages), node_address))
+        G_LOGGER.debug('Got page %d with %d messages from node %s and topic: %s' %(page_cnt, len(messages), node_address, topic))
 
         for msg_idx, msg in enumerate(messages):
             # Decode the payload
@@ -273,7 +273,7 @@ def main():
 
     """ Parse command line args. """
     parser = argparse.ArgumentParser()
-    parser.add_argument("-cfg", "--config_file", help="Config file", action="store_true", default=g_DEFAULT_CONFIG_FILE)
+    parser.add_argument("-cfg", "--config_file", help="Config file", action="store_true", default=G_DEFAULT_CONFIG_FILE)
     args = parser.parse_args()
 
     config_file = args.config_file
@@ -318,13 +318,39 @@ def main():
             sys.exit(1)
     G_LOGGER.info('All %d Waku nodes are reachable.' %len(targets))
 
+    """ Load Topics """
+    topics = []
+    try:
+        tomls = glob.glob('./tomls/*.toml')
+        tomls.sort()
+        for toml_file in tomls:
+            with open(toml_file, mode='rb') as read_file:
+                toml_config = tomllib.load(read_file)
+                node_topics_str = toml_config['topics']
+                topics.append(list(node_topics_str.split(' ')))
+    except Exception as e:
+        G_LOGGER.error('%s: %s' % (e.__doc__, e))
+        sys.exit()
+
+    # Dictionary to count messages of every topic being sent
+    topics_msg_cnt = {}
+    for node_topics in topics:
+        for topic in node_topics:
+            topics_msg_cnt[topic] = 0
+    
+    G_LOGGER.info('Loaded nodes topics from toml files: %s' %topics_msg_cnt.keys())
+
     """ Define the subset of emitters """
     num_emitters = int(len(targets) * config['general']['emitters_fraction'])
     if num_emitters == 0:
         G_LOGGER.error('The number of emitters must be greater than zero. Try increasing the fraction of emitters.')
         sys.exit()
 
-    emitters = random.sample(targets, num_emitters)
+    """ NOTE: Emitters will only inject topics they are subscribed to """
+    emitters_indices = random.sample(range(len(targets)), num_emitters)
+    emitters = [targets[i] for i in emitters_indices]
+    emitters_topics = [topics[i] for i in emitters_indices]
+    #  emitters = random.sample(targets, num_emitters)
     G_LOGGER.info('Selected %d emitters out of %d total nodes' %(len(emitters), len(targets)))
 
     """ Start simulation """
@@ -354,15 +380,24 @@ def main():
 
         G_LOGGER.debug('Time Δ: %.6f ms.' %((msg_elapsed - next_time_to_msg) * 1000.0))
         
-        node_address = 'http://%s/' %random.choice(emitters)
+        # Pick an emitter at random from the emitters list
+        emitter_idx = random.choice(emitters_indices)
+        
+        node_address = 'http://%s/' %emitters[emitter_idx]
 
-        G_LOGGER.info('Injecting message to network through Waku node %s ...' %node_address)
+        emitter_topics = emitters_topics[emitter_idx]
+
+        # Pick a topic at random from the topics supported by the emitter
+        emitter_topic = random.choice(emitter_topics)
+
+        G_LOGGER.info('Injecting message of topic %s to network through Waku node %s ...' %(emitter_topic, node_address))
         
         payload = make_payload_dist(dist_type=config['general']['dist_type'].lower(), min_size=config['general']['min_packet_size'], max_size=config['general']['max_packet_size'])
-        response, elapsed = send_waku_msg(node_address, topic='test', payload=payload, nonce=msg_cnt)
+        response, elapsed = send_waku_msg(node_address, topic=emitter_topic, payload=payload, nonce=msg_cnt)
         
         if response['result']:
             msg_cnt += 1 
+            topics_msg_cnt[emitter_topic] += 1
         else:
             G_LOGGER.info('Message failed!')    
             failed_cnt += 1 
@@ -375,25 +410,24 @@ def main():
     
     elapsed_s = time.time() - s_time
         
-    # Retrieve messages from every node
+    # Retrieve messages from every node and topic
     G_LOGGER.info('Retriving messages from the enclave ...')
-    lost_msg_cnt = 0
     for node_idx, target in enumerate(targets):
         node_address = 'http://%s/' %target
-        node_msg_cnt = get_all_messages_from_node(node_address, 'test')
-        node_lost_msg_cnt = msg_cnt - node_msg_cnt
-        lost_msg_cnt += lost_msg_cnt
-        G_LOGGER.info('Retrieved %d messages from node %s. Lost %d message(s).' %(node_msg_cnt, node_address, node_lost_msg_cnt))
+        
+        for topic_idx, topic in enumerate(topics[node_idx]):
+            msg_cnt = get_all_messages_from_node_from_topic(node_address, topic)
+            msg_lost = topics_msg_cnt[topic] - msg_cnt
+            G_LOGGER.info('- Retrieved %d messages on topic %s from node %s. Lost %d message(s).' %(msg_cnt, topic, node_address, msg_lost))
         
     # Output
     summary = {
         "end_ts" : time.time(),
         "params" : config['general'],
-        "topics" : ['test'],
+        "topics" : list(topics_msg_cnt.keys()),
+        "topics_msg_cnt" : topics_msg_cnt,
         "simulation_time" : elapsed_s,
         "total_messages" : msg_cnt,
-        "failed_messages" : failed_cnt,
-        "lost_messages" : lost_msg_cnt,
         "avg_latency" : 0, 
         "max_latency" : 0,
         "min_latency" : 0
