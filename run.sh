@@ -55,6 +55,11 @@ status_code="$(docker container wait $cid)"
 
 # Copy simulation results
 docker cp "$cid:/wsl/summary.json" "./"
-echo "Simulation results can be found in ./summary.json"
+echo "Simulation ended with code $status_code Results in ./summary.json"
+
+# Stop and delete the enclave
+kurtosis enclave stop $enclave_name > /dev/null 2>&1
+kurtosis enclave rm -f $enclave_name > /dev/null 2>&1
+echo "Enclave $enclave_name stopped and deleted."
 
 echo "Done."
