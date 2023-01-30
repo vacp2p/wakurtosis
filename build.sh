@@ -11,11 +11,11 @@ rm kurtosis-cli_0.64.2_linux_amd64.tar.gz
 
 # Build WSL and Gennet docker image
 cd wsl-module
-docker build -t gennet .
+docker build -t wsl:0.0.1 .
 cd ..
 
 cd gennet-module
-docker build -t wsl:0.0.1 .
+docker build -t gennet .
 cd ..
 
 git clone git@github.com:waku-org/go-waku.git
