@@ -39,4 +39,22 @@ echo -e "\n--> To see simulation logs run: kurtosis service logs wakurtosis $wsl
 grafana_host=$(kurtosis enclave inspect wakurtosis 2>/dev/null | grep grafana- | awk '{print $6}')
 echo -e "\n--> Statistics in Grafana server at http://$grafana_host/ <--"
 
-echo "Output of kurtosis run command written in kurtosisrun_log.txt"
+# echo "Output of kurtosis run command written in kurtosisrun_log.txt"
+
+### Wait for WSL to finish
+
+# Get the container suffix for the running service
+cid_suffix="$(kurtosis enclave inspect $enclave_name | grep $wsl_service_id | cut -f 1 -d ' ')"
+
+# Construct the fully qualified container name that kurtosis created 
+cid="$enclave_name--user-service--$cid_suffix"
+
+# Wait for the container to halt; this will block 
+echo "Waiting for simulation to finish ..."
+status_code="$(docker container wait $cid)"
+
+# Copy simulation results
+docker cp "$cid:/wsl/summary.json" "./"
+echo "Simulation results can be found in ./summary.json"
+
+echo "Done."
