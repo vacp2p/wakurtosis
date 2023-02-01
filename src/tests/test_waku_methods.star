@@ -12,8 +12,8 @@ node_builders = import_module(system_variables.NODE_BUILDERS_MODULE)
 def test_waku_methods(plan):
     NWAKU_TEST_SERVICE_NAME = "nwaku_global_test"
     NWAKU_TEST_SERVICE_NAME_2 = "nwaku_test_2"
-    NWAKU_TEST_SERVICE = node_builders.add_nwaku_service(plan, NWAKU_TEST_SERVICE_NAME, False)
-    NWAKU_TEST_SERVICE_2 = node_builders.add_nwaku_service(plan, NWAKU_TEST_SERVICE_NAME_2, False)
+    NWAKU_TEST_SERVICE = node_builders.prepare_nwaku_service(plan, NWAKU_TEST_SERVICE_NAME, False)
+    NWAKU_TEST_SERVICE_2 = node_builders.prepare_nwaku_service(plan, NWAKU_TEST_SERVICE_NAME_2, False)
 
     test_send_json_rpc(plan, NWAKU_TEST_SERVICE_NAME)
     test_get_wakunode_peer_id(plan, NWAKU_TEST_SERVICE_NAME)
