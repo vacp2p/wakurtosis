@@ -57,6 +57,7 @@ def init(plan, services, wsl_config):
     # Create targets.json
     wsl_targets = create_targets(plan, services)
 
+
     add_service_config = ServiceConfig(
         image=system_variables.WSL_IMAGE,
         ports={},
@@ -67,7 +68,6 @@ def init(plan, services, wsl_config):
         },
         cmd=["python3", "wsl.py"]
     )
-
     wsl_service = plan.add_service(
         service_name=system_variables.WSL_SERVICE_NAME,
         config=add_service_config
