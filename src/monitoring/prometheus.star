@@ -16,23 +16,25 @@ def set_up_prometheus(plan, services):
         name="prometheus_config"
     )
 
+    add_service_config = ServiceConfig(
+        image=system_variables.PROMETHEUS_IMAGE,
+        ports={
+            system_variables.PROMETHEUS_PORT_ID: PortSpec(
+                number=system_variables.CONTAINER_PROMETHEUS_TCP_PORT, transport_protocol="TCP")
+        },
+        files={
+            system_variables.CONTAINER_CONFIGURATION_LOCATION_PROMETHEUS: artifact_id,
+            system_variables.CONTAINER_CONFIGURATION_LOCATION_PROMETHEUS_2: targets_artifact_id
+        },
+        cmd=[
+            "--config.file=" + system_variables.CONTAINER_CONFIGURATION_LOCATION_PROMETHEUS +
+            system_variables.CONTAINER_CONFIGURATION_FILE_NAME_PROMETHEUS
+        ]
+    )
+
     prometheus_service = plan.add_service(
-        service_id=system_variables.PROMETHEUS_SERVICE_ID,
-        config=struct(
-            image=system_variables.PROMETHEUS_IMAGE,
-            ports={
-                system_variables.PROMETHEUS_PORT_ID: PortSpec(
-                    number=system_variables.CONTAINER_PROMETHEUS_TCP_PORT, transport_protocol="TCP")
-            },
-            files={
-                system_variables.CONTAINER_CONFIGURATION_LOCATION_PROMETHEUS: artifact_id,
-                system_variables.CONTAINER_CONFIGURATION_LOCATION_PROMETHEUS_2: targets_artifact_id
-            },
-            cmd=[
-                "--config.file=" + system_variables.CONTAINER_CONFIGURATION_LOCATION_PROMETHEUS +
-                system_variables.CONTAINER_CONFIGURATION_FILE_NAME_PROMETHEUS
-            ]
-        )
+        service_name=system_variables.PROMETHEUS_SERVICE_NAME,
+        config=add_service_config
     )
 
     return prometheus_service

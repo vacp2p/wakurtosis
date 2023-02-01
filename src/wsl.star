@@ -57,20 +57,21 @@ def init(plan, services, wsl_config):
     # Create targets.json
     wsl_targets = create_targets(plan, services)
 
-    wsl_service = plan.add_service(
-        service_id=system_variables.WSL_SERVICE_ID,
-        config=struct(
-            image=system_variables.WSL_IMAGE,
-            ports={},
-            files={
-                system_variables.WSL_CONFIG_PATH : wsl_config,
-                system_variables.WSL_TARGETS_PATH : wsl_targets,
-                system_variables.WSL_TOMLS_PATH : tomls_artifact
-            },
-        
-            cmd=["python3", "wsl.py"]
+    add_service_config = ServiceConfig(
+        image=system_variables.WSL_IMAGE,
+        ports={},
+        files={
+            system_variables.WSL_CONFIG_PATH: wsl_config,
+            system_variables.WSL_TARGETS_PATH: wsl_targets,
+            system_variables.WSL_TOMLS_PATH: tomls_artifact
+        },
 
-        )
+        cmd=["python3", "wsl.py"]
+    )
+
+    wsl_service = plan.add_service(
+        service_name=system_variables.WSL_SERVICE_NAME,
+        config=add_service_config
     )
 
     return wsl_service

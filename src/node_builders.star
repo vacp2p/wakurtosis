@@ -13,28 +13,30 @@ def add_nwaku_service(plan, nwakunode_name, use_general_configuration):
 
     plan.print("Configuration being used file is " + configuration_file)
 
+    add_service_config = ServiceConfig(
+        image=system_variables.NWAKU_IMAGE,
+        ports={
+            system_variables.WAKU_RPC_PORT_ID: PortSpec(number=system_variables.WAKU_TCP_PORT,
+                                                        transport_protocol="TCP"),
+            system_variables.PROMETHEUS_PORT_ID: PortSpec(
+                number=system_variables.PROMETHEUS_TCP_PORT,
+                transport_protocol="TCP"),
+            system_variables.WAKU_LIBP2P_PORT_ID: PortSpec(
+                number=system_variables.WAKU_LIBP2P_PORT,
+                transport_protocol="TCP"),
+        },
+        files={
+            system_variables.CONTAINER_NODE_CONFIG_FILE_LOCATION: artifact_id
+        },
+        entrypoint=system_variables.NWAKU_ENTRYPOINT,
+        cmd=[
+            "--config-file=" + system_variables.CONTAINER_NODE_CONFIG_FILE_LOCATION + "/" + configuration_file
+        ]
+    )
+
     nwaku_service = plan.add_service(
-        service_id=nwakunode_name,
-        config=struct(
-            image=system_variables.NWAKU_IMAGE,
-            ports={
-                system_variables.WAKU_RPC_PORT_ID: PortSpec(number=system_variables.WAKU_TCP_PORT,
-                                                            transport_protocol="TCP"),
-                system_variables.PROMETHEUS_PORT_ID: PortSpec(
-                    number=system_variables.PROMETHEUS_TCP_PORT,
-                    transport_protocol="TCP"),
-                system_variables.WAKU_LIBP2P_PORT_ID: PortSpec(
-                    number=system_variables.WAKU_LIBP2P_PORT,
-                    transport_protocol="TCP"),
-            },
-            files={
-                system_variables.CONTAINER_NODE_CONFIG_FILE_LOCATION: artifact_id
-            },
-            entrypoint=system_variables.NWAKU_ENTRYPOINT,
-            cmd=[
-                "--config-file=" + system_variables.CONTAINER_NODE_CONFIG_FILE_LOCATION + "/" + configuration_file
-            ]
-        )
+        service_name=nwakunode_name,
+        config=add_service_config
     )
 
     return nwaku_service
@@ -48,28 +50,30 @@ def add_gowaku_service(plan, gowakunode_name, use_general_configuration):
     plan.print("Configuration being used file is " + configuration_file)
     plan.print("Entrypoint is "+ str(system_variables.GOWAKU_ENTRYPOINT))
 
+    add_service_config = ServiceConfig(
+        image=system_variables.GOWAKU_IMAGE,
+        ports={
+            system_variables.WAKU_RPC_PORT_ID: PortSpec(number=system_variables.WAKU_TCP_PORT,
+                                                        transport_protocol="TCP"),
+            system_variables.PROMETHEUS_PORT_ID: PortSpec(
+                number=system_variables.PROMETHEUS_TCP_PORT,
+                transport_protocol="TCP"),
+            system_variables.WAKU_LIBP2P_PORT_ID: PortSpec(
+                number=system_variables.WAKU_LIBP2P_PORT,
+                transport_protocol="TCP"),
+        },
+        files={
+            system_variables.CONTAINER_NODE_CONFIG_FILE_LOCATION: artifact_id
+        },
+        entrypoint=system_variables.GOWAKU_ENTRYPOINT,
+        cmd=[
+            "--config-file=" + system_variables.CONTAINER_NODE_CONFIG_FILE_LOCATION + "/" + configuration_file
+        ]
+    )
+
     gowaku_service = plan.add_service(
-        service_id=gowakunode_name,
-        config=struct(
-            image=system_variables.GOWAKU_IMAGE,
-            ports={
-                system_variables.WAKU_RPC_PORT_ID: PortSpec(number=system_variables.WAKU_TCP_PORT,
-                                                            transport_protocol="TCP"),
-                system_variables.PROMETHEUS_PORT_ID: PortSpec(
-                    number=system_variables.PROMETHEUS_TCP_PORT,
-                    transport_protocol="TCP"),
-                system_variables.WAKU_LIBP2P_PORT_ID: PortSpec(
-                    number=system_variables.WAKU_LIBP2P_PORT,
-                    transport_protocol="TCP"),
-            },
-            files={
-                system_variables.CONTAINER_NODE_CONFIG_FILE_LOCATION: artifact_id
-            },
-            entrypoint=system_variables.GOWAKU_ENTRYPOINT,
-            cmd=[
-                "--config-file=" + system_variables.CONTAINER_NODE_CONFIG_FILE_LOCATION + "/" + configuration_file
-            ]
-        )
+        service_name=gowakunode_name,
+        config=add_service_config
     )
 
     return gowaku_service
@@ -106,28 +110,28 @@ def instantiate_services(plan, network_topology, use_general_configuration):
     services_information = {}
 
     # Get up all nodes
-    for service_id in network_topology.keys():
-        image = network_topology[service_id]["image"]
+    for service_name in network_topology.keys():
+        image = network_topology[service_name]["image"]
 
         service_builder, information_builder = service_dispatcher[image]
 
-        service_information = service_builder(plan, service_id, use_general_configuration)
+        service_information = service_builder(plan, service_name, use_general_configuration)
 
-        information_builder(plan, services_information, service_id, service_information)
+        information_builder(plan, services_information, service_name, service_information)
 
     return services_information
 
 
-def _add_waku_service_information(plan, services_information, new_service_id, service_information):
+def _add_waku_service_information(plan, services_information, new_service_name, service_information):
 
     new_service_information = {}
 
-    wakunode_peer_id = waku.get_wakunode_peer_id(plan, new_service_id, system_variables.WAKU_RPC_PORT_ID)
+    wakunode_peer_id = waku.get_wakunode_peer_id(plan, new_service_name, system_variables.WAKU_RPC_PORT_ID)
 
     new_service_information["peer_id"] = wakunode_peer_id
     new_service_information["service_info"] = service_information
 
-    services_information[new_service_id] = new_service_information
+    services_information[new_service_name] = new_service_information
 
 
 service_dispatcher = {

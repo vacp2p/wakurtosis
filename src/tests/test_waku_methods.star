@@ -10,34 +10,34 @@ node_builders = import_module(system_variables.NODE_BUILDERS_MODULE)
 # instead having to create one for each test, and in order to create a node we need access to "plan"
 # parameter, so we cannot have it as a global variable as it was intented.
 def test_waku_methods(plan):
-    NWAKU_TEST_SERVICE_ID = "nwaku_global_test"
-    NWAKU_TEST_SERVICE_ID_2 = "nwaku_test_2"
-    NWAKU_TEST_SERVICE = node_builders.add_nwaku_service(plan, NWAKU_TEST_SERVICE_ID, False)
-    NWAKU_TEST_SERVICE_2 = node_builders.add_nwaku_service(plan, NWAKU_TEST_SERVICE_ID_2, False)
+    NWAKU_TEST_SERVICE_NAME = "nwaku_global_test"
+    NWAKU_TEST_SERVICE_NAME_2 = "nwaku_test_2"
+    NWAKU_TEST_SERVICE = node_builders.add_nwaku_service(plan, NWAKU_TEST_SERVICE_NAME, False)
+    NWAKU_TEST_SERVICE_2 = node_builders.add_nwaku_service(plan, NWAKU_TEST_SERVICE_NAME_2, False)
 
-    test_send_json_rpc(plan, NWAKU_TEST_SERVICE_ID)
-    test_get_wakunode_peer_id(plan, NWAKU_TEST_SERVICE_ID)
+    test_send_json_rpc(plan, NWAKU_TEST_SERVICE_NAME)
+    test_get_wakunode_peer_id(plan, NWAKU_TEST_SERVICE_NAME)
     test_create_waku_id(plan)
     test__merge_peer_ids(plan)
-    test_connect_wakunode_to_peers(plan, NWAKU_TEST_SERVICE_ID)
-    test_post_waku_v2_relay_v1_message(plan, NWAKU_TEST_SERVICE_ID)
+    test_connect_wakunode_to_peers(plan, NWAKU_TEST_SERVICE_NAME)
+    test_post_waku_v2_relay_v1_message(plan, NWAKU_TEST_SERVICE_NAME)
     test_get_waku_peers(plan)
     test_interconnect_waku_nodes(plan)
 
-    plan.remove_service(NWAKU_TEST_SERVICE_ID)
-    plan.remove_service(NWAKU_TEST_SERVICE_ID_2)
+    plan.remove_service(NWAKU_TEST_SERVICE_NAME)
+    plan.remove_service(NWAKU_TEST_SERVICE_NAME_2)
 
-def test_send_json_rpc(plan, service_id):
+def test_send_json_rpc(plan, service_name):
     waku_message = '{"payload": "0x1a2b3c4d5e6f", "timestamp": 1626813243}'
     params = "test, " + waku_message
 
     # Automatically waits for 200
-    waku.send_json_rpc(plan, service_id, system_variables.WAKU_RPC_PORT_ID,
+    waku.send_json_rpc(plan, service_name, system_variables.WAKU_RPC_PORT_ID,
                        system_variables.POST_RELAY_MESSAGE_METHOD, params)
 
 
-def test_get_wakunode_peer_id(plan, service_id):
-    peer_id = waku.get_wakunode_peer_id(plan, service_id, system_variables.WAKU_RPC_PORT_ID)
+def test_get_wakunode_peer_id(plan, service_name):
+    peer_id = waku.get_wakunode_peer_id(plan, service_name, system_variables.WAKU_RPC_PORT_ID)
     plan.print(peer_id)
     plan.assert(value=peer_id, assertion="==",
             target_value="16Uiu2HAm7ZPmRY3ECVz7fAJQdxEDrBw3ToneYgUryKDJPtz25R2n")
@@ -63,12 +63,12 @@ def test__merge_peer_ids(plan):
             target_value="[/ip4/1.1.1.1/tcp/1234/p2p/ASDFGHJKL,/ip4/2.2.2.2/tcp/1234/p2p/QWERTYUIOP]")
 
 
-def test_connect_wakunode_to_peers(plan, service_id):
+def test_connect_wakunode_to_peers(plan, service_name):
     # It will print an error but 200 code
-    waku.connect_wakunode_to_peers(plan, service_id, system_variables.WAKU_RPC_PORT_ID, ["asd"])
+    waku.connect_wakunode_to_peers(plan, service_name, system_variables.WAKU_RPC_PORT_ID, ["asd"])
 
-def test_post_waku_v2_relay_v1_message(plan, service_id):
-    waku.post_waku_v2_relay_v1_message_test(plan, service_id, "test")
+def test_post_waku_v2_relay_v1_message(plan, service_name):
+    waku.post_waku_v2_relay_v1_message_test(plan, service_name, "test")
 
 
 def test_get_waku_peers(plan):
@@ -85,9 +85,9 @@ def test_interconnect_waku_nodes(plan):
 
     waku.interconnect_waku_nodes(plan, topology, node_test_services)
 
-    for service_id in topology:
-        neighbours = waku.get_waku_peers(plan, service_id)
+    for service_name in topology:
+        neighbours = waku.get_waku_peers(plan, service_name)
         plan.assert(value=neighbours, assertion="==", target_value=1)
 
-    for service_id in topology:
-        plan.remove_service(service_id)
+    for service_name in topology:
+        plan.remove_service(service_name)

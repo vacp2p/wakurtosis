@@ -22,21 +22,23 @@ def set_up_grafana(plan, prometheus_service):
         name="grafana_target"
     )
 
+    add_service_config = ServiceConfig(
+        image=system_variables.GRAFANA_IMAGE,
+        ports={
+            system_variables.GRAFANA_PORT_ID: PortSpec(number=system_variables.GRAFANA_TCP_PORT,
+                                                       transport_protocol="TCP")
+        },
+        files={
+            system_variables.CONTAINER_CONFIGURATION_GRAFANA: config_id,
+            # customization_id: CUSTOMIZATION_GRAFANA,
+            system_variables.CONTAINER_DASHBOARDS_GRAFANA: dashboard_id,
+            system_variables.CONTAINER_DATASOURCES_GRAFANA: artifact_id
+        }
+    )
+
     grafana_service = plan.add_service(
-        service_id=system_variables.GRAFANA_SERVICE_ID,
-        config=struct(
-            image=system_variables.GRAFANA_IMAGE,
-            ports={
-                system_variables.GRAFANA_PORT_ID: PortSpec(number=system_variables.GRAFANA_TCP_PORT,
-                                                           transport_protocol="TCP")
-            },
-            files={
-                system_variables.CONTAINER_CONFIGURATION_GRAFANA: config_id,
-                # customization_id: CUSTOMIZATION_GRAFANA,
-                system_variables.CONTAINER_DASHBOARDS_GRAFANA: dashboard_id,
-                system_variables.CONTAINER_DATASOURCES_GRAFANA: artifact_id
-            }
-        )
+        service_name=system_variables.GRAFANA_SERVICE_NAME,
+        config=add_service_config
     )
 
     return grafana_service
