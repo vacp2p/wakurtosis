@@ -2,7 +2,10 @@
 
 import matplotlib.pyplot as plt
 import yaml
+
 import networkx as nx
+import numpy as np
+
 import random, math
 import json
 import sys, os
@@ -269,9 +272,6 @@ def conf_callback(ctx: typer.Context, param: typer.CallbackParam, cfile: str):
                     sys.exit(1)
                 print(conf)
 
-            #set the random seed
-            random.seed(conf['general']['prng_seed'])
-
             ctx.default_map = ctx.default_map or {}  # Initialize the default map
             ctx.default_map.update(conf)  # Merge the config dict into default_map
         except Exception as ex:
@@ -310,6 +310,12 @@ def main(output_dir: str = STR_NONE,
             conf = json.load(f)
         #print(conf)
 
+    #set the random seed : networkx uses numpy as well
+    if "general" in conf  and "prng_seed" in conf ["general"]:
+        seed = conf["general"]["prng_seed"] 
+        print("Setting the random seed", seed)
+        random.seed(seed)
+        np.random.seed(seed)
     
     # merge the cli options and the config.json options
     # TODO : type check and sanity check config.json parameters

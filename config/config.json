@@ -1,6 +1,6 @@
 {
   "general":{
-    "prng_seed" : 0
+    "prng_seed" : 67
   },
   "kurtosis": {
     "enclave_name": "wakurtosis",
