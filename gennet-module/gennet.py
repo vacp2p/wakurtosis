@@ -9,8 +9,11 @@ import numpy as np
 import random, math
 import json
 import sys, os
+
+import time, tracemalloc
 import string
 import typer
+
 from enum import Enum
 
 
@@ -229,9 +232,7 @@ def generate_toml(topics, node_type=nodeType.NWAKU):
 
 # Convert a dict to pair of arrays
 def dict_to_arrays(dic):
-    keys = list(dic.keys())
-    print (keys)
-    vals = []
+    keys, vals = list(dic.keys()), []
     for k in keys :
         vals.append(dic[k])
     return keys, vals
@@ -296,7 +297,7 @@ def conf_callback(ctx: typer.Context, param: typer.CallbackParam, cfile: str):
                     print(f"Gennet configuration not found in {cfile}. Skipping topology generation.")
                     sys.exit(1)
                 # TODO : type-check and sanity-check the config.json
-                print(conf)
+                #print(conf)
         except Exception as ex:
             raise typer.BadParameter(str(ex))
     return cfile
@@ -328,6 +329,11 @@ def main(output_dir: str = STR_NONE,
          num_subnets: int = typer.Option(INT_NONE, callback=_num_subnets_callback),
          config_file: str = typer.Option(STR_NONE, callback=conf_callback, is_eager=True)):
 
+    # Benchmarking: record start time and start tracing mallocs
+    start = time.time()
+    tracemalloc.start()
+
+
     conf = {}
     if config_file != "" :
         with open(config_file, 'r') as f:  # Load config file
@@ -336,7 +342,7 @@ def main(output_dir: str = STR_NONE,
 
     # set the random seed : networkx uses numpy.random as well
     seed = test_and_set_int(prng_seed, "prng_seed", conf, "general")
-    print("Setting the random seed", seed)
+    print("Setting the random seed to", seed)
     random.seed(seed)
     np.random.seed(seed)
    
@@ -367,6 +373,14 @@ def main(output_dir: str = STR_NONE,
     # Generate file format specific data structs and write the files
     generate_and_write_files(output_dir, num_topics, num_subnets, node_type_distribution, G)
     #draw(G, outpur_dir)
+
+    # Benchmarking. Record finish time and stop the malloc tracing
+    end = time.time()
+    mem_curr, mem_max = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+
+    print(f"Network generation is done.\nThe generated network is under ./{output_dir}")
+    print(f"STATS: For {num_nodes} nodes, time took is {(end-start)} secs, peak memory usage is {mem_max/(1024*1024)} MBs\n")
 
 
 if __name__ == "__main__":
