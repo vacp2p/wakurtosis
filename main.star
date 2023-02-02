@@ -35,5 +35,5 @@ def run(plan, args):
 
     waku.interconnect_waku_nodes(plan, waku_topology, services)
 
-    # # Setup WSL & Start the Simulation
+    # Setup WSL & Start the Simulation
     wsl_service = wsl.init(plan, services, wsl_config)
