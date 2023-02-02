@@ -12,8 +12,7 @@
     "num_topics": 150,
     "num_partitions": 1,
     "num_subnets": 2,
-    "node_types": 2,
-    "node_type_distribution": { "type1":10, "type2":90},
+    "node_type_distribution": { "nwaku":50, "gowaku":50},
     "node_type": "desktop",
     "network_type": "scalefree",
     "output_dir": "generated_network"

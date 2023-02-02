@@ -20,23 +20,23 @@ from enum import Enum
 INT_NONE = -1
 STR_NONE = ""
 
-# the param defaults
+# the defaults parameter values
 defaults = {
-        "num_nodes": 4,
-        "num_partitions": 1,
-        "num_subnets": 1,
-        "num_topics": 1,
-        "node_types": 2,
-        "node_type_distribution": { "type1":10, "type2":90},
-        "network_type": "scalefree",
-        "output_dir": "generated_network"
+        "num_nodes" : 4,
+        "num_partitions" : 1,
+        "num_subnets" : 1,
+        "num_topics" : 1,
+        "node_type_distribution": { "nwaku" : 100 },
+        "network_type" : "scalefree",
+        "output_dir" : "generated_network",
+        "prng_seed" : 1
         }
 
 
 # To add a new node type, add appropriate entries to the nodeType and nodeTypeSwitch
 class nodeType(Enum):
-    NWAKU = "nwaku"  # waku desktop config
-    GOWAKU = "gowaku"  # waku mobile config
+    NWAKU = "nwaku"     # waku desktop config
+    GOWAKU = "gowaku"   # waku mobile config
 
 
 nodeTomlSwitch = {
@@ -49,8 +49,8 @@ nodeDockerImageSwitch = {
     nodeType.GOWAKU: "go-waku"
 }
 
-NODES = [nodeType.NWAKU, nodeType.GOWAKU]
-NODE_PROBABILITIES = (100, 0)
+#NODES = [nodeType.NWAKU, nodeType.GOWAKU]
+#NODE_PROBABILITIES = (100, 0)
 
 # To add a new network type, add appropriate entries to the networkType and networkTypeSwitch
 # the networkTypeSwitch is placed before generate_network(): fwd declaration mismatch with typer/python :/
@@ -202,9 +202,10 @@ def generate_subnets(G, num_subnets):
     offsets = sorted(random.sample(range(0, n), num_subnets - 1))
     offsets.append(n - 1)
 
-    start = 0
-    subnets = {}
-    subnet_id = 0
+    start, subnet_id, subnets = 0, 0, {}
+    #start = 0
+    #subnets = {}
+    #subnet_id = 0
     for end in offsets:
         for i in range(start, end + 1):
             subnets[f"{NODE_PREFIX}_{lst[i]}"] = f"{SUBNET_PREFIX}_{subnet_id}"
@@ -216,22 +217,46 @@ def generate_subnets(G, num_subnets):
 ### file format related fns ###########################################################
 # Generate per node toml configs
 def generate_toml(topics, node_type=nodeType.NWAKU):
-    topic_str = " ".join(get_random_sublist(topics))  # space separated topics
-    if node_type == nodeType.GOWAKU:
-        topic_str = [topic_str]
-    else:
+    topics = get_random_sublist(topics)
+    if node_type == nodeType.GOWAKU:    # comma separated list of topics
+        topic_str = ", ".join(topics)
+        topic_str = f"[{topic_str}]"
+    else:                               # space separated topics
+        topic_str = " ".join(topics)  
         topic_str = f"\"{topic_str}\""
     return f"{nodeTomlSwitch.get(node_type)}topics = {topic_str}\n"
 
 
+# Convert a dict to pair of arrays
+def dict_to_arrays(dic):
+    keys = list(dic.keys())
+    print (keys)
+    vals = []
+    for k in keys :
+        vals.append(dic[k])
+    return keys, vals
+
+
+# Generate a list of nodeType enums that respects the node type distribution
+def generate_node_types(node_type_distribution, G):
+    num_nodes = G.number_of_nodes()
+    nodes, node_probs = dict_to_arrays(node_type_distribution)
+    node_types_str = random.choices(nodes, weights=node_probs, k=num_nodes)
+    node_types_enum = [nodeType(s) for s in node_types_str]
+    return node_types_enum
+
+
 # Generates network-wide json and per-node toml and writes them
-def generate_and_write_files(dirname, num_topics, num_subnets, G):
+def generate_and_write_files(dirname, num_topics, num_subnets, node_type_distribution, G):
     topics = generate_topics(num_topics)
     subnets = generate_subnets(G, num_subnets)
-    json_dump = {}
+    node_types_enum = generate_node_types(node_type_distribution, G)
+
+    i, json_dump = 0, {}
     for node in G.nodes:
-        node_type = random.choices(NODES, weights=NODE_PROBABILITIES)[0]
-        write_toml(dirname, node, generate_toml(topics, node_type))  # per node toml
+        # write the per node toml for the ith node of appropriate type
+        node_type, i = node_types_enum[i], i+1
+        write_toml(dirname, node, generate_toml(topics, node_type))
         json_dump[node] = {}
         json_dump[node]["static_nodes"] = []
         for edge in G.edges(node):
@@ -270,33 +295,32 @@ def conf_callback(ctx: typer.Context, param: typer.CallbackParam, cfile: str):
                 if "gennet" not in conf:
                     print(f"Gennet configuration not found in {cfile}. Skipping topology generation.")
                     sys.exit(1)
+                # TODO : type-check and sanity-check the config.json
                 print(conf)
-
-            ctx.default_map = ctx.default_map or {}  # Initialize the default map
-            ctx.default_map.update(conf)  # Merge the config dict into default_map
         except Exception as ex:
             raise typer.BadParameter(str(ex))
     return cfile
 
 
 # methods to merge cli values, config.json and default values
-def test_and_set_int(cli_val, file_val, conf):
+def test_and_set_int(cli_val, file_val, conf, module="gennet"):
     if cli_val != INT_NONE:
         return cli_val
-    if cli_val == INT_NONE and "gennet" in conf and file_val in conf["gennet"]:
-        return conf["gennet"][file_val]
+    if cli_val == INT_NONE and module in conf and file_val in conf[module]:
+        return conf[module][file_val]
     return defaults[file_val]
 
 
-def test_and_set_str(cli_val, file_val, conf):
+def test_and_set_str(cli_val, file_val, conf, module="gennet"):
     if cli_val != STR_NONE:
         return cli_val
-    if cli_val == STR_NONE and "gennet" in conf and file_val in conf["gennet"]:
-        return conf["gennet"][file_val]
+    if cli_val == STR_NONE and module in conf and file_val in conf[module]:
+        return conf[module][file_val]
     return defaults[file_val]
 
 
 def main(output_dir: str = STR_NONE,
+         prng_seed: int = INT_NONE,
          num_nodes: int = INT_NONE,
          num_topics: int = INT_NONE,
          network_type: networkType = networkType.NEWMANWATTSSTROGATZ.value,
@@ -310,15 +334,21 @@ def main(output_dir: str = STR_NONE,
             conf = json.load(f)
         #print(conf)
 
-    #set the random seed : networkx uses numpy as well
-    if "general" in conf  and "prng_seed" in conf ["general"]:
-        seed = conf["general"]["prng_seed"] 
-        print("Setting the random seed", seed)
-        random.seed(seed)
-        np.random.seed(seed)
-    
+    # set the random seed : networkx uses numpy.random as well
+    seed = test_and_set_int(prng_seed, "prng_seed", conf, "general")
+    print("Setting the random seed", seed)
+    random.seed(seed)
+    np.random.seed(seed)
+   
+    # Extract the node type distribution from config.json or defaults
+    # no cli for node type distribution
+    if "gennet" in conf  and "node_type_distribution" in conf ["gennet"]:
+        node_type_distribution = conf["gennet"]["node_type_distribution"]
+    else:
+        node_type_distribution = default["node_type_distribution"]
+
     # merge the cli options and the config.json options
-    # TODO : type check and sanity check config.json parameters
+    # TODO : pack the fields in a class/'struct'/tuple
     # TODO : use inspect and local() to do this iteratively
     output_dir      =   test_and_set_str(output_dir, "output_dir", conf)
     num_nodes       =   test_and_set_int(num_nodes, "num_nodes", conf)
@@ -327,6 +357,7 @@ def main(output_dir: str = STR_NONE,
     num_partitions  =   test_and_set_int(num_partitions, "num_partitions", conf)
     num_subnets     =   test_and_set_int(num_subnets, "num_subnets", conf)
 
+
     # Generate the network
     G = generate_network(num_nodes, networkType(network_type))
 
@@ -334,7 +365,7 @@ def main(output_dir: str = STR_NONE,
     os.makedirs(output_dir, exist_ok=True)
 
     # Generate file format specific data structs and write the files
-    generate_and_write_files(output_dir, num_topics, num_subnets, G)
+    generate_and_write_files(output_dir, num_topics, num_subnets, node_type_distribution, G)
     #draw(G, outpur_dir)
 
 
