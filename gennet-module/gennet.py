@@ -13,16 +13,16 @@ from enum import Enum
 
 # Enums & Consts
 
-# to facilitate merge of config.json and cli
+# to facilitate merge of cli inputs, config.json and defaults
 INT_NONE = -1
 STR_NONE = ""
 
-
+# the param defaults
 defaults = {
         "num_nodes": 4,
         "num_partitions": 1,
         "num_subnets": 1,
-        "num_topics": 2,
+        "num_topics": 1,
         "node_types": 2,
         "node_type_distribution": { "type1":10, "type2":90},
         "network_type": "scalefree",
@@ -279,6 +279,7 @@ def conf_callback(ctx: typer.Context, param: typer.CallbackParam, cfile: str):
     return cfile
 
 
+# methods to merge cli values, config.json and default values
 def testAndSetInt(cli_val, file_val, conf):
     if cli_val != INT_NONE:
         return cli_val
@@ -309,8 +310,10 @@ def main(output_dir: str = STR_NONE,
             conf = json.load(f)
         #print(conf)
 
+    
     # merge the cli options and the config.json options
     # TODO : type check and sanity check config.json parameters
+    # TODO : use inspect and local() to do this iteratively
     output_dir      =   testAndSetStr(output_dir, "output_dir", conf)
     num_nodes       =   testAndSetInt(num_nodes, "num_nodes", conf)
     num_topics      =   testAndSetInt(num_topics, "num_topics", conf)
