@@ -280,7 +280,7 @@ def conf_callback(ctx: typer.Context, param: typer.CallbackParam, cfile: str):
 
 
 # methods to merge cli values, config.json and default values
-def testAndSetInt(cli_val, file_val, conf):
+def test_and_set_int(cli_val, file_val, conf):
     if cli_val != INT_NONE:
         return cli_val
     if cli_val == INT_NONE and "gennet" in conf and file_val in conf["gennet"]:
@@ -288,7 +288,7 @@ def testAndSetInt(cli_val, file_val, conf):
     return defaults[file_val]
 
 
-def testAndSetStr(cli_val, file_val, conf):
+def test_and_set_str(cli_val, file_val, conf):
     if cli_val != STR_NONE:
         return cli_val
     if cli_val == STR_NONE and "gennet" in conf and file_val in conf["gennet"]:
@@ -320,12 +320,12 @@ def main(output_dir: str = STR_NONE,
     # merge the cli options and the config.json options
     # TODO : type check and sanity check config.json parameters
     # TODO : use inspect and local() to do this iteratively
-    output_dir      =   testAndSetStr(output_dir, "output_dir", conf)
-    num_nodes       =   testAndSetInt(num_nodes, "num_nodes", conf)
-    num_topics      =   testAndSetInt(num_topics, "num_topics", conf)
-    network_type    =   testAndSetInt(network_type, "network_type", conf)
-    num_partitions  =   testAndSetInt(num_partitions, "num_partitions", conf)
-    num_subnets     =   testAndSetInt(num_subnets, "num_subnets", conf)
+    output_dir      =   test_and_set_str(output_dir, "output_dir", conf)
+    num_nodes       =   test_and_set_int(num_nodes, "num_nodes", conf)
+    num_topics      =   test_and_set_int(num_topics, "num_topics", conf)
+    network_type    =   test_and_set_int(network_type, "network_type", conf)
+    num_partitions  =   test_and_set_int(num_partitions, "num_partitions", conf)
+    num_subnets     =   test_and_set_int(num_subnets, "num_subnets", conf)
 
     # Generate the network
     G = generate_network(num_nodes, networkType(network_type))
