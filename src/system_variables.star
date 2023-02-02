@@ -12,7 +12,7 @@ NODE_CONFIG_FILE_LOCATION = "github.com/logos-co/wakurtosis/config/topology_gene
 
 CONTAINER_NODE_CONFIG_FILE_LOCATION = "/node/configuration_file/"
 NODE_CONFIGURATION_FILE_EXTENSION = ".toml"
-2NWAKU_ENTRYPOINT = ["/usr/bin/wakunode", "--rpc-address=0.0.0.0", "--metrics-server-address=0.0.0.0", "--log-level=INFO"]
+NWAKU_ENTRYPOINT = ["/usr/bin/wakunode", "--rpc-address=0.0.0.0", "--metrics-server-address=0.0.0.0", "--log-level=INFO"]
 GOWAKU_ENTRYPOINT = ["/usr/bin/waku", "--rpc-address=0.0.0.0", "--metrics-server-address=0.0.0.0", "--log-level=INFO"]
 
 # Prometheus Configuration
