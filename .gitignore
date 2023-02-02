@@ -27,3 +27,5 @@ config/topology_generated/
 config/waku_config_files/
 kurtosisrun_log.txt
 summary.json
+wakurtosis_logs/
+log_trace_test
