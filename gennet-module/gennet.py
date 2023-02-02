@@ -13,6 +13,23 @@ from enum import Enum
 
 # Enums & Consts
 
+# to facilitate merge of config.json and cli
+INT_NONE = -1
+STR_NONE = ""
+
+
+defaults = {
+        "num_nodes": 4,
+        "num_partitions": 1,
+        "num_subnets": 1,
+        "num_topics": 2,
+        "node_types": 2,
+        "node_type_distribution": { "type1":10, "type2":90},
+        "network_type": "scalefree",
+        "output_dir": "generated_network"
+        }
+
+
 # To add a new node type, add appropriate entries to the nodeType and nodeTypeSwitch
 class nodeType(Enum):
     NWAKU = "nwaku"  # waku desktop config
@@ -41,12 +58,12 @@ class networkType(Enum):
     BARBELL = "barbell"  # partition
     BALANCEDTREE = "balancedtree"  # committees?
     STAR = "star"  # spof
+    NONE = STR_NONE
 
 
 NW_DATA_FNAME = "network_data.json"
 NODE_PREFIX = "node"
 SUBNET_PREFIX = "subnetwork"
-
 
 ### I/O related fns ##############################################################
 
@@ -221,33 +238,15 @@ def generate_and_write_files(dirname, num_topics, num_subnets, G):
     write_json(dirname, json_dump)  # network wide json
 
 
-def conf_callback(ctx: typer.Context, param: typer.CallbackParam, value: str):
-    if value:
-        typer.echo(f"Loading config file: {value.split('/')[-1]}")
-        try:
-            with open(value, 'r') as f:  # Load config file
-                conf = json.load(f)
-                if "gennet" in conf:
-                    conf = conf["gennet"]
-                else:
-                    print("Configuration not found. Skipping topology generation.")
-                    sys.exit(1)
-            ctx.default_map = ctx.default_map or {}  # Initialize the default map
-            ctx.default_map.update(conf)  # Merge the config dict into default_map
-        except Exception as ex:
-            raise typer.BadParameter(str(ex))
-    return value
-
-
-# Sanity checks
+# sanity check : num_partitions == 1
 def _num_partitions_callback(num_partitions: int):
     if num_partitions > 1:
         raise ValueError(
             f"--num-partitions {num_partitions}, Sorry, we do not yet support partitions")
-
     return num_partitions
 
 
+# sanity check :  num_subnets < num_nodes
 def _num_subnets_callback(ctx: typer, Context, num_subnets: int):
     num_nodes = ctx.params["num_nodes"]
     if num_subnets > num_nodes:
@@ -255,17 +254,69 @@ def _num_subnets_callback(ctx: typer, Context, num_subnets: int):
             f"num_subnets must be <= num_nodes: num_subnets={num_subnets}, num_nodes={1}")
     if num_subnets == -1:
         num_subnets = num_nodes
-
     return num_subnets
 
 
-def main(output_dir: str = "topology_generated",
-         num_nodes: int = 4,
-         num_topics: int = 1,
+# sanity check : valid json with "gennet" config
+def conf_callback(ctx: typer.Context, param: typer.CallbackParam, cfile: str):
+    if cfile:
+        typer.echo(f"Loading config file: {cfile.split('/')[-1]}")
+        try:
+            with open(cfile, 'r') as f:  # Load config file
+                conf = json.load(f)
+                if "gennet" not in conf:
+                    print(f"Gennet configuration not found in {cfile}. Skipping topology generation.")
+                    sys.exit(1)
+                print(conf)
+
+            #set the random seed
+            random.seed(conf['general']['prng_seed'])
+
+            ctx.default_map = ctx.default_map or {}  # Initialize the default map
+            ctx.default_map.update(conf)  # Merge the config dict into default_map
+        except Exception as ex:
+            raise typer.BadParameter(str(ex))
+    return cfile
+
+
+def testAndSetInt(cli_val, file_val, conf):
+    if cli_val != INT_NONE:
+        return cli_val
+    if cli_val == INT_NONE and "gennet" in conf and file_val in conf["gennet"]:
+        return conf["gennet"][file_val]
+    return defaults[file_val]
+
+
+def testAndSetStr(cli_val, file_val, conf):
+    if cli_val != STR_NONE:
+        return cli_val
+    if cli_val == STR_NONE and "gennet" in conf and file_val in conf["gennet"]:
+        return conf["gennet"][file_val]
+    return defaults[file_val]
+
+
+def main(output_dir: str = STR_NONE,
+         num_nodes: int = INT_NONE,
+         num_topics: int = INT_NONE,
          network_type: networkType = networkType.NEWMANWATTSSTROGATZ.value,
-         num_subnets: int = typer.Option(-1, callback=_num_subnets_callback),
-         num_partitions: int = typer.Option(1, callback=_num_partitions_callback),
-         config_file: str = typer.Option("", callback=conf_callback, is_eager=True)):
+         num_partitions: int = typer.Option(INT_NONE, callback=_num_partitions_callback),
+         num_subnets: int = typer.Option(INT_NONE, callback=_num_subnets_callback),
+         config_file: str = typer.Option(STR_NONE, callback=conf_callback, is_eager=True)):
+
+    conf = {}
+    if config_file != "" :
+        with open(config_file, 'r') as f:  # Load config file
+            conf = json.load(f)
+        #print(conf)
+
+    # merge the cli options and the config.json options
+    # TODO : type check and sanity check config.json parameters
+    output_dir      =   testAndSetStr(output_dir, "output_dir", conf)
+    num_nodes       =   testAndSetInt(num_nodes, "num_nodes", conf)
+    num_topics      =   testAndSetInt(num_topics, "num_topics", conf)
+    network_type    =   testAndSetInt(network_type, "network_type", conf)
+    num_partitions  =   testAndSetInt(num_partitions, "num_partitions", conf)
+    num_subnets     =   testAndSetInt(num_subnets, "num_subnets", conf)
 
     # Generate the network
     G = generate_network(num_nodes, networkType(network_type))
@@ -275,6 +326,7 @@ def main(output_dir: str = "topology_generated",
 
     # Generate file format specific data structs and write the files
     generate_and_write_files(output_dir, num_topics, num_subnets, G)
+    #draw(G, outpur_dir)
 
 
 if __name__ == "__main__":

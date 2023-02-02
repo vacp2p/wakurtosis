@@ -1,16 +1,22 @@
 {
+  "general":{
+    "prng_seed" : 0
+  },
   "kurtosis": {
     "enclave_name": "wakurtosis",
     "topology_path": "./config/topology_generated/",
     "same_toml_configuration": false
   },
   "gennet": {
-    "num_nodes": 3,
-    "num_topics": 1,
+    "num_nodes": 100,
+    "num_topics": 150,
+    "num_partitions": 1,
+    "num_subnets": 2,
+    "node_types": 2,
+    "node_type_distribution": { "type1":10, "type2":90},
     "node_type": "desktop",
     "network_type": "scalefree",
-    "num_partitions": 1,
-    "num_subnets": 1
+    "output_dir": "generated_network"
   },
   "wsl": {
     "simulation_time": 60,
