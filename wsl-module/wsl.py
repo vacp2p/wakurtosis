@@ -5,7 +5,7 @@ Description: Wakurtosis load simulator
 """
 
 """ Dependencies """
-import sys, logging, yaml, json, time, random, os, argparse, tomllib, glob
+import sys, logging, yaml, json, time, random, os, argparse, tomllib, glob, hashlib
 import requests
 import rtnorm
 # from pathlib import Path
@@ -149,7 +149,7 @@ def send_waku_msg(node_address, topic, payload, nonce=1):
 
     G_LOGGER.debug('Response from %s: %s [%.4f ms.]' %(node_address, response_obj, elapsed_ms))
     
-    return response_obj, elapsed_ms, hash(json_data), my_payload['ts']
+    return response_obj, elapsed_ms, json.dumps(waku_msg), my_payload['ts']
 
 # Generate a random interval using a Poisson distribution
 def poisson_interval(rate):
@@ -392,9 +392,10 @@ def main():
         G_LOGGER.info('Injecting message of topic %s to network through Waku node %s ...' %(emitter_topic, node_address))
         
         payload, size = make_payload_dist(dist_type=config['general']['dist_type'].lower(), min_size=config['general']['min_packet_size'], max_size=config['general']['max_packet_size'])
-        response, elapsed, msg_hash, ts = send_waku_msg(node_address, topic=emitter_topic, payload=payload, nonce=len(msgs_dict))
+        response, elapsed, waku_msg, ts = send_waku_msg(node_address, topic=emitter_topic, payload=payload, nonce=len(msgs_dict))
 
         if response['result']:
+            msg_hash = hashlib.sha256(waku_msg.encode('utf-8')).hexdigest()
             if msg_hash in msgs_dict:
                 G_LOGGER.error('Hash collision. %s already exists in dictionary' %msg_hash)
                 continue
