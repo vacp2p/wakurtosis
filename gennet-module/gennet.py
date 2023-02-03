@@ -1,14 +1,12 @@
 #! /usr/bin/env python3
 
 import matplotlib.pyplot as plt
-import yaml
-
 import networkx as nx
 import numpy as np
 
 import random, math
-import json
 import sys, os
+import json
 
 import time, tracemalloc
 import string
@@ -31,7 +29,7 @@ defaults = {
         "num_topics" : 1,
         "node_type_distribution": { "nwaku" : 100 },
         "network_type" : "scalefree",
-        "output_dir" : "generated_network",
+        "output_dir" : "network_data",
         "prng_seed" : 1
         }
 
@@ -320,7 +318,8 @@ def test_and_set_str(cli_val, file_val, conf, module="gennet"):
     return defaults[file_val]
 
 
-def main(output_dir: str = STR_NONE,
+def main(benchmark : bool = False,
+         output_dir: str = STR_NONE,
          prng_seed: int = INT_NONE,
          num_nodes: int = INT_NONE,
          num_topics: int = INT_NONE,
@@ -330,8 +329,9 @@ def main(output_dir: str = STR_NONE,
          config_file: str = typer.Option(STR_NONE, callback=conf_callback, is_eager=True)):
 
     # Benchmarking: record start time and start tracing mallocs
-    start = time.time()
-    tracemalloc.start()
+    if benchmark :
+        start = time.time()
+        tracemalloc.start()
 
 
     conf = {}
@@ -351,7 +351,7 @@ def main(output_dir: str = STR_NONE,
     if "gennet" in conf  and "node_type_distribution" in conf ["gennet"]:
         node_type_distribution = conf["gennet"]["node_type_distribution"]
     else:
-        node_type_distribution = default["node_type_distribution"]
+        node_type_distribution = defaults["node_type_distribution"]
 
     # merge the cli options and the config.json options
     # TODO : pack the fields in a class/'struct'/tuple
@@ -373,14 +373,14 @@ def main(output_dir: str = STR_NONE,
     # Generate file format specific data structs and write the files
     generate_and_write_files(output_dir, num_topics, num_subnets, node_type_distribution, G)
     #draw(G, outpur_dir)
+    print(f"Network generation is done.\nThe generated network is under ./{output_dir}")
 
     # Benchmarking. Record finish time and stop the malloc tracing
-    end = time.time()
-    mem_curr, mem_max = tracemalloc.get_traced_memory()
-    tracemalloc.stop()
-
-    print(f"Network generation is done.\nThe generated network is under ./{output_dir}")
-    print(f"STATS: For {num_nodes} nodes, time took is {(end-start)} secs, peak memory usage is {mem_max/(1024*1024)} MBs\n")
+    if benchmark :
+        end = time.time()
+        mem_curr, mem_max = tracemalloc.get_traced_memory()
+        tracemalloc.stop()
+        print(f"STATS: For {num_nodes} nodes, time took is {(end-start)} secs, peak memory usage is {mem_max/(1024*1024)} MBs\n")
 
 
 if __name__ == "__main__":
