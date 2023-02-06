@@ -28,7 +28,7 @@ defaults = {
         "num_subnets" : 1,
         "num_topics" : 1,
         "node_type_distribution": { "nwaku" : 100 },
-        "network_type" : "scalefree",
+        "network_type" : "newmanwattsstrogatz",
         "output_dir" : "network_data",
         "prng_seed" : 1
         }
