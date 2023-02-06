@@ -8,14 +8,14 @@
     "same_toml_configuration": false
   },
   "gennet": {
-    "num_nodes": 100,
-    "num_topics": 150,
+    "num_nodes": 21,
+    "num_topics": 7,
     "num_partitions": 1,
-    "num_subnets": 2,
+    "num_subnets": 5,
     "node_type_distribution": { "nwaku":50, "gowaku":50},
     "node_type": "desktop",
-    "network_type": "scalefree",
-    "output_dir": "generated_network"
+    "network_type": "newmanwattsstrogatz",
+    "output_dir": "network_data"
   },
   "wsl": {
     "simulation_time": 60,

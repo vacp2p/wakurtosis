@@ -32,7 +32,7 @@ Our tool can also take arguments from a json file, specified using `--config-fil
 Following is an example json file:
 
 
-```json
+````json
 {
   "general":{
     "prng_seed" : 67
