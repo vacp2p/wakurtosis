@@ -6,24 +6,25 @@ Module to generate network models (in JSON) and node configuration files (in TOM
 ```commandline
 > python gennet.py --help
  Usage: gennet.py [OPTIONS]                                                     
+
+              
+╭─ Options ────────────────────────────────────────────────────────────────────────────╮
+│ --benchmark         --no-benchmark                           [default: no-benchmark] │
+│ --output-dir                          TEXT                   [default: network_data] │
+│ --prng-seed                           INTEGER                [default: 3]            │
+│ --num-nodes                           INTEGER                [default: 4]            │
+│ --num-topics                          INTEGER                [default: 1]            │
+│ --network-type                        [configmodel|scalefree [default:               │
+│                                       |newmanwattsstrogatz   newmanwattsstrogatz]    │
+│                                       |barbell|balancedtree                          │
+│                                       |star]                                         │
+│ --num-subnets                         INTEGER                [default: 1]            │
+│ --num-partitions                      INTEGER                [default: 1]            │
+│ --config-file                         TEXT                                           │
+│ --help                                                       Show this message and   │
+│                                                              exit.                   │
+╰──────────────────────────────────────────────────────────────────────────────────────╯
                                                                                 
-╭─ Options ────────────────────────────────────────────────────────────────────╮
-│ --benchmark         --no-benchmark                        [default:          │
-│                                                           no-benchmark]      │
-│ --output-dir                          TEXT                [default: network_data]                   │
-│ --prng-seed                           INTEGER             [default: 1]      │
-│ --num-nodes                           INTEGER             [default: 4]      │
-│ --num-topics                          INTEGER             [default: 1]      │
-│ --network-type                        [configmodel|scale  [default:          │
-│                                       free|newmanwattsst  newmanwattsstroga… │
-│                                       rogatz|barbell|bal                     │
-│                                       ancedtree|star|]                       │
-│ --num-partitions                      INTEGER             [default: 1]      │
-│ --num-subnets                         INTEGER             [default: -1]      │
-│ --config-file                         TEXT                                   │
-│ --help                                                    Show this message  │
-│                                                           and exit.          │
-╰──────────────────────────────────────────────────────────────────────────────╯
 ```
 
 Our tool can also take arguments from a json file, specified using `--config-file` option.

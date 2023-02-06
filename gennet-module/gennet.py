@@ -17,23 +17,6 @@ from enum import Enum
 
 # Enums & Consts
 
-# to facilitate merge of cli inputs, config.json and defaults
-INT_NONE = -1
-STR_NONE = ""
-
-# the defaults parameter values
-defaults = {
-        "num_nodes" : 4,
-        "num_partitions" : 1,
-        "num_subnets" : 1,
-        "num_topics" : 1,
-        "node_type_distribution": { "nwaku" : 100 },
-        "network_type" : "newmanwattsstrogatz",
-        "output_dir" : "network_data",
-        "prng_seed" : 1
-        }
-
-
 # To add a new node type, add appropriate entries to the nodeType and nodeTypeSwitch
 class nodeType(Enum):
     NWAKU = "nwaku"     # waku desktop config
@@ -62,7 +45,6 @@ class networkType(Enum):
     BARBELL = "barbell"  # partition
     BALANCEDTREE = "balancedtree"  # committees?
     STAR = "star"  # spof
-    NONE = STR_NONE
 
 
 NW_DATA_FNAME = "network_data.json"
@@ -265,6 +247,27 @@ def generate_and_write_files(dirname, num_topics, num_subnets, node_type_distrib
     write_json(dirname, json_dump)  # network wide json
 
 
+# sanity check : valid json with "gennet" config
+def conf_callback(ctx: typer.Context, param: typer.CallbackParam, cfile: str):
+    if cfile:
+        typer.echo(f"Loading config file: {cfile.split('/')[-1]}")
+        ctx.default_map = ctx.default_map or {}  # Init the default map
+        try:
+            with open(cfile, 'r') as f:  # Load config file
+                conf = json.load(f)
+                if "gennet" not in conf:
+                    print(f"Gennet configuration not found in {cfile}. Skipping topology generation.")
+                    sys.exit(1)
+                if "general" in conf and "prng_seed" in conf["general"]:
+                    conf["gennet"]["prng_seed"] = conf["general"]["prng_seed"]
+                # TODO : type-check and sanity-check the config.json
+                #print(conf)
+            ctx.default_map.update(conf["gennet"])  # Merge config and default_map
+        except Exception as ex:
+            raise typer.BadParameter(str(ex))
+    return cfile
+
+
 # sanity check : num_partitions == 1
 def _num_partitions_callback(num_partitions: int):
     if num_partitions > 1:
@@ -276,64 +279,30 @@ def _num_partitions_callback(num_partitions: int):
 # sanity check :  num_subnets < num_nodes
 def _num_subnets_callback(ctx: typer, Context, num_subnets: int):
     num_nodes = ctx.params["num_nodes"]
+    if num_subnets == -1:
+        num_subnets = num_nodes
     if num_subnets > num_nodes:
         raise ValueError(
             f"num_subnets must be <= num_nodes: num_subnets={num_subnets}, num_nodes={1}")
-    if num_subnets == -1:
-        num_subnets = num_nodes
     return num_subnets
 
 
-# sanity check : valid json with "gennet" config
-def conf_callback(ctx: typer.Context, param: typer.CallbackParam, cfile: str):
-    if cfile:
-        typer.echo(f"Loading config file: {cfile.split('/')[-1]}")
-        try:
-            with open(cfile, 'r') as f:  # Load config file
-                conf = json.load(f)
-                if "gennet" not in conf:
-                    print(f"Gennet configuration not found in {cfile}. Skipping topology generation.")
-                    sys.exit(1)
-                # TODO : type-check and sanity-check the config.json
-                #print(conf)
-        except Exception as ex:
-            raise typer.BadParameter(str(ex))
-    return cfile
-
-
-# methods to merge cli values, config.json and default values
-def test_and_set_int(cli_val, file_val, conf, module="gennet"):
-    if cli_val != INT_NONE:
-        return cli_val
-    if cli_val == INT_NONE and module in conf and file_val in conf[module]:
-        return conf[module][file_val]
-    return defaults[file_val]
-
-
-def test_and_set_str(cli_val, file_val, conf, module="gennet"):
-    if cli_val != STR_NONE:
-        return cli_val
-    if cli_val == STR_NONE and module in conf and file_val in conf[module]:
-        return conf[module][file_val]
-    return defaults[file_val]
-
-
-def main(benchmark : bool = False,
-         output_dir: str = STR_NONE,
-         prng_seed: int = INT_NONE,
-         num_nodes: int = INT_NONE,
-         num_topics: int = INT_NONE,
+def main(ctx: typer.Context, benchmark : bool = False,
+         output_dir: str = "network_data",
+         prng_seed: int = 3,
+         num_nodes: int = 4,
+         num_topics: int = 1,
          network_type: networkType = networkType.NEWMANWATTSSTROGATZ.value,
-         num_partitions: int = typer.Option(INT_NONE, callback=_num_partitions_callback),
-         num_subnets: int = typer.Option(INT_NONE, callback=_num_subnets_callback),
-         config_file: str = typer.Option(STR_NONE, callback=conf_callback, is_eager=True)):
+         num_subnets: int = typer.Option(1, callback=_num_subnets_callback),
+         num_partitions: int = typer.Option(1, callback=_num_partitions_callback),
+         config_file: str = typer.Option("", callback=conf_callback, is_eager=True)):
 
     # Benchmarking: record start time and start tracing mallocs
     if benchmark :
         start = time.time()
         tracemalloc.start()
 
-
+    # re-read the conf file to set node_type_distribution -- no cli equivalent
     conf = {}
     if config_file != "" :
         with open(config_file, 'r') as f:  # Load config file
@@ -341,27 +310,16 @@ def main(benchmark : bool = False,
         #print(conf)
 
     # set the random seed : networkx uses numpy.random as well
-    seed = test_and_set_int(prng_seed, "prng_seed", conf, "general")
-    print("Setting the random seed to", seed)
-    random.seed(seed)
-    np.random.seed(seed)
+    print("Setting the random seed to", prng_seed)
+    random.seed(prng_seed)
+    np.random.seed(prng_seed)
    
-    # Extract the node type distribution from config.json or defaults
-    # no cli for node type distribution
+    # Extract the node type distribution from config.json or use the default
+    # no cli equivalent for node type distribution (NTD)
     if "gennet" in conf  and "node_type_distribution" in conf ["gennet"]:
         node_type_distribution = conf["gennet"]["node_type_distribution"]
     else:
-        node_type_distribution = defaults["node_type_distribution"]
-
-    # merge the cli options and the config.json options
-    # TODO : pack the fields in a class/'struct'/tuple
-    # TODO : use inspect and local() to do this iteratively
-    output_dir      =   test_and_set_str(output_dir, "output_dir", conf)
-    num_nodes       =   test_and_set_int(num_nodes, "num_nodes", conf)
-    num_topics      =   test_and_set_int(num_topics, "num_topics", conf)
-    network_type    =   test_and_set_int(network_type, "network_type", conf)
-    num_partitions  =   test_and_set_int(num_partitions, "num_partitions", conf)
-    num_subnets     =   test_and_set_int(num_subnets, "num_subnets", conf)
+        node_type_distribution = { "nwaku" : 100 }  # default NTD is all nwaku
 
 
     # Generate the network
