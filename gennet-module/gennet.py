@@ -287,7 +287,7 @@ def _num_subnets_callback(ctx: typer, Context, num_subnets: int):
     return num_subnets
 
 
-def main(ctx: typer.Context, benchmark : bool = False,
+def main(benchmark: bool = False,
          output_dir: str = "network_data",
          prng_seed: int = 3,
          num_nodes: int = 4,
