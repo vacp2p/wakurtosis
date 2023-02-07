@@ -1,52 +1,69 @@
-Module to generate network models (in JSON) and node configuration files (in TOMLs) for wakurtosis runs. 
+Module to generate network models (in JSON) and node configuration files (in TOMLs) for wakurtosis runs. It can be deployed in two ways: as a stand-alone python tool or as a docker.
 
-## generate_network.py
-generate_network.py generates one network and per-node configuration files. The tool is configurable with specified number of nodes, topics, network types, node types and number of subnets.
+## gennet cli
+`gennet.py` takes a range of CLI inputs, and outputs the network data --- in the form of a `network_data.json` file and a set of per-node TOML files. 
 
 ```commandline
 > python gennet.py --help
+ Usage: gennet.py [OPTIONS]                                                     
 
-Usage: gennet.py [OPTIONS]
-
-Options:
-  --output-dir TEXT               [default: topology_generated]
-  --num-nodes INTEGER             [default: 4]
-  --num-topics INTEGER            [default: 1]
-  --network-type [configmodel|scalefree|newmanwattsstrogatz|barbell|balancedtree|star]
-                                  [default: newmanwattsstrogatz]
-  --node-type [desktop|mobile]    [default: desktop]
-  --num-subnets INTEGER           [default: -1]
-  --num-partitions INTEGER        [default: 1]
-  --config-file TEXT
-  --help                          Show this message and exit.
+              
+╭─ Options ────────────────────────────────────────────────────────────────────────────╮
+│ --benchmark         --no-benchmark                           [default: no-benchmark] │
+│ --output-dir                          TEXT                   [default: network_data] │
+│ --prng-seed                           INTEGER                [default: 3]            │
+│ --num-nodes                           INTEGER                [default: 4]            │
+│ --num-topics                          INTEGER                [default: 1]            │
+│ --network-type                        [configmodel|scalefree [default:               │
+│                                       |newmanwattsstrogatz   newmanwattsstrogatz]    │
+│                                       |barbell|balancedtree                          │
+│                                       |star]                                         │
+│ --num-subnets                         INTEGER                [default: 1]            │
+│ --num-partitions                      INTEGER                [default: 1]            │
+│ --config-file                         TEXT                                           │
+│ --help                                                       Show this message and   │
+│                                                              exit.                   │
+╰──────────────────────────────────────────────────────────────────────────────────────╯
+                                                                                
 ```
 
-CLI arguments have precedence from configuration file.
+Our tool can also take arguments from a json file, specified using `--config-file` option.
 
-Example of configuration file:
+
+Following is an example json file:
+
 
 ```json
 {
+  "general":{
+    "prng_seed" : 67
+  },
   "gennet": {
-    "num_nodes": 3,
-    "num_topics": 1,
+    "num_nodes": 100,
+    "num_topics": 150,
+    "num_partitions": 1,
+    "num_subnets": 2,
+    "node_type_distribution": { "nwaku":50, "gowaku":50},
     "node_type": "desktop",
     "network_type": "scalefree",
-    "num_partitions": 1,
-    "num_subnets": 1
+    "output_dir": "generated_network"
   }
 }
 ```
 
-It has also a Dockerfile to run it in a docker container. Example assuming our configiguration file is in `config` folder:
+Note that CLI arguments take precedence over the configuration file options.
+
+## gennet docker
+The gennet module can also be run as a docker. The Dockerfile provided can be used to build and run the gennet container as follows:
+
 
 ```commandline
 > docker build -t gennet .
 
-> docker run --name gennet-container -v ${dir}/config/:/config gennet --config-file /config/my_config_file.json --output-dir /config/topology_generated
+> docker run --name gennet-container -v ${dir}/config/:/config gennet --config-file /config/$input_config_file --output-dir /config/$output_dir
 ```
 
-In this way, it will mount `config` as a volume, allowing the docker container to get our `my_config_file.json`, and writing the results on a new folder called `topology_generated` which as it will be in `config`, the host will have access to it.
+When run this way, the docker will mount the host's `config` dir as a volume, allowing the gennet container to access the `$input_config_file` in the host filesystem; gennet reads the config.json and outputs a network under the `$output_dir` which is made accessible to the host via a subsequent`docker cp`.
 
 
 ## batch_gen.sh
