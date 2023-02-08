@@ -202,7 +202,7 @@ def generate_subnets(G, num_subnets):
 def generate_toml(topics, node_type=nodeType.NWAKU):
     topics = get_random_sublist(topics)
     if node_type == nodeType.GOWAKU:    # comma separated list of quoted topics
-        topic_str = ", ".join(f"\"{e}\"" for e in topics)
+        topic_str = ", ".join(f"\"{t}\"" for t in topics)
         topic_str = f"[{topic_str}]"
     else:                               # space separated topics
         topic_str = " ".join(topics)  
