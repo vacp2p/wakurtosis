@@ -24,8 +24,8 @@ class nodeType(Enum):
 
 
 nodeTomlSwitch = {
-    nodeType.NWAKU: "rpc-admin = true\nkeep-alive = true\nmetrics-server=true\n",
-    nodeType.GOWAKU: "rpc-admin = true\nmetrics-server=true\nrpc=true\n"
+    nodeType.NWAKU: "rpc-admin = true\nkeep-alive = true\nmetrics-server = true\n",
+    nodeType.GOWAKU: "rpc-admin = true\nmetrics-server = true\nrpc = true\n"
 }
 
 nodeDockerImageSwitch = {
@@ -201,8 +201,8 @@ def generate_subnets(G, num_subnets):
 # Generate per node toml configs
 def generate_toml(topics, node_type=nodeType.NWAKU):
     topics = get_random_sublist(topics)
-    if node_type == nodeType.GOWAKU:    # comma separated list of topics
-        topic_str = ", ".join(topics)
+    if node_type == nodeType.GOWAKU:    # comma separated list of quoted topics
+        topic_str = ", ".join(f"\"{t}\"" for t in topics)
         topic_str = f"[{topic_str}]"
     else:                               # space separated topics
         topic_str = " ".join(topics)  
