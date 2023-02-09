@@ -5,12 +5,15 @@ system_variables = import_module("github.com/logos-co/wakurtosis/src/system_vari
 waku = import_module(system_variables.WAKU_MODULE)
 prometheus = import_module(system_variables.PROMETHEUS_MODULE)
 grafana = import_module(system_variables.GRAFANA_MODULE)
+cadvisor = import_module(system_variables.CADVISOR_MODULE)
 args_parser = import_module(system_variables.ARGUMENT_PARSER_MODULE)
 wsl = import_module(system_variables.WSL_MODULE)
 nodes = import_module(system_variables.NODE_BUILDERS_MODULE)
 
 
 def run(plan, args):
+
+    cadvisor_service = cadvisor.set_up_cadvisor(plan)
 
     # Load global config file
     config_file = args_parser.get_configuration_file_name(plan, args)

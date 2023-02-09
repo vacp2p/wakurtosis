@@ -60,3 +60,37 @@ def prepare_artifact_files_grafana(plan, artifact_config_name, artifact_customiz
     )
 
     return config_id, customization_id, dashboard_id
+
+
+def prepare_artifact_folders_cadvisor(plan):
+    root_id = plan.upload_files(
+        src=system_variables.CONTAINER_ROOT_CADVISOR,
+        #name=root_name
+        name="root_name"
+    )
+    varrun_id = plan.upload_files(
+        src=system_variables.CONTAINER_VARRUN_CADVISOR,
+        name="varrun_name"
+    )
+    varlibdocker = plan.upload_files(
+        src=system_variables.CONTAINER_VARLIBDOCKER_CADVISOR,
+        name="varlibdocker_name"
+    )
+    devdisk_id = plan.upload_files(
+        src=system_variables.CONTAINER_DEVDISK_CADVISOR,
+        name="devdisk_name"
+    )
+    sys_id = plan.upload_files(
+        src=system_variables.CONTAINER_SYS_CADVISOR,
+        name="sys_name"
+    )
+    machineid_id = plan.upload_files(
+        src=system_variables.CONTAINER_MACHINEID_CADVISOR,
+        name="machineid_name"
+    )
+    wsl_id = plan.upload_files(
+        src=system_variables.CADVISOR_WSL,
+        name="wsl_name"
+    )
+
+    return root_id, varrun_id, varlibdocker, devdisk_id, sys_id, machineid_id, wsl_id

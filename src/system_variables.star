@@ -44,6 +44,22 @@ CONTAINER_CUSTOMIZATION_GRAFANA = "/usr/share/grafana/"
 CONTAINER_DATASOURCES_GRAFANA = "/etc/grafana/provisioning/datasources/"
 CONTAINER_DATASOURCES_FILE_NAME_GRAFANA = "datasources.yaml"
 
+# Cadvisor configuration
+CADVISOR_IMAGE = "gcr.io/cadvisor/cadvisor"
+CADVISOR_PORT_ID = "cadvisor_tcp"
+CADVISOR_TCP_PORT = 8080
+CADVISOR_SERVICE_NAME = "cadvisor"
+
+CADVISOR_WSL = "/mnt/windows_docker/"
+
+CONTAINER_ROOT_CADVISOR = "/rootfs"
+CONTAINER_VARRUN_CADVISOR = "/var/run"
+CONTAINER_VARLIBDOCKER_CADVISOR = "/var/lib/docker"
+CONTAINER_DEVDISK_CADVISOR = "/dev/disk"
+CONTAINER_SYS_CADVISOR = "/dev/disk"
+CONTAINER_MACHINEID_CADVISOR = "/etc/machine-id"
+CONTAINER_WSL = "/rootfs/var/lib/docker"
+
 # WSL Configuration
 WSL_IMAGE = "wsl:0.0.1"
 WSL_SERVICE_NAME = "wsl"
@@ -67,6 +83,7 @@ WAKU_MODULE = "github.com/logos-co/wakurtosis/src/waku.star"
 NODE_BUILDERS_MODULE = "github.com/logos-co/wakurtosis/src/node_builders.star"
 PROMETHEUS_MODULE = "github.com/logos-co/wakurtosis/src/monitoring/prometheus.star"
 GRAFANA_MODULE = "github.com/logos-co/wakurtosis/src/monitoring/grafana.star"
+CADVISOR_MODULE = "github.com/logos-co/wakurtosis/src/monitoring/cadvisor.star"
 ARGUMENT_PARSER_MODULE = "github.com/logos-co/wakurtosis/src/arguments_parser.star"
 FILE_HELPERS_MODULE = "github.com/logos-co/wakurtosis/src/file_helpers.star"
 TEMPLATES_MODULE = "github.com/logos-co/wakurtosis/src/templates.star"
