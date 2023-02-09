@@ -8,6 +8,8 @@ WAKU_LIBP2P_PORT_ID = "libp2p"
 WAKU_LIBP2P_PORT = 60000
 WAKU_SETUP_WAIT_TIME = "5"
 
+WAKU_INTERCONNECTION_BATCH = "4"
+
 NODE_CONFIG_FILE_LOCATION = "github.com/logos-co/wakurtosis/config/topology_generated/"
 
 CONTAINER_NODE_CONFIG_FILE_LOCATION = "/node/configuration_file/"
