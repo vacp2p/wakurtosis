@@ -65,7 +65,6 @@ def init(plan, services, wsl_config):
             system_variables.WSL_TARGETS_PATH: wsl_targets,
             system_variables.WSL_TOMLS_PATH: tomls_artifact
         },
-
         cmd=["python3", "wsl.py"]
     )
 

@@ -13,6 +13,7 @@ def prepare_nwaku_service(plan, nwakunode_name, all_services, use_general_config
 
     plan.print("Configuration being used file is " + configuration_file)
 
+<<<<<<< HEAD
     add_service_config = ServiceConfig(
         image=system_variables.NWAKU_IMAGE,
         ports={
@@ -32,6 +33,30 @@ def prepare_nwaku_service(plan, nwakunode_name, all_services, use_general_config
         cmd=[
             "--config-file=" + system_variables.CONTAINER_NODE_CONFIG_FILE_LOCATION + "/" + configuration_file
         ]
+=======
+    nwaku_service = plan.add_service(
+        service_name=nwakunode_name,
+        config=ServiceConfig(
+            image=system_variables.NWAKU_IMAGE,
+            ports={
+                system_variables.WAKU_RPC_PORT_ID: PortSpec(number=system_variables.WAKU_TCP_PORT,
+                                                            transport_protocol="TCP"),
+                system_variables.PROMETHEUS_PORT_ID: PortSpec(
+                    number=system_variables.PROMETHEUS_TCP_PORT,
+                    transport_protocol="TCP"),
+                system_variables.WAKU_LIBP2P_PORT_ID: PortSpec(
+                    number=system_variables.WAKU_LIBP2P_PORT,
+                    transport_protocol="TCP"),
+            },
+            files={
+                system_variables.CONTAINER_NODE_CONFIG_FILE_LOCATION: artifact_id
+            },
+            entrypoint=system_variables.NWAKU_ENTRYPOINT,
+            cmd=[
+                "--config-file=" + system_variables.CONTAINER_NODE_CONFIG_FILE_LOCATION + "/" + configuration_file
+            ]
+        )
+>>>>>>> ab6f7b6 (Upgrade Kurtosis and fix breaking changes)
     )
 
     all_services[nwakunode_name] = add_service_config
