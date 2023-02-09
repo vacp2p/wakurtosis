@@ -14,8 +14,8 @@ def add_nwaku_service(plan, nwakunode_name, use_general_configuration):
     plan.print("Configuration being used file is " + configuration_file)
 
     nwaku_service = plan.add_service(
-        service_id=nwakunode_name,
-        config=struct(
+        service_name=nwakunode_name,
+        config=ServiceConfig(
             image=system_variables.NWAKU_IMAGE,
             ports={
                 system_variables.WAKU_RPC_PORT_ID: PortSpec(number=system_variables.WAKU_TCP_PORT,
@@ -49,8 +49,8 @@ def add_gowaku_service(plan, gowakunode_name, use_general_configuration):
     plan.print("Entrypoint is "+ str(system_variables.GOWAKU_ENTRYPOINT))
 
     gowaku_service = plan.add_service(
-        service_id=gowakunode_name,
-        config=struct(
+        service_name=gowakunode_name,
+        config=ServiceConfig(
             image=system_variables.GOWAKU_IMAGE,
             ports={
                 system_variables.WAKU_RPC_PORT_ID: PortSpec(number=system_variables.WAKU_TCP_PORT,

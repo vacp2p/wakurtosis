@@ -23,8 +23,8 @@ def set_up_grafana(plan, prometheus_service):
     )
 
     grafana_service = plan.add_service(
-        service_id=system_variables.GRAFANA_SERVICE_ID,
-        config=struct(
+        service_name=system_variables.GRAFANA_SERVICE_ID,
+        config=ServiceConfig(
             image=system_variables.GRAFANA_IMAGE,
             ports={
                 system_variables.GRAFANA_PORT_ID: PortSpec(number=system_variables.GRAFANA_TCP_PORT,

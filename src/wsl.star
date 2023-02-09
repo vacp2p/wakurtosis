@@ -58,8 +58,8 @@ def init(plan, services, wsl_config):
     wsl_targets = create_targets(plan, services)
 
     wsl_service = plan.add_service(
-        service_id=system_variables.WSL_SERVICE_ID,
-        config=struct(
+        service_name=system_variables.WSL_SERVICE_ID,
+        config=ServiceConfig(
             image=system_variables.WSL_IMAGE,
             ports={},
             files={
