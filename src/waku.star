@@ -89,17 +89,13 @@ def get_waku_peers(plan, waku_service_name):
 
 
 def interconnect_waku_nodes(plan, topology_information, services):
-    def batch(iterable, n=1):
-        l = len(iterable)
-        for ndx in range(0, l, n):
-            yield iterable[ndx:min(ndx + n, l)]
-
     # Interconnect them
     for waku_service_name in services.keys():
         peers = topology_information[waku_service_name]["static_nodes"]
 
-        for peer_batch in batch(peers, system_variables.WAKU_INTERCONNECTION_BATCH):
-            peer_ids = [create_waku_id(services[peer]) for peer in peer_batch]
+        for i in range(0, len(peers), system_variables.WAKU_INTERCONNECTION_BATCH):
+            x = i
+            peer_ids = [create_waku_id(services[peer]) for peer in peers[x:x+system_variables.WAKU_INTERCONNECTION_BATCH]]
 
             connect_wakunode_to_peers(plan, waku_service_name, system_variables.WAKU_RPC_PORT_ID, peer_ids)
 
