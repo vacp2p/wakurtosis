@@ -12,7 +12,7 @@
     "num_topics": 7,
     "num_partitions": 1,
     "num_subnets": 5,
-    "node_type_distribution": { "nwaku":50, "gowaku":50},
+    "node_type_distribution": { "nwaku":100, "gowaku":0 },
     "node_type": "desktop",
     "network_type": "newmanwattsstrogatz",
     "output_dir": "network_data",

@@ -17,8 +17,8 @@ def set_up_prometheus(plan, services):
     )
 
     prometheus_service = plan.add_service(
-        service_id=system_variables.PROMETHEUS_SERVICE_ID,
-        config=struct(
+        service_name=system_variables.PROMETHEUS_SERVICE_ID,
+        config=ServiceConfig(
             image=system_variables.PROMETHEUS_IMAGE,
             ports={
                 system_variables.PROMETHEUS_PORT_ID: PortSpec(

@@ -6,11 +6,10 @@ files = import_module(system_variables.FILE_HELPERS_MODULE)
 
 
 def send_json_rpc(plan, service_id, port_id, method, params, extract={}):
-    recipe = struct(
-        service_id=service_id,
+    recipe = PostHttpRequestRecipe(
+        service_name=service_id,
         port_id=port_id,
         endpoint="",
-        method="POST",
         content_type="application/json",
         body='{ "jsonrpc": "2.0", "method": "' + method + '", "params": [' + params + '], "id": 1}',
         extract=extract
