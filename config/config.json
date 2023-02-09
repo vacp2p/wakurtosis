@@ -8,10 +8,10 @@
     "same_toml_configuration": false
   },
   "gennet": {
-    "num_nodes": 121,
-    "num_topics": 7,
+    "num_nodes": 9,
+    "num_topics": 1,
     "num_partitions": 1,
-    "num_subnets": 5,
+    "num_subnets": 1,
     "node_type_distribution": { "nwaku":100, "gowaku":0 },
     "node_type": "desktop",
     "network_type": "newmanwattsstrogatz",

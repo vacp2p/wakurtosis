@@ -34,11 +34,6 @@ def prepare_nwaku_service(plan, nwakunode_name, all_services, use_general_config
         ]
     )
 
-    nwaku_service = plan.add_service(
-        service_name=nwakunode_name,
-        config=add_service_config
-    )
-
     all_services[nwakunode_name] = add_service_config
 
 
@@ -70,11 +65,6 @@ def prepare_gowaku_service(plan, gowakunode_name, all_services, use_general_conf
         cmd=[
             "--config-file=" + system_variables.CONTAINER_NODE_CONFIG_FILE_LOCATION + "/" + configuration_file
         ]
-    )
-
-    gowaku_service = plan.add_service(
-        service_name=gowakunode_name,
-        config=add_service_config
     )
 
     all_services[gowakunode_name] = add_service_config
@@ -121,7 +111,6 @@ def instantiate_services(plan, network_topology, use_general_configuration):
     all_services_information = plan.add_services(
         configs = all_services
     )
-
     services_information = _add_waku_service_information(plan, all_services_information)
 
     return services_information
