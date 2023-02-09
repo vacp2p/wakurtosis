@@ -31,12 +31,12 @@ eval $kurtosis_cmd
 echo -e "Enclave " $enclave_name " is up and running"
 
 # Fetch the WSL service id and display the log of the simulation
-wsl_service_name=$(kurtosis enclave inspect wakurtosis 2>/dev/null | grep wsl- | awk '{print $1}')
+wsl_service_name=$(kurtosis enclave inspect wakurtosis | grep wsl | awk '{print $1}')
 # kurtosis service logs wakurtosis $wsl_service_name
 echo -e "\n--> To see simulation logs run: kurtosis service logs wakurtosis $wsl_service_name <--"
 
 # Fetch the Grafana address & port
-grafana_host=$(kurtosis enclave inspect wakurtosis 2>/dev/null | grep grafana- | awk '{print $6}')
+grafana_host=$(kurtosis enclave inspect wakurtosis | grep grafana | awk '{print $6}')
 echo -e "\n--> Statistics in Grafana server at http://$grafana_host/ <--"
 
 # echo "Output of kurtosis run command written in kurtosisrun_log.txt"
@@ -44,10 +44,11 @@ echo -e "\n--> Statistics in Grafana server at http://$grafana_host/ <--"
 ### Wait for WSL to finish
 
 # Get the container suffix for the running service
-cid_suffix="$(kurtosis enclave inspect $enclave_name | grep $wsl_service_name | cut -f 1 -d ' ')"
+enclave_preffix="$(kurtosis enclave inspect --full-uuids $enclave_name | grep UUID: | awk '{print $2}')"
+cid_suffix="$(kurtosis enclave inspect --full-uuids $enclave_name | grep $wsl_service_name | cut -f 1 -d ' ')"
 
 # Construct the fully qualified container name that kurtosis created 
-cid="$enclave_name--user-service--$cid_suffix"
+cid="$enclave_preffix--user-service--$cid_suffix"
 
 # Wait for the container to halt; this will block 
 echo "Waiting for simulation to finish ..."
