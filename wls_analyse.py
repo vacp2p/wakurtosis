@@ -86,26 +86,32 @@ def main():
     G_LOGGER.info('Loaded %d messages.' %len(msgs_dict))
 
     """ Load node level logs """
-    # node_logs = []
-    # try:
-    #     node_logs_paths = glob.glob('%s/*--node_*' %simulation_path)
-    #     node_logs_paths.sort()
-    #     for node_log_path in node_logs_paths:
-    #         with open('%s/output.log' %node_log_path, mode='r') as f:
-    #             node_log_reader = csv.reader(f, delimiter=" ")
-    #             for log_line in node_log_reader:
-    #                 # if 'waku.relay received' in log_line:
-    #                 #     print(log_line)
-    #                 # elif 'waku.relay received' in log_line:
-    #                 #     print(log_line)
-    #                 if 'subscribe' in log_line:
-    #                     print(log_line)
-    #             G_LOGGER.info('Parsed log in %s/output.log' %node_log_path)
-    #             # print(node_log)    
-    # except Exception as e:
-    #     G_LOGGER.error('%s: %s' % (e.__doc__, e))
-    #     sys.exit()
+    node_logs = {}
+    try:
+        services_log_paths = glob.glob('%s/*--user-service--*' %simulation_path)
+        
+        for log_path in services_log_paths:
+            with open('%s/spec.json' %log_path, mode='r') as f:
+                spec_json = json.load(f)
+                if spec_json['Path'] == '/usr/bin/wakunode':
+                    node_id = spec_json['Config']['Labels']['com.kurtosistech.id']
+                    node_logs[node_id] = []
+                    with open('%s/output.log' %log_path, mode='r') as f:
+                        node_log_reader = csv.reader(f, delimiter=" ")
+                        for log_line in node_log_reader:
+                            # if 'waku.relay received' in log_line:
+                            #     print(log_line)
+                            # elif 'waku.relay received' in log_line:
+                            #     print(log_line)
+                            if 'subscribe' in log_line:
+                                node_logs[node_id].append(log_line)
+                        G_LOGGER.info('Parsed node \"%s\" log in %s/output.log' %(node_id, log_path))
+    except Exception as e:
+        G_LOGGER.error('%s: %s' % (e.__doc__, e))
+        sys.exit()
 
+    G_LOGGER.debug(node_logs.keys())
+    
     ### Statistics we want to compute:
     # 1 - Make sure that all messages have been delivered to their respective peers (x topic)
     # 2 - Calculate the latency of every message at every peer wrt injection time
