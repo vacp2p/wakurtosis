@@ -13,6 +13,9 @@ wakurtosis_config_file=$ARGS2
 echo "- Enclave name: " $enclave_name
 echo "- Configuration file: " $wakurtosis_config_file
 
+# Delete topology
+rm -rf ./config/topology_generated > /dev/null 2>&1
+
 # Create and run Gennet docker container
 echo -e "\nRunning topology generation"
 cd gennet-module
