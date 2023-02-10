@@ -21,17 +21,6 @@ cd ..
 
 docker rm gennet-container > /dev/null 2>&1
 
-### Prepare environment for scale
-ulimit -n $(ulimit -n -H)
-ulimit -u $(ulimit -u -H)
-
-sudo sysctl -w net.ipv4.neigh.default.gc_thresh3=4096
-sudo sysctl fs.inotify.max_user_instances=1048576
-sudo sysctl -w vm.max_map_count=262144
-
-sudo docker container rm $(docker container ls -aq)
-sudo docker volume rm $(docker volume ls -q)
-
 # Delete the enclave just in case
 echo -e "\nCleaning up Kurtosis environment "$enclave_name
 kurtosis enclave rm -f $enclave_name > /dev/null 2>&1
