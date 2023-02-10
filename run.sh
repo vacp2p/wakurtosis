@@ -24,12 +24,12 @@ docker rm gennet-container > /dev/null 2>&1
 # Delete the enclave just in case
 echo -e "\nCleaning up Kurtosis environment "$enclave_name
 kurtosis enclave rm -f $enclave_name > /dev/null 2>&1
-kurtosis clean -a
+kurtosis clean -a > /dev/null 2>&1
 
 # Delete previous logs
 echo -e "\Deleting previous logs in ${enclave_name}_logs"
-rm -rf ./${enclave_name}_logs
-rm ./kurtosisrun_log.txt
+rm -rf ./${enclave_name}_logs > /dev/null 2>&1
+rm ./kurtosisrun_log.txt > /dev/null 2>&1
 
 # Create the new enclave and run the simulation
 echo -e "\nInitiating enclave "$enclave_name
@@ -57,17 +57,17 @@ cid_suffix="$(kurtosis enclave inspect $enclave_name | grep $wsl_service_id | cu
 cid="$enclave_name--user-service--$cid_suffix"
 
 # Wait for the container to halt; this will block 
-echo "Waiting for simulation to finish ..."
+echo -e "Waiting for simulation to finish ..."
 status_code="$(docker container wait $cid)"
 
 ### Logs
 rm -rf ./$enclave_name_logs > /dev/null 2>&1
 kurtosis enclave dump ${enclave_name} ${enclave_name}_logs > /dev/null 2>&1
-echo "Simulation ended with code $status_code Results in ./${enclave_name}_logs"
+echo -e "Simulation ended with code $status_code Results in ./${enclave_name}_logs"
 
 # Copy simulation results
-# docker cp "$cid:/wsl/summary.json" "./${enclave_name}_logs"
-docker cp "$cid:/wsl/messages.json" "./${enclave_name}_logs"
+# docker cp "$cid:/wsl/summary.json" "./${enclave_name}_logs" > /dev/null 2>&1
+docker cp "$cid:/wsl/messages.json" "./${enclave_name}_logs" > /dev/null 2>&1
 
 # Stop and delete the enclave
 # kurtosis enclave stop $enclave_name > /dev/null 2>&1
