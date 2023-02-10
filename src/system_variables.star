@@ -8,6 +8,8 @@ WAKU_LIBP2P_PORT_ID = "libp2p"
 WAKU_LIBP2P_PORT = 60000
 WAKU_SETUP_WAIT_TIME = "5"
 
+WAKU_INTERCONNECTION_BATCH = 4
+
 NODE_CONFIG_FILE_LOCATION = "github.com/logos-co/wakurtosis/config/topology_generated/"
 
 CONTAINER_NODE_CONFIG_FILE_LOCATION = "/node/configuration_file/"
@@ -17,7 +19,7 @@ GOWAKU_ENTRYPOINT = ["/usr/bin/waku", "--rpc-address=0.0.0.0", "--metrics-server
 
 # Prometheus Configuration
 PROMETHEUS_IMAGE = "prom/prometheus:latest"
-PROMETHEUS_SERVICE_ID = "prometheus"
+PROMETHEUS_SERVICE_NAME = "prometheus"
 PROMETHEUS_PORT_ID = "prometheus_tcp"
 PROMETHEUS_TCP_PORT = 8008
 PROMETHEUS_CONFIGURATION_PATH = "github.com/logos-co/wakurtosis/monitoring/prometheus.yml"
@@ -34,7 +36,7 @@ GRAFANA_CONFIGURATION_PATH = "github.com/logos-co/wakurtosis/monitoring/configur
 GRAFANA_CUSTOMIZATION_PATH = "github.com/logos-co/wakurtosis/monitoring/configuration/customizations/"
 GRAFANA_DASHBOARD_PATH = "github.com/logos-co/wakurtosis/monitoring/configuration/dashboards/"
 
-GRAFANA_SERVICE_ID = "grafana"
+GRAFANA_SERVICE_NAME = "grafana"
 GRAFANA_PORT_ID = "grafana_tcp"
 GRAFANA_TCP_PORT = 3000
 
@@ -46,7 +48,7 @@ CONTAINER_DATASOURCES_FILE_NAME_GRAFANA = "datasources.yaml"
 
 # WSL Configuration
 WSL_IMAGE = "wsl:0.0.1"
-WSL_SERVICE_ID = "wsl"
+WSL_SERVICE_NAME = "wsl"
 WSL_CONFIG_PATH = "/wsl/config"
 WSL_TARGETS_PATH = "/wsl/targets"
 WSL_TOMLS_PATH = "/wsl/tomls"

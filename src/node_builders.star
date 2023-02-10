@@ -6,41 +6,39 @@ waku = import_module(system_variables.WAKU_MODULE)
 files = import_module(system_variables.FILE_HELPERS_MODULE)
 
 
-def add_nwaku_service(plan, nwakunode_name, use_general_configuration):
+def prepare_nwaku_service(plan, nwakunode_name, all_services, use_general_configuration):
     artifact_id, configuration_file = files.get_toml_configuration_artifact(plan, nwakunode_name,
                                                                             use_general_configuration,
                                                                             nwakunode_name)
 
     plan.print("Configuration being used file is " + configuration_file)
 
-    nwaku_service = plan.add_service(
-        service_id=nwakunode_name,
-        config=struct(
-            image=system_variables.NWAKU_IMAGE,
-            ports={
-                system_variables.WAKU_RPC_PORT_ID: PortSpec(number=system_variables.WAKU_TCP_PORT,
-                                                            transport_protocol="TCP"),
-                system_variables.PROMETHEUS_PORT_ID: PortSpec(
-                    number=system_variables.PROMETHEUS_TCP_PORT,
-                    transport_protocol="TCP"),
-                system_variables.WAKU_LIBP2P_PORT_ID: PortSpec(
-                    number=system_variables.WAKU_LIBP2P_PORT,
-                    transport_protocol="TCP"),
-            },
-            files={
-                system_variables.CONTAINER_NODE_CONFIG_FILE_LOCATION: artifact_id
-            },
-            entrypoint=system_variables.NWAKU_ENTRYPOINT,
-            cmd=[
-                "--config-file=" + system_variables.CONTAINER_NODE_CONFIG_FILE_LOCATION + "/" + configuration_file
-            ]
-        )
+    add_service_config = ServiceConfig(
+        image=system_variables.NWAKU_IMAGE,
+        ports={
+            system_variables.WAKU_RPC_PORT_ID: PortSpec(number=system_variables.WAKU_TCP_PORT,
+                                                        transport_protocol="TCP"),
+            system_variables.PROMETHEUS_PORT_ID: PortSpec(
+                number=system_variables.PROMETHEUS_TCP_PORT,
+                transport_protocol="TCP"),
+            system_variables.WAKU_LIBP2P_PORT_ID: PortSpec(
+                number=system_variables.WAKU_LIBP2P_PORT,
+                transport_protocol="TCP"),
+        },
+        files={
+            system_variables.CONTAINER_NODE_CONFIG_FILE_LOCATION: artifact_id
+        },
+        entrypoint=system_variables.NWAKU_ENTRYPOINT,
+        cmd=[
+            "--config-file=" + system_variables.CONTAINER_NODE_CONFIG_FILE_LOCATION + "/" + configuration_file
+        ]
     )
 
-    return nwaku_service
+    all_services[nwakunode_name] = add_service_config
 
 
-def add_gowaku_service(plan, gowakunode_name, use_general_configuration):
+
+def prepare_gowaku_service(plan, gowakunode_name, all_services, use_general_configuration):
     artifact_id, configuration_file = files.get_toml_configuration_artifact(plan, gowakunode_name,
                                                                             use_general_configuration,
                                                                             gowakunode_name)
@@ -48,34 +46,31 @@ def add_gowaku_service(plan, gowakunode_name, use_general_configuration):
     plan.print("Configuration being used file is " + configuration_file)
     plan.print("Entrypoint is "+ str(system_variables.GOWAKU_ENTRYPOINT))
 
-    gowaku_service = plan.add_service(
-        service_id=gowakunode_name,
-        config=struct(
-            image=system_variables.GOWAKU_IMAGE,
-            ports={
-                system_variables.WAKU_RPC_PORT_ID: PortSpec(number=system_variables.WAKU_TCP_PORT,
-                                                            transport_protocol="TCP"),
-                system_variables.PROMETHEUS_PORT_ID: PortSpec(
-                    number=system_variables.PROMETHEUS_TCP_PORT,
-                    transport_protocol="TCP"),
-                system_variables.WAKU_LIBP2P_PORT_ID: PortSpec(
-                    number=system_variables.WAKU_LIBP2P_PORT,
-                    transport_protocol="TCP"),
-            },
-            files={
-                system_variables.CONTAINER_NODE_CONFIG_FILE_LOCATION: artifact_id
-            },
-            entrypoint=system_variables.GOWAKU_ENTRYPOINT,
-            cmd=[
-                "--config-file=" + system_variables.CONTAINER_NODE_CONFIG_FILE_LOCATION + "/" + configuration_file
-            ]
-        )
+    add_service_config = ServiceConfig(
+        image=system_variables.GOWAKU_IMAGE,
+        ports={
+            system_variables.WAKU_RPC_PORT_ID: PortSpec(number=system_variables.WAKU_TCP_PORT,
+                                                        transport_protocol="TCP"),
+            system_variables.PROMETHEUS_PORT_ID: PortSpec(
+                number=system_variables.PROMETHEUS_TCP_PORT,
+                transport_protocol="TCP"),
+            system_variables.WAKU_LIBP2P_PORT_ID: PortSpec(
+                number=system_variables.WAKU_LIBP2P_PORT,
+                transport_protocol="TCP"),
+        },
+        files={
+            system_variables.CONTAINER_NODE_CONFIG_FILE_LOCATION: artifact_id
+        },
+        entrypoint=system_variables.GOWAKU_ENTRYPOINT,
+        cmd=[
+            "--config-file=" + system_variables.CONTAINER_NODE_CONFIG_FILE_LOCATION + "/" + configuration_file
+        ]
     )
 
-    return gowaku_service
+    all_services[gowakunode_name] = add_service_config
 
 
-def add_nomos_service(plan, test, test2):
+def prepare_nomos_service(plan, test, test2):
     plan.print("nomos")
 
 
@@ -103,35 +98,40 @@ def instantiate_services(plan, network_topology, use_general_configuration):
     rpc_node_protocol = services["nwaku_0"]["service_info"].ports["your_rpc_identifier"].protocol
     """
 
-    services_information = {}
+    all_services = {}
 
     # Get up all nodes
-    for service_id in network_topology.keys():
-        image = network_topology[service_id]["image"]
+    for service_name in network_topology.keys():
+        image = network_topology[service_name]["image"]
 
-        service_builder, information_builder = service_dispatcher[image]
+        service_builder = service_dispatcher[image]
 
-        service_information = service_builder(plan, service_id, use_general_configuration)
+        service_builder(plan, service_name, all_services, use_general_configuration)
 
-        information_builder(plan, services_information, service_id, service_information)
+    all_services_information = plan.add_services(
+        configs = all_services
+    )
+    services_information = _add_waku_service_information(plan, all_services_information)
 
     return services_information
 
 
-def _add_waku_service_information(plan, services_information, new_service_id, service_information):
+def _add_waku_service_information(plan, all_services_information):
 
-    new_service_information = {}
+    new_services_information = {}
 
-    wakunode_peer_id = waku.get_wakunode_peer_id(plan, new_service_id, system_variables.WAKU_RPC_PORT_ID)
+    for service_name in all_services_information:
+        node_peer_id = waku.get_wakunode_peer_id(plan, service_name, system_variables.WAKU_RPC_PORT_ID)
 
-    new_service_information["peer_id"] = wakunode_peer_id
-    new_service_information["service_info"] = service_information
+        new_services_information[service_name] = {}
+        new_services_information[service_name]["peer_id"] = node_peer_id
+        new_services_information[service_name]["service_info"] = all_services_information[service_name]
 
-    services_information[new_service_id] = new_service_information
+    return new_services_information
 
 
 service_dispatcher = {
-    "go-waku": (add_gowaku_service, _add_waku_service_information),
-    "nim-waku": (add_nwaku_service, _add_waku_service_information),
-    "nomos": (add_nomos_service, "test")
+    "go-waku": prepare_gowaku_service,
+    "nim-waku": prepare_nwaku_service,
+    "nomos": prepare_nomos_service
 }

@@ -54,10 +54,11 @@ echo "Output of kurtosis run command written in kurtosisrun_log.txt"
 ### Wait for WSL to finish
 
 # Get the container suffix for the running service
-cid_suffix="$(kurtosis enclave inspect $enclave_name | grep $wsl_service_id | cut -f 1 -d ' ')"
+enclave_preffix="$(kurtosis enclave inspect --full-uuids $enclave_name | grep UUID: | awk '{print $2}')"
+cid_suffix="$(kurtosis enclave inspect --full-uuids $enclave_name | grep $wsl_service_name | cut -f 1 -d ' ')"
 
 # Construct the fully qualified container name that kurtosis created 
-cid="$enclave_name--user-service--$cid_suffix"
+cid="$enclave_preffix--user-service--$cid_suffix"
 
 # Wait for the container to halt; this will block 
 echo -e "Waiting for simulation to finish ..."
