@@ -21,8 +21,26 @@ cd ..
 
 docker rm gennet-container > /dev/null 2>&1
 
+### Prepare environment for scale
+ulimit -n $(ulimit -n -H)
+ulimit -u $(ulimit -u -H)
+
+sudo sysctl -w net.ipv4.neigh.default.gc_thresh3=4096
+sudo sysctl fs.inotify.max_user_instances=1048576
+sudo sysctl -w vm.max_map_count=262144
+
+sudo docker container rm $(docker container ls -aq)
+sudo docker volume rm $(docker volume ls -q)
+
 # Delete the enclave just in case
+echo -e "\nCleaning up Kurtosis environment "$enclave_name
 kurtosis enclave rm -f $enclave_name > /dev/null 2>&1
+kurtosis clean -a
+
+# Delete previous logs
+echo -e "\Deleting previous logs in ${enclave_name}_logs"
+rm -rf ./${enclave_name}_logs
+rm ./kurtosisrun_log.txt
 
 # Create the new enclave and run the simulation
 echo -e "\nInitiating enclave "$enclave_name
@@ -31,15 +49,15 @@ eval $kurtosis_cmd
 echo -e "Enclave " $enclave_name " is up and running"
 
 # Fetch the WSL service id and display the log of the simulation
-wsl_service_id=$(kurtosis enclave inspect wakurtosis 2>/dev/null | grep wsl- | awk '{print $1}')
+wsl_service_id=$(kurtosis enclave inspect $enclave_name 2>/dev/null | grep wsl- | awk '{print $1}')
 # kurtosis service logs wakurtosis $wsl_service_id
-echo -e "\n--> To see simulation logs run: kurtosis service logs wakurtosis $wsl_service_id <--"
+echo -e "\n--> To see simulation logs run: kurtosis service logs $enclave_name $wsl_service_id <--"
 
 # Fetch the Grafana address & port
-grafana_host=$(kurtosis enclave inspect wakurtosis 2>/dev/null | grep grafana- | awk '{print $6}')
+grafana_host=$(kurtosis enclave inspect $enclave_name 2>/dev/null | grep grafana- | awk '{print $6}')
 echo -e "\n--> Statistics in Grafana server at http://$grafana_host/ <--"
 
-# echo "Output of kurtosis run command written in kurtosisrun_log.txt"
+echo "Output of kurtosis run command written in kurtosisrun_log.txt"
 
 ### Wait for WSL to finish
 
@@ -53,13 +71,18 @@ cid="$enclave_name--user-service--$cid_suffix"
 echo "Waiting for simulation to finish ..."
 status_code="$(docker container wait $cid)"
 
+### Logs
+rm -rf ./$enclave_name_logs > /dev/null 2>&1
+kurtosis enclave dump ${enclave_name} ${enclave_name}_logs > /dev/null 2>&1
+echo "Simulation ended with code $status_code Results in ./${enclave_name}_logs"
+
 # Copy simulation results
-docker cp "$cid:/wsl/summary.json" "./"
-echo "Simulation ended with code $status_code Results in ./summary.json"
+# docker cp "$cid:/wsl/summary.json" "./${enclave_name}_logs"
+docker cp "$cid:/wsl/messages.json" "./${enclave_name}_logs"
 
 # Stop and delete the enclave
-kurtosis enclave stop $enclave_name > /dev/null 2>&1
-kurtosis enclave rm -f $enclave_name > /dev/null 2>&1
-echo "Enclave $enclave_name stopped and deleted."
+# kurtosis enclave stop $enclave_name > /dev/null 2>&1
+# kurtosis enclave rm -f $enclave_name > /dev/null 2>&1
+# echo "Enclave $enclave_name stopped and deleted."
 
 echo "Done."
