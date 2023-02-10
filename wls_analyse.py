@@ -59,20 +59,27 @@ def main():
     simulation_path = args.simulation_path
         
     """ Load Topics Structure """
+    topics = set()
     nodes_topics = [] 
     try:
         tomls = glob.glob('%s/*.toml' %G_DEFAULT_TOPOLOGY_PATH)
         # Index is the node id
         tomls.sort()
         for toml_file in tomls:
-            topics = []
+            
             with open(toml_file, mode='rb') as read_file:
                 toml_config = tomllib.load(read_file)
                 node_topics_str = toml_config['topics']
-                nodes_topics.append(list(node_topics_str.split(' ')))
+                topics_list = list(node_topics_str.split(' '))
+                nodes_topics.append(topics_list)
+                topics.update(topics_list)
     except Exception as e:
         G_LOGGER.error('%s: %s' % (e.__doc__, e))
         sys.exit()
+
+    G_LOGGER.info('Loaded topic structure with %d topic(s) and %d node(s).' %(len(topics), len(nodes_topics)))
+    G_LOGGER.debug(topics)
+    G_LOGGER.debug(nodes_topics)
 
     """ Load Simulation Messages """
     msgs_dict = None
@@ -84,6 +91,7 @@ def main():
         sys.exit()
 
     G_LOGGER.info('Loaded %d messages.' %len(msgs_dict))
+    # G_LOGGER.debug(msgs_dict)
 
     """ Load node level logs """
     node_logs = {}
@@ -98,6 +106,7 @@ def main():
                     node_logs[node_id] = []
                     with open('%s/output.log' %log_path, mode='r') as f:
                         node_log_reader = csv.reader(f, delimiter=" ")
+                        # Check and extract if the log entry is relevant to us
                         for log_line in node_log_reader:
                             # if 'waku.relay received' in log_line:
                             #     print(log_line)
@@ -111,6 +120,7 @@ def main():
         sys.exit()
 
     G_LOGGER.debug(node_logs.keys())
+    # G_LOGGER.debug(node_logs)
     
     ### Statistics we want to compute:
     # 1 - Make sure that all messages have been delivered to their respective peers (x topic)
