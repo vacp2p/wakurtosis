@@ -7,7 +7,7 @@ waku = import_module(system_variables.WAKU_MODULE)
 
 
 def test_add_nwaku_service(plan):
-    nwaku_test_service = node_builders.add_nwaku_service(plan, "nwaku_test", False)
+    nwaku_test_service = node_builders.prepare_nwaku_service(plan, "nwaku_test", False)
 
     test__add_waku_service_information(plan, nwaku_test_service)
 
@@ -22,7 +22,7 @@ def test_add_nwaku_service(plan):
 
 
 def test_add_gowaku_service(plan):
-    gowaku_test_service = node_builders.add_gowaku_service(plan, "gowaku_test", False)
+    gowaku_test_service = node_builders.prepare_gowaku_service(plan, "gowaku_test", False)
 
     plan.assert(value=str(gowaku_test_service.ports[system_variables.WAKU_RPC_PORT_ID].number),
             assertion="==", target_value=str(system_variables.WAKU_TCP_PORT))
