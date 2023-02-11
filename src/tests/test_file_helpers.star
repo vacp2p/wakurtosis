@@ -13,6 +13,8 @@ def test_get_toml_configuration_artifact_same_config_true(plan):
 
 
 def test_get_toml_configuration_artifact_same_config_false(plan):
+    # This test should be mocked, but there are not enough tools for this, as topology generated
+    # should be empty. test.toml file is there specifically for this test.
     artifact_id, file_name = files.get_toml_configuration_artifact(plan, "test", False, "id_2")
 
     plan.assert(value=file_name, assertion="==", target_value="test.toml")
