@@ -7,8 +7,6 @@ WAKU_TCP_PORT = 8545
 WAKU_LIBP2P_PORT_ID = "libp2p"
 WAKU_LIBP2P_PORT = 60000
 
-WAKU_INTERCONNECTION_BATCH = 4
-
 NODE_CONFIG_FILE_LOCATION = "github.com/logos-co/wakurtosis/config/topology_generated/"
 CONTAINER_NODE_CONFIG_FILE_LOCATION = "/node/configuration_file/"
 NODE_CONFIGURATION_FILE_EXTENSION = ".toml"

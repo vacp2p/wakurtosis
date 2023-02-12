@@ -11,6 +11,7 @@ More info about Kurtosis: https://docs.kurtosis.com/
 
 - **You are using Kurtosis version 0.66.2**. This is important, as they are working on it and changes can be huge depending on different versions. You can find all Kurtosis versions [here](https://github.com/kurtosis-tech/kurtosis-cli-release-artifacts/releases).
 - The topology files that will be used by default are defined in `config/topology_generated/`. This topology is created with the [gennet](gennet-module/Readme.md) module.
+- Kurtosis can set up services in a parallel manner, defined in the `config.json` file (see below).
 - Only `kurtosis` and `docker` are needed to run this.
 
 #### How to run
@@ -30,6 +31,8 @@ These are arguments that can be modified:
 - _prng_seed_: int. Seed to reproduce results.
 - _enclave_name_: string. Default: **wakurtosis**. Defines the name of the Kurtosis enclave being created.
 - _topology_file_: string. Default: **waku_test_topology_small.json**. If defines the network topology that will be created.
+- _jobs_: int. Defines how many services will be instantiated at the same time.
+- _interconnection_batch_: int. If nodes are being connected by a given topology, this tells kurtosis how many connections will try to set up in the same node at a time. Used to avoid timeouts if a node has a lot of connections.
 
 - [WLS](wsl-module/README.md) module configuration
 - [Gennet](gennet-module/Readme.md) module configuration
