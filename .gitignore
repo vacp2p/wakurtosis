@@ -23,6 +23,7 @@ config/config.json
 gennet-module/topology/
 kurtosis_log.txt
 config/network_topology/
+config/topology_generated/
 config/waku_config_files/
 kurtosisrun_log.txt
 summary.json
