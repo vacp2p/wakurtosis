@@ -60,9 +60,6 @@ GET_WAKU_INFO_METHOD = "get_waku_v2_debug_v1_info"
 CONNECT_TO_PEER_METHOD = "post_waku_v2_admin_v1_peers"
 GET_PEERS_METHOD = "get_waku_v2_admin_v1_peers"
 
-GENERAL_TOML_CONFIGURATION_PATH = "github.com/logos-co/wakurtosis/config/node_config_files/waku_general.toml"
-GENERAL_TOML_CONFIGURATION_NAME = "waku_general.toml"
-
 # Import locations
 WAKU_MODULE = "github.com/logos-co/wakurtosis/src/waku.star"
 NODE_BUILDERS_MODULE = "github.com/logos-co/wakurtosis/src/node_builders.star"
