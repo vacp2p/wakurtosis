@@ -1,0 +1,18 @@
+{
+  "nwaku_0_2": {
+    "static_nodes": [
+      "nwaku_1_2"
+    ],
+    "subnetwork": "subnetwork_0",
+    "image": "nim-waku",
+    "configuration": "nwaku_0_2.toml"
+  },
+  "nwaku_1_2": {
+    "static_nodes": [
+      "nwaku_0_2"
+    ],
+    "subnetwork": "subnetwork_0",
+    "image": "nim-waku",
+    "configuration": "nwaku_1_2.toml"
+  }
+}
