@@ -14,8 +14,9 @@ NODE_CONFIG_FILE_LOCATION = "github.com/logos-co/wakurtosis/config/topology_gene
 
 CONTAINER_NODE_CONFIG_FILE_LOCATION = "/node/configuration_file/"
 NODE_CONFIGURATION_FILE_EXTENSION = ".toml"
-NWAKU_ENTRYPOINT = ["/usr/bin/wakunode", "--rpc-address=0.0.0.0", "--metrics-server-address=0.0.0.0", "--store=true", "--storenode=/dns4/node_0"]
-GOWAKU_ENTRYPOINT = ["/usr/bin/waku", "--rpc-address=0.0.0.0", "--metrics-server-address=0.0.0.0", "--store=true", "--storenode=/dns4/node_0"]
+NODE_CONFIGURATION_FILE_FLAG = "--config-file="
+NWAKU_ENTRYPOINT = ["/usr/bin/wakunode", "--rpc-address=0.0.0.0", "--metrics-server-address=0.0.0.0"] # todo: check, "--store=true", "--storenode=/dns4/node_0"]
+GOWAKU_ENTRYPOINT = ["/usr/bin/waku", "--rpc-address=0.0.0.0", "--metrics-server-address=0.0.0.0"] # todo: check, "--store=true", "--storenode=/dns4/node_0"]
 
 # Prometheus Configuration
 PROMETHEUS_IMAGE = "prom/prometheus:latest"
@@ -84,9 +85,9 @@ SAME_TOML_CONFIGURATION_ARGUMENT_NAME = "same_toml_configuration"
 SAME_TOML_CONFIGURATION_DEFAULT_ARGUMENT_VALUE = True
 
 TOPOLOGY_FILE_NAME_ARGUMENT_NAME = "topology_file"
-DEFAULT_TOPOLOGY_FILE_DEFAULT_ARGUMENT_VALUE = "waku_test_topology_small.json"
-TOPOLOGY_FOR_TESTS = "test_network_data.json"
+DEFAULT_TOPOLOGY_FILE_DEFAULT_ARGUMENT_VALUE = "test_network_data.json"
 TOPOLOGIES_LOCATION = "github.com/logos-co/wakurtosis/config/topology_generated/"
+TEST_FILES_LOCATION = "github.com/logos-co/wakurtosis/config/test_files/"
 DEFAULT_TOPOLOGY_FILE = "network_data.json"
 
 # Default Simulation Parameters

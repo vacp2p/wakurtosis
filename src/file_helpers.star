@@ -2,23 +2,21 @@
 system_variables = import_module("github.com/logos-co/wakurtosis/src/system_variables.star")
 
 
-def get_toml_configuration_artifact(plan, wakunode_name, same_toml_configuration, name):
-    if same_toml_configuration:
+def get_toml_configuration_artifact(plan, config_file, name, testing):
+    plan.print("Configuration being used file is " + config_file)
+
+    if testing:
         artifact_id = plan.upload_files(
-            src=system_variables.GENERAL_TOML_CONFIGURATION_PATH,
+            src=system_variables.TEST_FILES_LOCATION + config_file,
             name=name
         )
-        file_name = system_variables.GENERAL_TOML_CONFIGURATION_NAME
     else:
         artifact_id = plan.upload_files(
-            src=system_variables.NODE_CONFIG_FILE_LOCATION +
-                wakunode_name +
-                system_variables.NODE_CONFIGURATION_FILE_EXTENSION,
+            src=system_variables.NODE_CONFIG_FILE_LOCATION + config_file,
             name=name
         )
-        file_name = wakunode_name + system_variables.NODE_CONFIGURATION_FILE_EXTENSION
 
-    return artifact_id, file_name
+    return artifact_id
 
 
 def generate_template_node_targets(services, port_id):

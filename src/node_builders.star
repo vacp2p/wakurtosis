@@ -6,13 +6,7 @@ waku = import_module(system_variables.WAKU_MODULE)
 files = import_module(system_variables.FILE_HELPERS_MODULE)
 
 
-def prepare_nwaku_service(plan, nwakunode_name, artifact_name, all_services, use_general_configuration):
-    artifact_id, configuration_file = files.get_toml_configuration_artifact(plan, nwakunode_name,
-                                                                            use_general_configuration,
-                                                                            artifact_name)
-
-    plan.print("Configuration being used file is " + configuration_file)
-
+def prepare_nwaku_service(nwakunode_name, all_services, config_file, artifact_id):
     add_service_config = ServiceConfig(
         image=system_variables.NWAKU_IMAGE,
         ports={
@@ -31,21 +25,14 @@ def prepare_nwaku_service(plan, nwakunode_name, artifact_name, all_services, use
         entrypoint=system_variables.NWAKU_ENTRYPOINT,
         cmd=[
             system_variables.NODE_CONFIGURATION_FILE_FLAG +
-            system_variables.CONTAINER_NODE_CONFIG_FILE_LOCATION +
-            "/" + configuration_file
+            system_variables.CONTAINER_NODE_CONFIG_FILE_LOCATION + config_file
         ]
     )
 
     all_services[nwakunode_name] = add_service_config
 
 
-def prepare_gowaku_service(plan, gowakunode_name, artifact_name, all_services, use_general_configuration):
-    artifact_id, configuration_file = files.get_toml_configuration_artifact(plan, gowakunode_name,
-                                                                            use_general_configuration,
-                                                                            artifact_name)
-
-    plan.print("Configuration being used file is " + configuration_file)
-
+def prepare_gowaku_service(gowakunode_name, all_services, config_file, artifact_id):
     add_service_config = ServiceConfig(
         image=system_variables.GOWAKU_IMAGE,
         ports={
@@ -64,8 +51,7 @@ def prepare_gowaku_service(plan, gowakunode_name, artifact_name, all_services, u
         entrypoint=system_variables.GOWAKU_ENTRYPOINT,
         cmd=[
             system_variables.NODE_CONFIGURATION_FILE_FLAG +
-            system_variables.CONTAINER_NODE_CONFIG_FILE_LOCATION +
-            "/" + configuration_file
+            system_variables.CONTAINER_NODE_CONFIG_FILE_LOCATION + config_file
         ]
     )
 
@@ -76,7 +62,7 @@ def prepare_nomos_service(plan, test, test2):
     plan.print("nomos")
 
 
-def instantiate_services(plan, network_topology, use_general_configuration):
+def instantiate_services(plan, network_topology, testing):
     """
     As we will need to access for the service information later, the structure is the following:
 
@@ -107,10 +93,14 @@ def instantiate_services(plan, network_topology, use_general_configuration):
     # Get up all nodes
     for service_name in network_topology.keys():
         image = network_topology[service_name]["image"]
+        config_file = network_topology[service_name]["configuration"]
 
         service_builder = service_dispatcher[image]
 
-        service_builder(plan, service_name, service_name, all_services, use_general_configuration)
+        configuration_artifact_id = files.get_toml_configuration_artifact(plan, config_file,
+                                                                          service_name, testing)
+
+        service_builder(service_name, all_services, config_file, configuration_artifact_id)
 
     all_services_information = plan.add_services(
         configs = all_services
