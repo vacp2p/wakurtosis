@@ -19,7 +19,7 @@ def run(plan, args):
 
     kurtosis_config = config['kurtosis']
     wsl_config = config['wsl']
-    interconnection_batch = config['interconnection_batch']
+    interconnection_batch = kurtosis_config['interconnection_batch']
 
     # Load network topology
     waku_topology_json = read_file(src=vars.TOPOLOGIES_LOCATION + vars.DEFAULT_TOPOLOGY_FILE)

@@ -244,6 +244,7 @@ def generate_and_write_files(dirname, num_topics, num_subnets, node_type_distrib
             json_dump[node]["static_nodes"].append(edge[1])
         json_dump[node][SUBNET_PREFIX] = subnets[node]
         json_dump[node]["image"] = nodeDockerImageSwitch.get(node_type)
+        json_dump[node]["configuration"] = f"{node}.toml"
     write_json(dirname, json_dump)  # network wide json
 
 
