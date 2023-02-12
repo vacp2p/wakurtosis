@@ -101,7 +101,7 @@ def prepare_nomos_service(plan, node_name, all_services, use_general_configurati
 	]
     )
 
-    all_services[node_name]
+    all_services[node_name] = nomos_service_config
 
 
 def instantiate_services(plan, network_topology, use_general_configuration):
@@ -161,15 +161,18 @@ def _add_waku_service_information(plan, all_services_information):
     return new_services_information
 
 
-def _add_nomos_service_information(plan, services_information, new_service_id, service_information):
-    new_service_information = {}
+def _add_nomos_service_information(plan, all_services_information):
 
-    nomos_peer_id = nomos.get_nomos_peer_id(plan, new_service_id, system_variables.NOMOS_HTTP_PORT_ID)
+    new_services_information = {}
 
-    new_service_information["peer_id"] = nomos_peer_id
-    new_service_information["service_info"] = service_information
+    for service_name in all_services_information:
+	node_peer_id = nomos.get_nomos_peer_id(plan, service_name, system_variables.NOMOS_HTTP_PORT_ID)
 
-    services_information[new_service_id] = new_service_information
+        new_services_information[service_name] = {}
+        new_services_information[service_name]["peer_id"] = node_peer_id
+        new_services_information[service_name]["service_info"] = all_services_information[service_name]
+
+    return new_services_information
 
 
 service_dispatcher = {
