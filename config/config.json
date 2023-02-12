@@ -4,7 +4,7 @@
   },
   "kurtosis": {
     "enclave_name": "wakurtosis",
-    "topology_path": "./config/topology_generated/",
+    "topology_path": "./config/topology_generated/"
   },
   "gennet": {
     "num_nodes": 9,
