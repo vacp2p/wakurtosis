@@ -6,12 +6,10 @@ WAKU_RPC_PORT_ID = "rpc"
 WAKU_TCP_PORT = 8545
 WAKU_LIBP2P_PORT_ID = "libp2p"
 WAKU_LIBP2P_PORT = 60000
-WAKU_SETUP_WAIT_TIME = "5"
 
 WAKU_INTERCONNECTION_BATCH = 4
 
 NODE_CONFIG_FILE_LOCATION = "github.com/logos-co/wakurtosis/config/topology_generated/"
-
 CONTAINER_NODE_CONFIG_FILE_LOCATION = "/node/configuration_file/"
 NODE_CONFIGURATION_FILE_EXTENSION = ".toml"
 NODE_CONFIGURATION_FILE_FLAG = "--config-file="
@@ -81,20 +79,14 @@ TEST_NODE_BUILDERS_MODULE = "github.com/logos-co/wakurtosis/src/tests/test_node_
 TEST_WAKU_MODULE = "github.com/logos-co/wakurtosis/src/tests/test_waku_methods.star"
 
 # Default main starlark arguments
-SAME_TOML_CONFIGURATION_ARGUMENT_NAME = "same_toml_configuration"
-SAME_TOML_CONFIGURATION_DEFAULT_ARGUMENT_VALUE = True
-
-TOPOLOGY_FILE_NAME_ARGUMENT_NAME = "topology_file"
-DEFAULT_TOPOLOGY_FILE_DEFAULT_ARGUMENT_VALUE = "test_network_data.json"
 TOPOLOGIES_LOCATION = "github.com/logos-co/wakurtosis/config/topology_generated/"
-TEST_FILES_LOCATION = "github.com/logos-co/wakurtosis/config/test_files/"
 DEFAULT_TOPOLOGY_FILE = "network_data.json"
+TEST_FILES_LOCATION = "github.com/logos-co/wakurtosis/config/test_files/"
+DEFAULT_TOPOLOGY_FILE_DEFAULT_ARGUMENT_VALUE = "test_network_data.json"
+DEFAULT_CONFIG_FILE = "github.com/logos-co/wakurtosis/config/config.json"
 
 # Default Simulation Parameters
 SIMULATION_TIME = 300
 MESSAGE_RATE = 25
 MIN_PACKET_SIZE = 1
 MAX_PACKET_SIZE = 1024
-
-# Global config
-DEFAULT_CONFIG_FILE = "github.com/logos-co/wakurtosis/config/config.json"
