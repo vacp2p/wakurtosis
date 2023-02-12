@@ -1,8 +1,8 @@
 # System Imports
-system_variables = import_module("github.com/logos-co/wakurtosis/src/system_variables.star")
+vars = import_module("github.com/logos-co/wakurtosis/src/system_variables.star")
 
 # Module Imports
-arg_parser = import_module(system_variables.ARGUMENT_PARSER_MODULE)
+arg_parser = import_module(vars.ARGUMENT_PARSER_MODULE)
 
 
 def test_load_config_args_default(plan):
@@ -10,7 +10,7 @@ def test_load_config_args_default(plan):
 
     parsed = arg_parser.get_configuration_file_name(plan, input_args)
 
-    plan.assert(value=parsed, assertion="==", target_value = system_variables.DEFAULT_CONFIG_FILE)
+    plan.assert(value=parsed, assertion="==", target_value = vars.DEFAULT_CONFIG_FILE)
 
 
 def test_load_config_args_given(plan):

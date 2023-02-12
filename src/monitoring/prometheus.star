@@ -1,9 +1,9 @@
 # System Imports
-system_variables = import_module("github.com/logos-co/wakurtosis/src/system_variables.star")
+vars = import_module("github.com/logos-co/wakurtosis/src/system_variables.star")
 
 # Module Imports
-files = import_module(system_variables.FILE_HELPERS_MODULE)
-templates = import_module(system_variables.TEMPLATES_MODULE)
+files = import_module(vars.FILE_HELPERS_MODULE)
+templates = import_module(vars.TEMPLATES_MODULE)
 
 
 def set_up_prometheus(plan, services):
@@ -12,28 +12,28 @@ def set_up_prometheus(plan, services):
 
     # Set up prometheus
     artifact_id = plan.upload_files(
-        src=system_variables.PROMETHEUS_CONFIGURATION_PATH,
+        src=vars.PROMETHEUS_CONFIGURATION_PATH,
         name="prometheus_config"
     )
 
     add_service_config = ServiceConfig(
-        image=system_variables.PROMETHEUS_IMAGE,
+        image=vars.PROMETHEUS_IMAGE,
         ports={
-            system_variables.PROMETHEUS_PORT_ID: PortSpec(
-                number=system_variables.CONTAINER_PROMETHEUS_TCP_PORT, transport_protocol="TCP")
+            vars.PROMETHEUS_PORT_ID: PortSpec(
+                number=vars.CONTAINER_PROMETHEUS_TCP_PORT, transport_protocol="TCP")
         },
         files={
-            system_variables.CONTAINER_CONFIGURATION_LOCATION_PROMETHEUS: artifact_id,
-            system_variables.CONTAINER_CONFIGURATION_LOCATION_PROMETHEUS_2: targets_artifact_id
+            vars.CONTAINER_CONFIGURATION_LOCATION_PROMETHEUS: artifact_id,
+            vars.CONTAINER_CONFIGURATION_LOCATION_PROMETHEUS_2: targets_artifact_id
         },
         cmd=[
-            "--config.file=" + system_variables.CONTAINER_CONFIGURATION_LOCATION_PROMETHEUS +
-            system_variables.CONTAINER_CONFIGURATION_FILE_NAME_PROMETHEUS
+            "--config.file=" + vars.CONTAINER_CONFIGURATION_LOCATION_PROMETHEUS +
+            vars.CONTAINER_CONFIGURATION_FILE_NAME_PROMETHEUS
         ]
     )
 
     prometheus_service = plan.add_service(
-        service_name=system_variables.PROMETHEUS_SERVICE_NAME,
+        service_name=vars.PROMETHEUS_SERVICE_NAME,
         config=add_service_config
     )
 
@@ -43,13 +43,13 @@ def set_up_prometheus(plan, services):
 def create_prometheus_targets(plan, services):
     # get ip and ports of all nodes
     template_data = files.generate_template_node_targets(services,
-                                                         system_variables.PROMETHEUS_PORT_ID)
+                                                         vars.PROMETHEUS_PORT_ID)
 
     template = templates.get_prometheus_template()
 
     artifact_id = plan.render_templates(
         config={
-            system_variables.CONTAINER_TARGETS_FILE_NAME_PROMETHEUS: struct(
+            vars.CONTAINER_TARGETS_FILE_NAME_PROMETHEUS: struct(
                 template=template,
                 data=template_data,
             )

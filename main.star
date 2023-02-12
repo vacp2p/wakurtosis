@@ -1,13 +1,13 @@
 # System Imports
-system_variables = import_module("github.com/logos-co/wakurtosis/src/system_variables.star")
+vars = import_module("github.com/logos-co/wakurtosis/src/system_variables.star")
 
 # Module Imports
-waku = import_module(system_variables.WAKU_MODULE)
-prometheus = import_module(system_variables.PROMETHEUS_MODULE)
-grafana = import_module(system_variables.GRAFANA_MODULE)
-args_parser = import_module(system_variables.ARGUMENT_PARSER_MODULE)
-wsl = import_module(system_variables.WSL_MODULE)
-nodes = import_module(system_variables.NODE_BUILDERS_MODULE)
+waku = import_module(vars.WAKU_MODULE)
+prometheus = import_module(vars.PROMETHEUS_MODULE)
+grafana = import_module(vars.GRAFANA_MODULE)
+args_parser = import_module(vars.ARGUMENT_PARSER_MODULE)
+wsl = import_module(vars.WSL_MODULE)
+nodes = import_module(vars.NODE_BUILDERS_MODULE)
 
 
 def run(plan, args):
@@ -21,7 +21,7 @@ def run(plan, args):
     wsl_config = config['wsl']
 
     # Load network topology
-    waku_topology_json = read_file(src=system_variables.TOPOLOGIES_LOCATION + 'network_data.json')
+    waku_topology_json = read_file(src=vars.TOPOLOGIES_LOCATION + vars.DEFAULT_TOPOLOGY_FILE)
     waku_topology = json.decode(waku_topology_json)
 
     # Set up nodes
