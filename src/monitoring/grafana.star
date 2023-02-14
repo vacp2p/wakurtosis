@@ -1,9 +1,9 @@
 # System Imports
-system_variables = import_module("github.com/logos-co/wakurtosis/src/system_variables.star")
+vars = import_module("github.com/logos-co/wakurtosis/src/system_variables.star")
 
 # Module Imports
-files = import_module(system_variables.FILE_HELPERS_MODULE)
-templates = import_module(system_variables.TEMPLATES_MODULE)
+files = import_module(vars.FILE_HELPERS_MODULE)
+templates = import_module(vars.TEMPLATES_MODULE)
 
 
 def set_up_grafana(plan, prometheus_service):
@@ -14,7 +14,7 @@ def set_up_grafana(plan, prometheus_service):
 
     artifact_id = plan.render_templates(
         config={
-            system_variables.CONTAINER_DATASOURCES_FILE_NAME_GRAFANA: struct(
+            vars.CONTAINER_DATASOURCES_FILE_NAME_GRAFANA: struct(
                 template=prometheus_template,
                 data=prometheus_data,
             )
@@ -23,21 +23,21 @@ def set_up_grafana(plan, prometheus_service):
     )
 
     add_service_config = ServiceConfig(
-        image=system_variables.GRAFANA_IMAGE,
+        image=vars.GRAFANA_IMAGE,
         ports={
-            system_variables.GRAFANA_PORT_ID: PortSpec(number=system_variables.GRAFANA_TCP_PORT,
-                                                       transport_protocol="TCP")
+            vars.GRAFANA_PORT_ID: PortSpec(number=vars.GRAFANA_TCP_PORT,
+                                           transport_protocol="TCP")
         },
         files={
-            system_variables.CONTAINER_CONFIGURATION_GRAFANA: config_id,
+            vars.CONTAINER_CONFIGURATION_GRAFANA: config_id,
             # customization_id: CUSTOMIZATION_GRAFANA,
-            system_variables.CONTAINER_DASHBOARDS_GRAFANA: dashboard_id,
-            system_variables.CONTAINER_DATASOURCES_GRAFANA: artifact_id
+            vars.CONTAINER_DASHBOARDS_GRAFANA: dashboard_id,
+            vars.CONTAINER_DATASOURCES_GRAFANA: artifact_id
         }
     )
 
     grafana_service = plan.add_service(
-        service_name=system_variables.GRAFANA_SERVICE_NAME,
+        service_name=vars.GRAFANA_SERVICE_NAME,
         config=add_service_config
     )
 

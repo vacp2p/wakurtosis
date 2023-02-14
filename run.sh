@@ -29,8 +29,10 @@ docker rm gennet-container > /dev/null 2>&1
 kurtosis enclave rm -f $enclave_name > /dev/null 2>&1
 
 # Create the new enclave and run the simulation
+jobs=$(cat config/${wakurtosis_config_file} | jq -r ".kurtosis.jobs")
+
 echo -e "\nInitiating enclave "$enclave_name
-kurtosis_cmd="kurtosis run --enclave-id ${enclave_name} . '{\"wakurtosis_config_file\" : \"config/${wakurtosis_config_file}\"}' > kurtosisrun_log.txt 2>&1"
+kurtosis_cmd="kurtosis run --enclave-id ${enclave_name} . '{\"wakurtosis_config_file\" : \"config/${wakurtosis_config_file}\"}' --parallelism ${jobs} > kurtosisrun_log.txt 2>&1"
 eval $kurtosis_cmd
 echo -e "Enclave " $enclave_name " is up and running"
 
@@ -51,10 +53,10 @@ echo -e "\n--> Statistics in Grafana server at http://$grafana_host/ <--"
 enclave_preffix="$(kurtosis enclave inspect --full-uuids $enclave_name | grep UUID: | awk '{print $2}')"
 cid_suffix="$(kurtosis enclave inspect --full-uuids $enclave_name | grep $wsl_service_name | cut -f 1 -d ' ')"
 
-# Construct the fully qualified container name that kurtosis created 
+# Construct the fully qualified container name that kurtosis created
 cid="$enclave_preffix--user-service--$cid_suffix"
 
-# Wait for the container to halt; this will block 
+# Wait for the container to halt; this will block
 echo "Waiting for simulation to finish ..."
 status_code="$(docker container wait $cid)"
 

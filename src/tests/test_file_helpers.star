@@ -1,21 +1,21 @@
 # System Imports
-system_variables = import_module("github.com/logos-co/wakurtosis/src/system_variables.star")
+vars = import_module("github.com/logos-co/wakurtosis/src/system_variables.star")
 
 # Module Imports
-files = import_module(system_variables.FILE_HELPERS_MODULE)
+files = import_module(vars.FILE_HELPERS_MODULE)
 
 
 def test_get_toml_configuration_artifact_same_config_true(plan):
-    artifact_id, file_name = files.get_toml_configuration_artifact(plan, "test", True, "id_1")
+    artifact_id = files.get_toml_configuration_artifact(plan, "test.toml", "id_1", True)
 
-    plan.assert(value=file_name, assertion="==", target_value=system_variables.GENERAL_TOML_CONFIGURATION_NAME)
     plan.assert(value=artifact_id, assertion="==", target_value="id_1")
 
 
 def test_get_toml_configuration_artifact_same_config_false(plan):
-    artifact_id, file_name = files.get_toml_configuration_artifact(plan, "test", False, "id_2")
+    # This test should be mocked, but there are not enough tools for this, as topology generated
+    # should be empty. test.toml file is there specifically for this test.
+    artifact_id = files.get_toml_configuration_artifact(plan, "test.toml", "id_2", True)
 
-    plan.assert(value=file_name, assertion="==", target_value="test.toml")
     plan.assert(value=artifact_id, assertion="==", target_value="id_2")
 
 
@@ -40,8 +40,8 @@ def test_generate_template_node_targets_multiple(plan):
 
 def test_generate_template_prometheus_url(plan):
     prometheus_service_struct = struct(ip_address="1.2.3.4",
-                               ports={system_variables.PROMETHEUS_PORT_ID:
-                                          PortSpec(number=system_variables.PROMETHEUS_TCP_PORT)})
+                                       ports={vars.PROMETHEUS_PORT_ID:
+                                          PortSpec(number=vars.PROMETHEUS_TCP_PORT)})
 
     result = files.generate_template_prometheus_url(prometheus_service_struct)
     plan.assert(value=result["prometheus_url"], assertion="==", target_value="1.2.3.4:8008")

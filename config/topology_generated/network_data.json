@@ -1,0 +1,29 @@
+{
+  "node_0": {
+    "static_nodes": [
+      "node_1",
+      "node_2"
+    ],
+    "subnetwork": "subnetwork_0",
+    "image": "nim-waku",
+    "configuration": "node_0.toml"
+  },
+  "node_1": {
+    "static_nodes": [
+      "node_0",
+      "node_2"
+    ],
+    "subnetwork": "subnetwork_0",
+    "image": "nim-waku",
+    "configuration": "node_1.toml"
+  },
+  "node_2": {
+    "static_nodes": [
+      "node_0",
+      "node_1"
+    ],
+    "subnetwork": "subnetwork_0",
+    "image": "nim-waku",
+    "configuration": "node_2.toml"
+  }
+}

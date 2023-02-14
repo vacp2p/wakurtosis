@@ -5,7 +5,8 @@
   "kurtosis": {
     "enclave_name": "wakurtosis",
     "topology_path": "./config/topology_generated/",
-    "same_toml_configuration": false
+    "jobs": 4,
+    "interconnection_batch": 10
   },
   "gennet": {
     "num_nodes": 9,
