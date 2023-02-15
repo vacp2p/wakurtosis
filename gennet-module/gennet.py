@@ -247,7 +247,7 @@ def generate_and_write_files(dirname, num_topics, num_subnets, node_type_distrib
         json_dump[node]["node_config"] = f"{node}.toml" 
             # logs ought to continue as they need to be unique
         json_dump[node]["node_log"] = f"{node}.log"
-        json_dump[node]["port-shift"] = port_shift
+        json_dump[node]["port_shift"] = port_shift
         port_shift += 1
     write_json(dirname, json_dump)  # network wide json
 
