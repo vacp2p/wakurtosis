@@ -110,6 +110,22 @@ def instantiate_services(plan, network_topology, testing):
     return services_information
 
 
+def assign_subnetwork_to_nodes(network_topology):
+    for node in network_topology.keys():
+        update_service_config = UpdateServiceConfig(
+            subnetwork=network_topology[node]["subnetwork"]
+        )
+        update_service(
+            service_name=node,
+            config=update_service_config
+        )
+
+
+# def assign_subnetwork_configuration():
+
+
+
+
 def _add_waku_service_information(plan, all_services_information):
 
     new_services_information = {}

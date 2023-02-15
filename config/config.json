@@ -1,23 +1,53 @@
 {
   "general":{
-    "prng_seed" : 67
+    "prng_seed" : 67,
+    "discovery": false,
+    "kubernetes": false
   },
   "kurtosis": {
     "enclave_name": "wakurtosis",
     "topology_path": "./config/topology_generated/",
     "jobs": 4,
-    "interconnection_batch": 10
+    "interconnection_batch": 10,
+    "subnetworks": {
+      "times_configuration": {
+        "apply_1": {
+          "time": 0,
+          "config": "configuration_1"
+        },
+        "apply_2": {
+          "time": 120,
+          "config": "configuration_2"
+        }
+      },
+      "configuration_1": {
+        "subnetworks": ["A", "B"],
+        "packet_loss": 0.1
+      },
+      "configuration_2": {
+        "subnetworks": ["A", "B"],
+        "packet_loss": 0.5,
+        "packet_delay": {
+          "type": "uniform"
+        }
+      }
+    }
   },
   "gennet": {
     "num_nodes": 9,
     "num_topics": 1,
     "num_partitions": 1,
-    "num_subnets": 1,
+    "subnetworks": ["A", "B"], #  <--changed
     "node_type_distribution": { "nwaku":100, "gowaku":0 },
     "node_type": "desktop",
     "network_type": "newmanwattsstrogatz",
     "output_dir": "network_data",
-    "benchmark": "False"
+    "benchmark": "False",
+
+
+
+
+
   },
   "wsl": {
     "simulation_time": 60,
