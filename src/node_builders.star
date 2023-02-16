@@ -8,27 +8,41 @@ files = import_module(vars.FILE_HELPERS_MODULE)
 
 def prepare_nwaku_service(nwakunode_names, all_services, config_files, artifact_ids):
 
+    # TODO MAKE SURE THEY MATCH
+
+    prepared_ports = {}
+    for i in range(len(nwakunode_names)):
+        prepared_ports[vars.WAKU_RPC_PORT_ID+"_"+nwakunode_names[i]] = PortSpec(number=vars.WAKU_TCP_PORT + i,
+                                            transport_protocol="TCP"),
+        prepared_ports[vars.PROMETHEUS_PORT_ID+"_"+nwakunode_names[i]] = PortSpec(
+                number=vars.PROMETHEUS_TCP_PORT + i,
+                transport_protocol="TCP")
+        prepared_ports[vars.WAKU_LIBP2P_PORT_ID+"_"+nwakunode_names[i]] = PortSpec(
+                number=vars.WAKU_LIBP2P_PORT + i,
+                transport_protocol="TCP")
+
+
+    prepared_files = {}
+    for i in range(len(nwakunode_names)):
+        prepared_files[vars.CONTAINER_NODE_CONFIG_FILE_LOCATION+nwakunode_names[i]] = artifact_ids[i]
+
+    prepared_cmd = []
+    for i in range(len(nwakunode_names)):
+        prepared_cmd.extend(vars.NWAKU_ENTRYPOINT)
+        prepared_cmd.append(vars.NODE_CONFIGURATION_FILE_FLAG+
+                            vars.CONTAINER_NODE_CONFIG_FILE_LOCATION+nwakunode_names[i]+
+                            config_files[i])
+        if i != len(nwakunode_names) - 1:
+            prepared_cmd.append(" && ")
+
+
 
     add_service_config = ServiceConfig(
         image=vars.NWAKU_IMAGE,
-        ports={
-            vars.WAKU_RPC_PORT_ID: PortSpec(number=vars.WAKU_TCP_PORT,
-                                            transport_protocol="TCP"),
-            vars.PROMETHEUS_PORT_ID: PortSpec(
-                number=vars.PROMETHEUS_TCP_PORT,
-                transport_protocol="TCP"),
-            vars.WAKU_LIBP2P_PORT_ID: PortSpec(
-                number=vars.WAKU_LIBP2P_PORT,
-                transport_protocol="TCP"),
-        },
-        files={
-            vars.CONTAINER_NODE_CONFIG_FILE_LOCATION: artifact_ids
-        },
-        entrypoint=vars.NWAKU_ENTRYPOINT,
-        cmd=[
-            vars.NODE_CONFIGURATION_FILE_FLAG +
-            vars.CONTAINER_NODE_CONFIG_FILE_LOCATION + config_files
-        ]
+        ports=prepared_ports,
+        files=prepared_files,
+        entrypoint="",
+        cmd=prepared_cmd
     )
 
     all_services[nwakunode_names] = add_service_config
