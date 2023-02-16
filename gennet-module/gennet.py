@@ -6,7 +6,7 @@ import numpy as np
 
 import random, math
 import sys, os
-import json
+import json, ast
 
 import time, tracemalloc
 import string
@@ -23,18 +23,15 @@ class nodeType(Enum):
     GOWAKU = "gowaku"   # waku mobile config
 
 
-nodeTomlSwitch = {
+nodeTypeToToml = {
     nodeType.NWAKU: "rpc-admin = true\nkeep-alive = true\nmetrics-server = true\n",
     nodeType.GOWAKU: "rpc-admin = true\nmetrics-server = true\nrpc = true\n"
 }
 
-nodeDockerImageSwitch = {
+nodeTypeToDocker = {
     nodeType.NWAKU: "nim-waku",
     nodeType.GOWAKU: "go-waku"
 }
-
-#NODES = [nodeType.NWAKU, nodeType.GOWAKU]
-#NODE_PROBABILITIES = (100, 0)
 
 # To add a new network type, add appropriate entries to the networkType and networkTypeSwitch
 # the networkTypeSwitch is placed before generate_network(): fwd declaration mismatch with typer/python :/
@@ -207,7 +204,7 @@ def generate_toml(topics, node_type=nodeType.NWAKU):
     else:                               # space separated topics
         topic_str = " ".join(topics)  
         topic_str = f"\"{topic_str}\""
-    return f"{nodeTomlSwitch.get(node_type)}topics = {topic_str}\n"
+    return f"{nodeTypeToToml.get(node_type)}topics = {topic_str}\n"
 
 
 # Convert a dict to pair of arrays
@@ -226,12 +223,14 @@ def generate_node_types(node_type_distribution, G):
     node_types_enum = [nodeType(s) for s in node_types_str]
     return node_types_enum
 
+port_shift = 0
 
 # Generates network-wide json and per-node toml and writes them
 def generate_and_write_files(dirname, num_topics, num_subnets, node_type_distribution, G):
     topics = generate_topics(num_topics)
     subnets = generate_subnets(G, num_subnets)
     node_types_enum = generate_node_types(node_type_distribution, G)
+    global port_shift
 
     i, json_dump = 0, {}
     for node in G.nodes:
@@ -243,7 +242,13 @@ def generate_and_write_files(dirname, num_topics, num_subnets, node_type_distrib
         for edge in G.edges(node):
             json_dump[node]["static_nodes"].append(edge[1])
         json_dump[node][SUBNET_PREFIX] = subnets[node]
-        json_dump[node]["image"] = nodeDockerImageSwitch.get(node_type)
+        json_dump[node]["image"] = nodeTypeToDocker.get(node_type)
+            # the per node tomls will continue for now as they include topics
+        json_dump[node]["node_config"] = f"{node}.toml" 
+            # logs ought to continue as they need to be unique
+        json_dump[node]["node_log"] = f"{node}.log"
+        json_dump[node]["port_shift"] = port_shift
+        port_shift += 1
     write_json(dirname, json_dump)  # network wide json
 
 
@@ -288,10 +293,12 @@ def _num_subnets_callback(ctx: typer, Context, num_subnets: int):
 
 
 def main(benchmark: bool = False,
+         container_size: int = 1,   # TODO: subnet aware container packing
          output_dir: str = "network_data",
          prng_seed: int = 3,
          num_nodes: int = 4,
          num_topics: int = 1,
+         node_type_distribution: str = typer.Argument("{\"nwaku\" : 100 }" ,callback=ast.literal_eval),
          network_type: networkType = networkType.NEWMANWATTSSTROGATZ.value,
          num_subnets: int = typer.Option(1, callback=_num_subnets_callback),
          num_partitions: int = typer.Option(1, callback=_num_partitions_callback),
@@ -299,8 +306,8 @@ def main(benchmark: bool = False,
 
     # Benchmarking: record start time and start tracing mallocs
     if benchmark :
-        start = time.time()
         tracemalloc.start()
+    start = time.time()
 
     # re-read the conf file to set node_type_distribution -- no cli equivalent
     conf = {}
@@ -314,12 +321,13 @@ def main(benchmark: bool = False,
     random.seed(prng_seed)
     np.random.seed(prng_seed)
    
+    # leaving it for now should any json parsing issues pops up
     # Extract the node type distribution from config.json or use the default
     # no cli equivalent for node type distribution (NTD)
-    if "gennet" in conf  and "node_type_distribution" in conf ["gennet"]:
-        node_type_distribution = conf["gennet"]["node_type_distribution"]
-    else:
-        node_type_distribution = { "nwaku" : 100 }  # default NTD is all nwaku
+    # if "gennet" in conf  and "node_type_distribution" in conf ["gennet"]:
+    #     node_type_distribution = conf["gennet"]["node_type_distribution"]
+    # else:
+    #    node_type_distribution = { "nwaku" : 100 }  # default NTD is all nwaku
 
 
     # Generate the network
@@ -331,11 +339,11 @@ def main(benchmark: bool = False,
     # Generate file format specific data structs and write the files
     generate_and_write_files(output_dir, num_topics, num_subnets, node_type_distribution, G)
     #draw(G, outpur_dir)
-    print(f"Network generation is done.\nThe generated network is under ./{output_dir}")
+    end = time.time()
+    print(f"Network generation took {end/10**9} secs.\nThe generated network is under ./{output_dir}")
 
     # Benchmarking. Record finish time and stop the malloc tracing
     if benchmark :
-        end = time.time()
         mem_curr, mem_max = tracemalloc.get_traced_memory()
         tracemalloc.stop()
         print(f"STATS: For {num_nodes} nodes, time took is {(end-start)} secs, peak memory usage is {mem_max/(1024*1024)} MBs\n")

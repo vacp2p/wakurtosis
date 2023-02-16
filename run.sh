@@ -2,6 +2,10 @@
 
 dir=$(pwd)
 
+# Set up Cadvisor
+docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev/disk/:/dev/disk:ro --volume=/sys:/sys:ro --volume=/etc/machine-id:/etc/machine-id:ro --publish=8080:8080 --detach=true --name=cadvisor --privileged --device=/dev/kmsg gcr.io/cadvisor/cadvisor
+
+
 # Parse arg if any
 ARGS1=${1:-"wakurtosis"}
 ARGS2=${2:-"config.json"}
@@ -17,10 +21,18 @@ echo "- Configuration file: " $wakurtosis_config_file
 rm -rf ./config/topology_generated > /dev/null 2>&1
 
 # Create and run Gennet docker container
-echo -e "\nRunning topology generation"
+echo -e "\nRunning network generation"
+docker rm gennet-container    # cleanup the old docker if any
 cd gennet-module
 docker run --name gennet-container -v ${dir}/config/:/config gennet --config-file /config/${wakurtosis_config_file} --output-dir /config/topology_generated
+err=$?
 cd ..
+
+if [ $err != 0 ]
+then
+  echo "Gennet failed with error code $err"
+  exit
+fi
 
 docker rm gennet-container > /dev/null 2>&1
 
@@ -35,8 +47,10 @@ rm -rf ./${enclave_name}_logs > /dev/null 2>&1
 rm ./kurtosisrun_log.txt > /dev/null 2>&1
 
 # Create the new enclave and run the simulation
+jobs=$(cat config/${wakurtosis_config_file} | jq -r ".kurtosis.jobs")
+
 echo -e "\nInitiating enclave "$enclave_name
-kurtosis_cmd="kurtosis run --enclave-id ${enclave_name} . '{\"wakurtosis_config_file\" : \"config/${wakurtosis_config_file}\"}' > kurtosisrun_log.txt 2>&1"
+kurtosis_cmd="kurtosis run --enclave-id ${enclave_name} . '{\"wakurtosis_config_file\" : \"config/${wakurtosis_config_file}\"}' --parallelism ${jobs} > kurtosisrun_log.txt 2>&1"
 eval $kurtosis_cmd
 echo -e "Enclave " $enclave_name " is up and running"
 
@@ -57,7 +71,7 @@ echo "Output of kurtosis run command written in kurtosisrun_log.txt"
 enclave_preffix="$(kurtosis enclave inspect --full-uuids $enclave_name | grep UUID: | awk '{print $2}')"
 cid_suffix="$(kurtosis enclave inspect --full-uuids $enclave_name | grep $wsl_service_name | cut -f 1 -d ' ')"
 
-# Construct the fully qualified container name that kurtosis created 
+# Construct the fully qualified container name that kurtosis created
 cid="$enclave_preffix--user-service--$cid_suffix"
 
 # Wait for the container to halt; this will block 

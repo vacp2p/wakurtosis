@@ -329,7 +329,17 @@ def main():
             with open(toml_file, mode='rb') as read_file:
                 toml_config = tomllib.load(read_file)
                 node_topics_str = toml_config['topics']
-                topics.append(list(node_topics_str.split(' ')))
+                
+                # Make sure we are tokenising the topics depending if Nim-Waku or Go-Waku
+                # Ideally we should also pass the network_data.json so we can check directly the type of node
+                if isinstance(node_topics_str, list):
+                
+                    # Parses Go Waku style topics list: ["topic_a", "topic_b"]
+                    topics.append(node_topics_str)
+                else:
+                    # Parses Nim Waku style topics list: "topic_a" "topic_b"
+                    topics.append(list(node_topics_str.split(' ')))
+
     except Exception as e:
         G_LOGGER.error('%s: %s' % (e.__doc__, e))
         sys.exit()
