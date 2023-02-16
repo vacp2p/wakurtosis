@@ -62,7 +62,7 @@ def prepare_nomos_service(plan, test, test2):
     plan.print("nomos")
 
 
-def instantiate_services(plan, network_topology, testing):
+def instantiate_services(plan, network_topology, nodes_per_container, testing):
     """
     As we will need to access for the service information later, the structure is the following:
 
@@ -91,7 +91,17 @@ def instantiate_services(plan, network_topology, testing):
     all_services = {}
 
     # Get up all nodes
-    for service_name in network_topology.keys():
+    filterByImage = lambda keys: {x: network_topology[x] for x in keys}
+    services_by_image = []
+    for image in vars.NODE_IMAGES_FROM_GENNET:
+        services_by_image.append(filterByImage(image))
+
+    # set up dicts by batch by grouped images
+
+    for i in range(0, len(service_names), nodes_per_container):
+        services_in_container = service_names[i:i+nodes_per_container]
+
+
         image = network_topology[service_name]["image"]
         config_file = network_topology[service_name]["node_config"]
 

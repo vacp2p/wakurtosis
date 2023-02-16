@@ -1,4 +1,5 @@
 # Waku Configuration
+NODE_IMAGES_FROM_GENNET = ["go-waku", "nim-waku"]
 NWAKU_IMAGE = "statusteam/nim-waku:019f357d"
 GOWAKU_IMAGE = "gowaku"
 
