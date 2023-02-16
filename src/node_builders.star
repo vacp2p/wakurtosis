@@ -6,14 +6,14 @@ waku = import_module(vars.WAKU_MODULE)
 files = import_module(vars.FILE_HELPERS_MODULE)
 
 
-def prepare_nwaku_service(nwakunode_names, all_services, config_files, artifact_ids):
+def prepare_nwaku_service(plan, nwakunode_names, all_services, config_files, artifact_ids):
 
     # TODO MAKE SURE THEY MATCH
 
     prepared_ports = {}
     for i in range(len(nwakunode_names)):
         prepared_ports[vars.WAKU_RPC_PORT_ID+"_"+nwakunode_names[i]] = PortSpec(number=vars.WAKU_TCP_PORT + i,
-                                            transport_protocol="TCP"),
+                                            transport_protocol="TCP")
         prepared_ports[vars.PROMETHEUS_PORT_ID+"_"+nwakunode_names[i]] = PortSpec(
                 number=vars.PROMETHEUS_TCP_PORT + i,
                 transport_protocol="TCP")
@@ -26,26 +26,24 @@ def prepare_nwaku_service(nwakunode_names, all_services, config_files, artifact_
     for i in range(len(nwakunode_names)):
         prepared_files[vars.CONTAINER_NODE_CONFIG_FILE_LOCATION+nwakunode_names[i]] = artifact_ids[i]
 
-    prepared_cmd = []
+    prepared_cmd = ""
     for i in range(len(nwakunode_names)):
-        prepared_cmd.extend(vars.NWAKU_ENTRYPOINT)
-        prepared_cmd.append(vars.NODE_CONFIGURATION_FILE_FLAG+
-                            vars.CONTAINER_NODE_CONFIG_FILE_LOCATION+nwakunode_names[i]+
-                            config_files[i])
+        prepared_cmd += vars.NWAKU_ENTRYPOINT + " "
+        prepared_cmd += vars.NODE_CONFIGURATION_FILE_FLAG + vars.CONTAINER_NODE_CONFIG_FILE_LOCATION +\
+                        nwakunode_names[i] + "/" + config_files[i] + " "
+        prepared_cmd += "--ports-shift="+str(i)
         if i != len(nwakunode_names) - 1:
-            prepared_cmd.append(" && ")
-
-
+            prepared_cmd += " & "
 
     add_service_config = ServiceConfig(
         image=vars.NWAKU_IMAGE,
         ports=prepared_ports,
         files=prepared_files,
-        entrypoint="",
-        cmd=prepared_cmd
+        entrypoint=["/bin/sh", "-c"],
+        cmd=[prepared_cmd]
     )
 
-    all_services[nwakunode_names] = add_service_config
+    all_services["0"] = add_service_config
 
 
 def prepare_gowaku_service(gowakunode_name, all_services, config_file, artifact_id):
@@ -107,13 +105,15 @@ def instantiate_services(plan, network_topology, nodes_per_container, testing):
     all_services = {}
 
     # Get up all nodes
-    filterByImage = lambda keys: {x: network_topology[x] for x in keys}
     services_by_image = []
     for image in vars.NODE_IMAGES_FROM_GENNET:
-        services_by_image.append(filterByImage(image))
+        services_by_image.append({k: v for (k, v) in network_topology.items() if v["image"] == image})
 
     # set up dicts by batch by grouped images
     for services in services_by_image:
+        if len(services) == 0:
+            continue
+
         service_names = services.keys()
         image = services[service_names[0]]["image"]
         service_builder = service_dispatcher[image]
@@ -123,7 +123,7 @@ def instantiate_services(plan, network_topology, nodes_per_container, testing):
             services_in_container = service_names[i:i+nodes_per_container]
 
             # Get all config file names needed
-            config_file_names = [services[service_config_file["node_config"]]
+            config_file_names = [services[service_config_file]["node_config"]
                            for service_config_file in services_in_container]
 
             config_files_artifact_ids = [files.get_toml_configuration_artifact(plan, config_file_name,
@@ -132,15 +132,16 @@ def instantiate_services(plan, network_topology, nodes_per_container, testing):
 
 
             # All them in ServiceConfig
-            service_builder(services_in_container, all_services, config_file_names,
+            service_builder(plan, services_in_container, all_services, config_file_names,
                             config_files_artifact_ids)
+            
 
     all_services_information = plan.add_services(
         configs = all_services
     )
-    services_information = _add_waku_service_information(plan, all_services_information)
+    # services_information = _add_waku_service_information(plan, all_services_information)
 
-    return services_information
+    return {} # services_information
 
 
 def _add_waku_service_information(plan, all_services_information):
