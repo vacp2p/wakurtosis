@@ -6,7 +6,9 @@ waku = import_module(vars.WAKU_MODULE)
 files = import_module(vars.FILE_HELPERS_MODULE)
 
 
-def prepare_nwaku_service(nwakunode_name, all_services, config_file, artifact_id):
+def prepare_nwaku_service(nwakunode_names, all_services, config_files, artifact_ids):
+
+
     add_service_config = ServiceConfig(
         image=vars.NWAKU_IMAGE,
         ports={
@@ -20,16 +22,16 @@ def prepare_nwaku_service(nwakunode_name, all_services, config_file, artifact_id
                 transport_protocol="TCP"),
         },
         files={
-            vars.CONTAINER_NODE_CONFIG_FILE_LOCATION: artifact_id
+            vars.CONTAINER_NODE_CONFIG_FILE_LOCATION: artifact_ids
         },
         entrypoint=vars.NWAKU_ENTRYPOINT,
         cmd=[
             vars.NODE_CONFIGURATION_FILE_FLAG +
-            vars.CONTAINER_NODE_CONFIG_FILE_LOCATION + config_file
+            vars.CONTAINER_NODE_CONFIG_FILE_LOCATION + config_files
         ]
     )
 
-    all_services[nwakunode_name] = add_service_config
+    all_services[nwakunode_names] = add_service_config
 
 
 def prepare_gowaku_service(gowakunode_name, all_services, config_file, artifact_id):
@@ -97,20 +99,27 @@ def instantiate_services(plan, network_topology, nodes_per_container, testing):
         services_by_image.append(filterByImage(image))
 
     # set up dicts by batch by grouped images
-
-    for i in range(0, len(service_names), nodes_per_container):
-        services_in_container = service_names[i:i+nodes_per_container]
-
-
-        image = network_topology[service_name]["image"]
-        config_file = network_topology[service_name]["node_config"]
-
+    for services in services_by_image:
+        service_names = services.keys()
+        image = services[service_names[0]]["image"]
         service_builder = service_dispatcher[image]
 
-        configuration_artifact_id = files.get_toml_configuration_artifact(plan, config_file,
-                                                                          service_name, testing)
+        for i in range(0, len(service_names), nodes_per_container):
+            # We have a batch of nodes
+            services_in_container = service_names[i:i+nodes_per_container]
 
-        service_builder(service_name, all_services, config_file, configuration_artifact_id)
+            # Get all config file names needed
+            config_file_names = [services[service_config_file["node_config"]]
+                           for service_config_file in services_in_container]
+
+            config_files_artifact_ids = [files.get_toml_configuration_artifact(plan, config_file_name,
+                                                                               service_name, testing)
+                for config_file_name, service_name in zip(config_file_names, services_in_container)]
+
+
+            # All them in ServiceConfig
+            service_builder(services_in_container, all_services, config_file_names,
+                            config_files_artifact_ids)
 
     all_services_information = plan.add_services(
         configs = all_services
