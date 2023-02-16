@@ -108,12 +108,15 @@ def main():
                         node_log_reader = csv.reader(f, delimiter=" ")
                         # Check and extract if the log entry is relevant to us
                         for log_line in node_log_reader:
-                            # if 'waku.relay received' in log_line:
-                            #     print(log_line)
-                            # elif 'waku.relay received' in log_line:
-                            #     print(log_line)
-                            if 'subscribe' in log_line:
-                                node_logs[node_id].append(log_line)
+                            if 'waku.relay received' in log_line:
+                                print(log_line)
+                                G_LOGGER.debug(node_logs.keys())
+                            elif 'waku.relay published' in log_line:
+                                print(log_line)
+                            # if 'subscribe' in log_line:
+                            #     node_logs[node_id].append(log_line)
+
+
                         G_LOGGER.info('Parsed node \"%s\" log in %s/output.log' %(node_id, log_path))
     except Exception as e:
         G_LOGGER.error('%s: %s' % (e.__doc__, e))
