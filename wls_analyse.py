@@ -78,8 +78,8 @@ def main():
         sys.exit()
 
     G_LOGGER.info('Loaded topic structure with %d topic(s) and %d node(s).' %(len(topics), len(nodes_topics)))
-    G_LOGGER.debug(topics)
-    G_LOGGER.debug(nodes_topics)
+    # G_LOGGER.debug(topics)
+    # G_LOGGER.debug(nodes_topics)
 
     """ Load Simulation Messages """
     msgs_dict = None
@@ -128,6 +128,7 @@ def main():
     # 3 - Summarise/Visualise latencies per node / per topic / per message size?
     # 4 - Reconstruct the path of the messages throughout the network where edge weight is latency
     # 5 - Calculate propagation times per message (time for injection to last node)
+    # 6 - Pull statistics from cCadvisor using API (memory, CPU, badnwitdh per node)
 
     """ We are done """
     G_LOGGER.info('Ended')
