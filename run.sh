@@ -20,6 +20,9 @@ echo "- Configuration file: " $wakurtosis_config_file
 # Delete topology
 rm -rf ./config/topology_generated > /dev/null 2>&1
 
+# Remove previous logs
+rm -rf ./$enclave_name_logs > /dev/null 2>&1
+
 # Create and run Gennet docker container
 echo -e "\nRunning network generation"
 docker rm gennet-container    # cleanup the old docker if any
@@ -79,13 +82,12 @@ echo -e "Waiting for simulation to finish ..."
 status_code="$(docker container wait $cid)"
 
 ### Logs
-rm -rf ./$enclave_name_logs > /dev/null 2>&1
 kurtosis enclave dump ${enclave_name} ${enclave_name}_logs > /dev/null 2>&1
 echo -e "Simulation ended with code $status_code Results in ./${enclave_name}_logs"
 
 # Copy simulation results
 # docker cp "$cid:/wsl/summary.json" "./${enclave_name}_logs" > /dev/null 2>&1
-docker cp "$cid:/wsl/messages.json" "./${enclave_name}_logs" > /dev/null 2>&1
+docker cp "$cid:/wsl/messages.json" "./${enclave_name}_logs"
 
 # Stop and delete the enclave
 # kurtosis enclave stop $enclave_name > /dev/null 2>&1
