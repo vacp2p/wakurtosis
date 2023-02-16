@@ -1,5 +1,6 @@
 # Waku Configuration
-NWAKU_IMAGE = "statusteam/nim-waku:019f357d"
+# NWAKU_IMAGE = "statusteam/nim-waku:019f357d"
+NWAKU_IMAGE = "statusteam/nim-waku:nwaku-trace"
 GOWAKU_IMAGE = "gowaku"
 
 WAKU_RPC_PORT_ID = "rpc"
