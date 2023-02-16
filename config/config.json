@@ -6,7 +6,8 @@
     "enclave_name": "wakurtosis",
     "topology_path": "./config/topology_generated/",
     "jobs": 4,
-    "interconnection_batch": 10
+    "interconnection_batch": 10,
+    "nodes_per_container": 5
   },
   "gennet": {
     "num_nodes": 9,

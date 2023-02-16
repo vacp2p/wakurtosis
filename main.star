@@ -20,13 +20,14 @@ def run(plan, args):
     kurtosis_config = config['kurtosis']
     wsl_config = config['wsl']
     interconnection_batch = kurtosis_config['interconnection_batch']
+    nodes_per_container = kurtosis_config['nodes_per_container']
 
     # Load network topology
     waku_topology_json = read_file(src=vars.TOPOLOGIES_LOCATION + vars.DEFAULT_TOPOLOGY_FILE)
     waku_topology = json.decode(waku_topology_json)
 
     # Set up nodes
-    services = nodes.instantiate_services(plan, waku_topology, False)
+    services = nodes.instantiate_services(plan, waku_topology, nodes_per_container, False)
 
     # Set up prometheus + graphana
     prometheus_service = prometheus.set_up_prometheus(plan, services)
