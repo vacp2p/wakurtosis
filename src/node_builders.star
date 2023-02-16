@@ -93,7 +93,7 @@ def instantiate_services(plan, network_topology, testing):
     # Get up all nodes
     for service_name in network_topology.keys():
         image = network_topology[service_name]["image"]
-        config_file = network_topology[service_name]["configuration"]
+        config_file = network_topology[service_name]["node_config"]
 
         service_builder = service_dispatcher[image]
 
