@@ -6,15 +6,9 @@ waku = import_module(vars.WAKU_MODULE)
 files = import_module(vars.FILE_HELPERS_MODULE)
 
 
-def prepare_nwaku_service(nwakunode_names, all_services, config_files, artifact_ids,
-                          services_information, containers_counter):
+def prepare_nwaku_service(nwakunode_names, all_services, config_files, artifact_ids, container):
 
     # TODO MAKE SURE THEY MATCH
-    group = "group_"+str(containers_counter)
-
-    for nwaku_name in nwakunode_names:
-        services_information[nwaku_name]["service_id"] = group
-
     prepared_ports = {}
     for i in range(len(nwakunode_names)):
         prepared_ports[vars.WAKU_RPC_PORT_ID+"_"+nwakunode_names[i]] = PortSpec(number=vars.WAKU_TCP_PORT + i,
@@ -47,7 +41,7 @@ def prepare_nwaku_service(nwakunode_names, all_services, config_files, artifact_
         cmd=[prepared_cmd]
     )
 
-    all_services[] = add_service_config
+    all_services[container] = add_service_config
 
 
 def prepare_gowaku_service(gowakunode_name, all_services, config_file, artifact_id):
@@ -80,8 +74,9 @@ def prepare_nomos_service(plan, test, test2):
     plan.print("nomos")
 
 
-def instantiate_services(plan, network_topology, nodes_per_container, testing):
+def instantiate_services(plan, network_topology, testing):
     """
+    todo refactor this
     As we will need to access for the service information later, the structure is the following:
 
     services = {
@@ -94,71 +89,62 @@ def instantiate_services(plan, network_topology, nodes_per_container, testing):
         },
         "nwaku_1": {...},
         "gowaku_": {...}
-
     }
 
     Example:
 
     service_peer_id = services["nwaku_0"]["peer_id"]
-    service_id = services["nwaku_0"]["service_id"]
     service_hostname = services["nwaku_0"]["service_info"].hostname
     service_ip = services["nwaku_0"]["service_info"].ip_address
     rpc_node_number = services["nwaku_0"]["service_info"].ports["your_rpc_identifier"].number
     rpc_node_protocol = services["nwaku_0"]["service_info"].ports["your_rpc_identifier"].transport_protocol
     """
 
-    services_information = {}
     all_services_configuration = {}
-    containers_counter = 0
 
-    # Get up all nodes
-    services_by_image = []
-    for image in vars.NODE_IMAGES_FROM_GENNET:
-        services_by_image.append({k: v for (k, v) in network_topology.items() if v["image"] == image})
-
-    # set up dicts by batch by grouped images
-    for services in services_by_image:
-        if len(services) == 0:
-            continue
-
-        service_names = services.keys()
-        image = services[service_names[0]]["image"]
+    for service_id, nodes_in_service in network_topology["containers"].items():
+        image = network_topology["nodes"][nodes_in_service[0]]["image"]
         service_builder = service_dispatcher[image]
 
-        for i in range(0, len(service_names), nodes_per_container):
-            # We have a batch of nodes
-            services_in_container = service_names[i:i+nodes_per_container]
+        # Get all config file names needed
+        config_file_names = [network_topology["nodes"][node]["node_config"] for node in nodes_in_service]
 
-            # Get all config file names needed
-            config_file_names = [services[service_config_file]["node_config"]
-                           for service_config_file in services_in_container]
+        config_files_artifact_ids = [
+            files.get_toml_configuration_artifact(plan, config_file_name,service_name, testing)
+            for config_file_name, service_name
+            in zip(config_file_names, nodes_in_service)
+        ]
 
-            config_files_artifact_ids = [files.get_toml_configuration_artifact(plan, config_file_name,
-                                                                               service_name, testing)
-                for config_file_name, service_name in zip(config_file_names, services_in_container)]
-
-
-            # All them in ServiceConfig
-            service_builder(services_in_container, all_services_configuration, config_file_names,
-                            config_files_artifact_ids, services_information, containers_counter)
-            containers_counter += 1
-            
+        service_builder(nodes_in_service, all_services_configuration, config_file_names,
+                        config_files_artifact_ids, service_id)
 
     all_services_information = plan.add_services(
-        configs = all_services_configuration
+        configs=all_services_configuration
     )
-    _add_waku_service_information(plan, all_services_information, services_information)
+    nodes_information = _add_waku_service_information(plan, all_services_information, network_topology)
 
-    return services_information
+    return nodes_information
 
 
-def _add_waku_service_information(plan, all_services_information, services_information):
+def _add_waku_service_information(plan, all_services_information, network_topology):
 
-    for service_name in all_services_information:
-        node_peer_id = waku.get_wakunode_peer_id(plan, service_name, vars.WAKU_RPC_PORT_ID)
+    new_information = {}
 
-        services_information[service_name]["peer_id"] = node_peer_id
-        services_information[service_name]["service_info"] = all_services_information[service_name]
+    for node_id, node_info in network_topology["nodes"].items():
+        new_information[node_id] = {}
+        rpc_identifier = vars.WAKU_RPC_PORT_ID + "_" + node_id
+
+        node_peer_id = waku.get_wakunode_peer_id(plan, node_info["container_id"], rpc_identifier)
+
+        new_information[node_id]["peer_id"] = node_peer_id
+        new_information[node_id]["hostname"] = all_services_information[node_info["container_id"]].hostname
+        new_information[node_id]["ip_address"] = all_services_information[node_info["container_id"]].ip_address
+        new_information[node_id]["rpc_node_number"] = \
+            all_services_information[node_info["container_id"]].ports[rpc_identifier].number
+        new_information[node_id]["rpc_node_protocol"] = \
+            all_services_information[node_info["container_id"]].ports[rpc_identifier].transport_protocol
+
+    return new_information
 
 
 service_dispatcher = {

@@ -27,7 +27,7 @@ def run(plan, args):
     waku_topology = json.decode(waku_topology_json)
 
     # Set up nodes
-    services = nodes.instantiate_services(plan, waku_topology, nodes_per_container, False)
+    services = nodes.instantiate_services(plan, waku_topology, False)
 
     # Set up prometheus + graphana
     prometheus_service = prometheus.set_up_prometheus(plan, services)
