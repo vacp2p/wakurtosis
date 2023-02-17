@@ -21,7 +21,7 @@ from enum import Enum
 class nodeType(Enum):
     NWAKU = "nwaku"  # waku desktop config
     GOWAKU = "gowaku"  # waku mobile config
-    NOMOS = "nomos" # incompatible with waku nodes
+    NOMOS = "nomos"
 
 
 nodeTypeToToml = {
