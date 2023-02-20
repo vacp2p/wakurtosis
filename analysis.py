@@ -39,6 +39,7 @@ def fetch_hw_metrics_from_container(container_id):
     
     # cAdvisor API URL endpoint
     url = 'http://localhost:8080/api/v2.1/summary/docker/%s' %container_id
+    # Note: We can also use the endpoint /stats instead of summary to get timepoints
     G_LOGGER.debug('Fetching summary stats from %s ...' %url)
     
     # Make an HTTP request to the cAdvisor API to get the summary stats of the container
