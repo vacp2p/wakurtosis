@@ -5,10 +5,10 @@ Description: Wakurtosis simulation analysis
 """
 
 """ Dependencies """
-import sys, logging, yaml, json, time, random, os, argparse, tomllib, glob, csv
+import sys, logging, yaml, json, time, random, os, argparse, tomllib, glob, re, requests
 
 """ Globals """
-G_APP_NAME = 'WLS-ANALYSE'
+G_APP_NAME = 'WLS-ANALYSIS'
 G_LOG_LEVEL = 'DEBUG'
 G_DEFAULT_CONFIG_FILE = './config/config.json'
 G_DEFAULT_CONFIG_FILE = './config/config.json'
@@ -34,6 +34,24 @@ class CustomFormatter(logging.Formatter):
         log_fmt = self.FORMATS.get(record.levelno, self.FORMATS['DEFAULT'])
         formatter = logging.Formatter(log_fmt, '%d-%m-%Y %H:%M:%S')
         return formatter.format(record)
+
+def fetch_hw_metrics_from_container(container_id):
+    
+    # cAdvisor API URL endpoint
+    url = 'http://localhost:8080/api/v2.1/summary/docker/%s' %container_id
+    G_LOGGER.debug('Fetching summary stats from %s ...' %url)
+    
+    # Make an HTTP request to the cAdvisor API to get the summary stats of the container
+    try:
+        response = requests.get(url)
+    except Exception as e:
+        G_LOGGER.error('%s: %s' % (e.__doc__, e))
+        return
+    
+    # Parse the response as JSON
+    summary_stats = json.loads(response.text)
+
+    return summary_stats
 
 def main(): 
 
@@ -82,49 +100,88 @@ def main():
     # G_LOGGER.debug(nodes_topics)
 
     """ Load Simulation Messages """
-    msgs_dict = None
-    try:
-        with open('%s/messages.json' %simulation_path, 'r') as f:
-            msgs_dict = json.load(f)
-    except Exception as e:
-        G_LOGGER.error('%s: %s' % (e.__doc__, e))
-        sys.exit()
+    msgs_dict = {}
+    # try:
+    #     with open('%s/messages.json' %simulation_path, 'r') as f:
+    #         msgs_dict = json.load(f)
+    # except Exception as e:
+    #     G_LOGGER.error('%s: %s' % (e.__doc__, e))
+    #     sys.exit()
 
-    G_LOGGER.info('Loaded %d messages.' %len(msgs_dict))
+    # G_LOGGER.info('Loaded %d messages.' %len(msgs_dict))
     # G_LOGGER.debug(msgs_dict)
 
     """ Load node level logs """
     node_logs = {}
-    try:
-        services_log_paths = glob.glob('%s/*--user-service--*' %simulation_path)
-        
-        for log_path in services_log_paths:
-            with open('%s/spec.json' %log_path, mode='r') as f:
-                spec_json = json.load(f)
-                if spec_json['Path'] == '/usr/bin/wakunode':
-                    node_id = spec_json['Config']['Labels']['com.kurtosistech.id']
-                    node_logs[node_id] = []
-                    with open('%s/output.log' %log_path, mode='r') as f:
-                        node_log_reader = csv.reader(f, delimiter=" ")
-                        # Check and extract if the log entry is relevant to us
-                        for log_line in node_log_reader:
-                            if 'waku.relay received' in log_line:
-                                print(log_line)
-                                G_LOGGER.debug(node_logs.keys())
-                            elif 'waku.relay published' in log_line:
-                                print(log_line)
-                            # if 'subscribe' in log_line:
-                            #     node_logs[node_id].append(log_line)
-
-
-                        G_LOGGER.info('Parsed node \"%s\" log in %s/output.log' %(node_id, log_path))
-    except Exception as e:
-        G_LOGGER.error('%s: %s' % (e.__doc__, e))
-        sys.exit()
-
-    G_LOGGER.debug(node_logs.keys())
-    # G_LOGGER.debug(node_logs)
+    # try:
+    services_log_paths = glob.glob('%s/*--user-service--*' %simulation_path)
     
+    for log_path in services_log_paths:
+        with open('%s/spec.json' %log_path, mode='r') as f:
+            spec_json = json.load(f)
+            if spec_json['Path'] == '/usr/bin/wakunode':
+                node_id = spec_json['Config']['Labels']['com.kurtosistech.id']
+                # container_id = spec_json['Name'][1:]
+                container_id = spec_json['Id']
+                node_logs[node_id] = {'published' : [], 'received' : [], 'container_id' : container_id}
+                
+                with open('%s/output.log' %log_path, mode='r') as f:
+                    
+                    # Process log line by line as a text string
+                    for log_line in f:
+                        # At this stage we only care about Waku Relay protocol
+                        if 'waku.relay' in log_line:
+                            
+                            msg_topics = re.search(r'topics="([^"]+)"', log_line).group(1)
+                            msg_topic = re.search(r'pubsubTopic=([^ ]+)', log_line).group(1)
+                            msg_hash = re.search(r'hash=([^ ]+)', log_line).group(1)
+
+                            if 'published' in log_line:
+                                msg_publishTime = re.search(r'publishTime=([\d]+)', log_line).group(1)
+                                node_logs[node_id]['published'].append([msg_publishTime, msg_topics, msg_topic, msg_hash])
+                                
+                                if msg_hash not in msgs_dict:
+                                    msgs_dict[msg_hash] = {'published_ts' : [msg_publishTime], 'received_ts' : []}
+                                else:
+                                    msgs_dict[msg_hash]['published_ts'].append(msg_publishTime)
+                                
+                                    # G_LOGGER.debug('Published by %s: %s %s %s %s' %(node_id, msg_publishTime, msg_hash, msg_topic, msg_topics))
+
+                            elif 'received' in log_line: 
+                                msg_receivedTime = re.search(r'receivedTime=([\d]+)', log_line).group(1)
+                                node_logs[node_id]['received'].append([msg_receivedTime, msg_topics, msg_topic, msg_hash])
+                                
+                                if msg_hash not in msgs_dict:
+                                    msgs_dict[msg_hash] = {'published_ts' : [], 'received_ts' : [msg_receivedTime]}
+                                else:
+                                    msgs_dict[msg_hash]['received_ts'].append(msg_receivedTime)
+                                
+                                # G_LOGGER.debug('Received in node %s: %s %s %s %s' %(node_id, msg_receivedTime, msg_hash, msg_topic, msg_topics))
+                                
+                        
+                G_LOGGER.info('Parsed node \"%s\" log in %s/output.log' %(node_id, log_path))
+    # except Exception as e:
+    #     G_LOGGER.error('%s: %s' % (e.__doc__, e))
+    #     sys.exit()
+
+    # G_LOGGER.debug(node_logs.keys())
+    # G_LOGGER.debug(node_logs)
+    # for item in node_logs.items():
+    #     print(item[0], len(item[1]['published']), len(item[1]['received']))
+
+    # Calculate tota propagation times, ie time for a messafe to reach all the nodes
+    # Easiest way is likely to sort the reception time stamps and get the oldest for a specific message within the node
+    for msg in msgs_dict.items():
+        published_ts = msg[1]['published_ts'][0]
+        msg[1]['latencies'] = []
+        for received_ts in msg[1]['received_ts']:
+            latency = int(received_ts) - int(published_ts)
+            msg[1]['latencies'].append(latency)
+            # print(msg[0], msg[1]['published_ts'], received_ts, latency)
+        msg[1]['max_latency'] = max(msg[1]['latencies'])
+        msg[1]['min_latency'] = min(msg[1]['latencies'])
+
+    # print(msgs_dict)
     ### Statistics we want to compute:
     # 1 - Make sure that all messages have been delivered to their respective peers (x topic)
     # 2 - Calculate the latency of every message at every peer wrt injection time
@@ -133,6 +190,14 @@ def main():
     # 5 - Calculate propagation times per message (time for injection to last node)
     # 6 - Pull statistics from cCadvisor using API (memory, CPU, badnwitdh per node)
 
+    # Fetch Hardware metrics from Node containers 
+    for node in node_logs.items():
+        node_logs[node[0]]['hw_stats'] = fetch_hw_metrics_from_container(node[1]['container_id'])
+        
+    # Do Some plotting?
+
+
+    
     """ We are done """
     G_LOGGER.info('Ended')
     
