@@ -50,6 +50,7 @@ def fetch_hw_metrics_from_container(container_id):
     
     # Parse the response as JSON
     summary_stats = json.loads(response.text)
+    G_LOGGER.debug(summary_stats)
 
     return summary_stats
 
