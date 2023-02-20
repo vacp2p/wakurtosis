@@ -121,30 +121,37 @@ def instantiate_services(plan, network_topology, testing):
     all_services_information = plan.add_services(
         configs=all_services_configuration
     )
-    nodes_information = _add_waku_service_information(plan, all_services_information, network_topology)
 
-    return nodes_information
+    _add_service_info_to_topology(plan, all_services_information, network_topology)
 
 
-def _add_waku_service_information(plan, all_services_information, network_topology):
-
-    new_information = {}
+def _add_service_info_to_topology(plan, all_services_information, network_topology):
 
     for node_id, node_info in network_topology["nodes"].items():
-        new_information[node_id] = {}
-        rpc_identifier = vars.WAKU_RPC_PORT_ID + "_" + node_id
+        waku_port_id = vars.WAKU_RPC_PORT_ID + "_" + node_id
+        libp2p_port_id = vars.WAKU_LIBP2P_PORT_ID + "_" + node_id
+        prometheus_port_id = vars.PROMETHEUS_PORT_ID + "_" + node_id
 
-        node_peer_id = waku.get_wakunode_peer_id(plan, node_info["container_id"], rpc_identifier)
+        node_peer_id = waku.get_wakunode_peer_id(plan, node_info["container_id"], waku_port_id)
 
-        new_information[node_id]["peer_id"] = node_peer_id
-        new_information[node_id]["hostname"] = all_services_information[node_info["container_id"]].hostname
-        new_information[node_id]["ip_address"] = all_services_information[node_info["container_id"]].ip_address
-        new_information[node_id]["rpc_node_number"] = \
-            all_services_information[node_info["container_id"]].ports[rpc_identifier].number
-        new_information[node_id]["rpc_node_protocol"] = \
-            all_services_information[node_info["container_id"]].ports[rpc_identifier].transport_protocol
+        network_topology["nodes"][node_id]["peer_id"] = node_peer_id
+        network_topology["nodes"][node_id]["hostname"] = \
+            all_services_information[node_info["container_id"]].hostname
+        network_topology["nodes"][node_id]["ip_address"] = \
+            all_services_information[node_info["container_id"]].ip_address
 
-    return new_information
+        network_topology["nodes"][node_id]["ports"] = {}
+        network_topology["nodes"][node_id]["ports"][waku_port_id] = \
+            (all_services_information[node_info["container_id"]].ports[waku_port_id].number,
+             all_services_information[node_info["container_id"]].ports[waku_port_id].transport_protocol)
+
+        network_topology["nodes"][node_id]["ports"][libp2p_port_id] = \
+            (all_services_information[node_info["container_id"]].ports[libp2p_port_id].number,
+             all_services_information[node_info["container_id"]].ports[libp2p_port_id].transport_protocol)
+
+        network_topology["nodes"][node_id]["ports"][prometheus_port_id] = \
+            (all_services_information[node_info["container_id"]].ports[prometheus_port_id].number,
+             all_services_information[node_info["container_id"]].ports[prometheus_port_id].transport_protocol)
 
 
 service_dispatcher = {
