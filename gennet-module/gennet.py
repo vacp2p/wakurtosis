@@ -45,8 +45,7 @@ class networkType(Enum):
 
 
 NW_DATA_FNAME = "network_data.json"
-NODE_PREFIX = "node"
-SUBNET_PREFIX = "subnetwork"
+NODE_PREFIX, SUBNET_PREFIX, CONTAINER_PREFIX = "node", "subnetwork", "container"
 
 ### I/O related fns ##############################################################
 
@@ -182,16 +181,15 @@ def generate_subnets(G, num_subnets):
     offsets = sorted(random.sample(range(0, n), num_subnets - 1))
     offsets.append(n - 1)
 
-    start, subnet_id, subnets = 0, 0, {}
-    #start = 0
-    #subnets = {}
-    #subnet_id = 0
+    start, subnet_id, node2subnet = 0, 0, {}
     for end in offsets:
+        l = []
         for i in range(start, end + 1):
-            subnets[f"{NODE_PREFIX}_{lst[i]}"] = f"{SUBNET_PREFIX}_{subnet_id}"
+            node2subnet[f"{NODE_PREFIX}_{lst[i]}"] = f"{SUBNET_PREFIX}_{subnet_id}"
+            #node2subnet[lst[i]] = subnet_id
         start = end
         subnet_id += 1
-    return subnets
+    return node2subnet
 
 
 ### file format related fns ###########################################################
@@ -223,33 +221,71 @@ def generate_node_types(node_type_distribution, G):
     node_types_enum = [nodeType(s) for s in node_types_str]
     return node_types_enum
 
-port_shift = 0
+# Inverts a dictionary of lists
+def invert_dict_of_list(d):
+    inv = {} 
+    for key, val in d.items(): 
+        if val not in inv: 
+            inv[val] = [key] 
+        else: 
+            inv[val].append(key) 
+    return inv
+
+
+# Packs the nodes into container in a subnet aware manner : optimal
+# Number of containers = 
+#   $$ O(\sum_{i=0}^{num_subnets} log_{container_size}(#Nodes_{numsubnets}) + num_subnets)
+def pack_nodes(container_size, node2subnet, G):
+    subnet2node = invert_dict_of_list(node2subnet)
+    port_shift, cid, node2container = 0, 0, {}
+    for subnet in subnet2node:
+        for node in subnet2node[subnet]:
+            if port_shift >= container_size :
+                port_shift, cid = 0, cid+1
+            node2container[node] = (port_shift, f"{CONTAINER_PREFIX}_{cid}")
+            port_shift += 1
+    return node2container
+
 
 # Generates network-wide json and per-node toml and writes them
-def generate_and_write_files(dirname, num_topics, num_subnets, node_type_distribution, G):
-    topics = generate_topics(num_topics)
-    subnets = generate_subnets(G, num_subnets)
-    node_types_enum = generate_node_types(node_type_distribution, G)
-    global port_shift
+def generate_and_write_files(ctx: typer, G):
+    topics = generate_topics(ctx.params["num_topics"])
+    node2subnet = generate_subnets(G, ctx.params["num_subnets"])
+    node_types_enum = generate_node_types(ctx.params["node_type_distribution"], G)
+    node2container = pack_nodes(ctx.params["container_size"], node2subnet, G)
 
-    i, json_dump = 0, {}
+    json_dump = {}
+    json_dump[CONTAINER_PREFIX] = {}
+    inv = {} 
+    for key, val in node2container.items(): 
+        if val[1] not in inv: 
+            inv[val[1]] = [key]
+        else: 
+            inv[val[1]].append(key)
+    for container, nodes in inv.items():
+        json_dump[CONTAINER_PREFIX][container] = nodes
+
+    i = 0
     for node in G.nodes:
-        # write the per node toml for the ith node of appropriate type
+        # package container_size nodes per container
+
+        # write the per node toml for the i^ith node of appropriate type
         node_type, i = node_types_enum[i], i+1
-        write_toml(dirname, node, generate_toml(topics, node_type))
+        write_toml(ctx.params["output_dir"], node, generate_toml(topics, node_type))
         json_dump[node] = {}
         json_dump[node]["static_nodes"] = []
         for edge in G.edges(node):
             json_dump[node]["static_nodes"].append(edge[1])
-        json_dump[node][SUBNET_PREFIX] = subnets[node]
+        json_dump[node][SUBNET_PREFIX] = node2subnet[node]
         json_dump[node]["image"] = nodeTypeToDocker.get(node_type)
             # the per node tomls will continue for now as they include topics
         json_dump[node]["node_config"] = f"{node}.toml" 
             # logs ought to continue as they need to be unique
         json_dump[node]["node_log"] = f"{node}.log"
+        port_shift, cid = node2container[node]
         json_dump[node]["port_shift"] = port_shift
-        port_shift += 1
-    write_json(dirname, json_dump)  # network wide json
+        json_dump[node]["container_id"] = cid
+    write_json(ctx.params["output_dir"], json_dump)  # network wide json
 
 
 # sanity check : valid json with "gennet" config
@@ -292,8 +328,9 @@ def _num_subnets_callback(ctx: typer, Context, num_subnets: int):
     return num_subnets
 
 
-def main(benchmark: bool = False,
-         container_size: int = 1,   # TODO: subnet aware container packing
+def main(ctx: typer.Context,
+         benchmark: bool = False,
+         container_size: int = 1,   # TODO: reduce container packer memory consumption
          output_dir: str = "network_data",
          prng_seed: int = 3,
          num_nodes: int = 4,
@@ -337,16 +374,18 @@ def main(benchmark: bool = False,
     os.makedirs(output_dir, exist_ok=True)
 
     # Generate file format specific data structs and write the files
-    generate_and_write_files(output_dir, num_topics, num_subnets, node_type_distribution, G)
+    generate_and_write_files(ctx, G)
+    #generate_and_write_files(output_dir, num_topics, num_subnets, node_type_distribution, G)
     #draw(G, outpur_dir)
     end = time.time()
-    print(f"Network generation took {end/10**9} secs.\nThe generated network is under ./{output_dir}")
+    time_took = end - start
+    print(f"For {num_nodes} nodes, network generation took {time_took} secs.\nThe generated network is under ./{output_dir}")
 
     # Benchmarking. Record finish time and stop the malloc tracing
     if benchmark :
         mem_curr, mem_max = tracemalloc.get_traced_memory()
         tracemalloc.stop()
-        print(f"STATS: For {num_nodes} nodes, time took is {(end-start)} secs, peak memory usage is {mem_max/(1024*1024)} MBs\n")
+        print(f"STATS: For {num_nodes} nodes, time took is {time_took} secs, peak memory usage is {mem_max/(1024*1024)} MBs\n")
 
 
 if __name__ == "__main__":
