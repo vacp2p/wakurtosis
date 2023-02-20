@@ -23,17 +23,18 @@ def run(plan, args):
     nodes_per_container = kurtosis_config['nodes_per_container']
 
     # Load network topology
-    waku_topology_json = read_file(src=vars.TOPOLOGIES_LOCATION + vars.DEFAULT_TOPOLOGY_FILE)
-    waku_topology = json.decode(waku_topology_json)
+    network_topology = read_file(src=vars.TOPOLOGIES_LOCATION + vars.DEFAULT_TOPOLOGY_FILE)
+    network_topology = json.decode(network_topology)
 
     # Set up nodes
-    services = nodes.instantiate_services(plan, waku_topology, False)
+    nodes.instantiate_services(plan, network_topology, False)
 
-    # Set up prometheus + graphana
-    prometheus_service = prometheus.set_up_prometheus(plan, services)
+    # Set up prometheus + grafana
+    prometheus_service = prometheus.set_up_prometheus(plan, network_topology)
+
     grafana_service = grafana.set_up_grafana(plan, prometheus_service)
 
-    waku.interconnect_waku_nodes(plan, waku_topology, services, interconnection_batch)
+    waku.interconnect_waku_nodes(plan, network_topology, interconnection_batch)
 
     # Setup WSL & Start the Simulation
-    wsl_service = wsl.init(plan, services, wsl_config)
+    wsl_service = wsl.init(plan, network_topology, wsl_config)
