@@ -135,8 +135,6 @@ def _add_service_info_to_topology(plan, all_services_information, network_topolo
         node_peer_id = waku.get_wakunode_peer_id(plan, node_info["container_id"], waku_port_id)
 
         network_topology["nodes"][node_id]["peer_id"] = node_peer_id
-        network_topology["nodes"][node_id]["hostname"] = \
-            all_services_information[node_info["container_id"]].hostname
         network_topology["nodes"][node_id]["ip_address"] = \
             all_services_information[node_info["container_id"]].ip_address
 

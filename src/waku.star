@@ -34,12 +34,11 @@ def get_wakunode_peer_id(plan, service_name, port_id):
     return response["extract.peer_id"]
 
 
-def create_waku_id(waku_service_information):
-    waku_service = waku_service_information["service_info"]
-
-    ip = waku_service.ip_address
-    port = waku_service.ports[vars.WAKU_LIBP2P_PORT_ID].number
-    waku_node_id = waku_service_information["peer_id"]
+# todo better name for this function
+def create_waku_id(node_id, node_information):
+    ip = node_information["ip_address"]
+    port = node_information["ports"][vars.WAKU_LIBP2P_PORT_ID + "_" + node_id][0]
+    waku_node_id = node_information["peer_id"]
 
     return '"/ip4/' + str(ip) + '/tcp/' + str(port) + '/p2p/' + waku_node_id + '"'
 
@@ -48,9 +47,10 @@ def _merge_peer_ids(peer_ids):
     return "[" + ",".join(peer_ids) + "]"
 
 
-def connect_wakunode_to_peers(plan, service_name, port_id, peer_ids):
+def connect_wakunode_to_peers(plan, service_name, node_id, port_id, peer_ids):
     method = vars.CONNECT_TO_PEER_METHOD
     params = _merge_peer_ids(peer_ids)
+    port_id = port_id + "_" + node_id
 
     response = send_json_rpc(plan, service_name, port_id, method, params)
 
@@ -88,15 +88,17 @@ def get_waku_peers(plan, waku_service_name):
     return response["extract.peers"]
 
 
-def interconnect_waku_nodes(plan, topology_information, services, interconnection_batch):
+def interconnect_waku_nodes(plan, topology_information, interconnection_batch):
     # Interconnect them
-    for waku_service_name in services.keys():
-        peers = topology_information[waku_service_name]["static_nodes"]
+    for node_id in topology_information["nodes"].keys():
+        peers = topology_information["nodes"][node_id]["static_nodes"]
 
         for i in range(0, len(peers), interconnection_batch):
             x = i
-            peer_ids = [create_waku_id(services[peer]) for peer in peers[x:x + interconnection_batch]]
+            peer_ids = [create_waku_id(peer, topology_information["nodes"][peer])
+                        for peer in peers[x:x + interconnection_batch]]
 
-            connect_wakunode_to_peers(plan, waku_service_name, vars.WAKU_RPC_PORT_ID, peer_ids)
+            connect_wakunode_to_peers(plan, topology_information["nodes"][node_id]["container_id"],
+                                      node_id, vars.WAKU_RPC_PORT_ID, peer_ids)
 
 

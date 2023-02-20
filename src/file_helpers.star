@@ -22,9 +22,9 @@ def get_toml_configuration_artifact(plan, config_file, name, testing):
 def generate_template_node_targets(services, port_id):
     template_data = {}
     targets_data = []
-    for service_name in services.keys():
-        service_ip = services[service_name]["service_info"].ip_address
-        service_port_number = str(services[service_name]["service_info"].ports[port_id].number)
+    for service_name in services["nodes"].keys():
+        service_ip = services["nodes"][service_name]["ip_address"]
+        service_port_number = str(services["nodes"][service_name]["ports"][port_id+"_"+service_name][0])
         targets_data.append('"' + service_ip + ":" + service_port_number + '"')
 
     data_as_string = ",".join(targets_data)
