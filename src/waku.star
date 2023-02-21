@@ -3,30 +3,13 @@ vars = import_module("github.com/logos-co/wakurtosis/src/system_variables.star")
 
 # Module Imports
 files = import_module(vars.FILE_HELPERS_MODULE)
-
-
-def send_json_rpc(plan, service_name, port_id, method, params, extract={}):
-    recipe = PostHttpRequestRecipe(
-        service_name=service_name,
-        port_id=port_id,
-        endpoint="",
-        content_type="application/json",
-        body='{ "jsonrpc": "2.0", "method": "' + method + '", "params": [' + params + '], "id": 1}',
-        extract=extract
-    )
-
-    response = plan.wait(recipe=recipe,
-                    field="code",
-                    assertion="==",
-                    target_value=200)
-
-    return response
+call_protocols = import_module(vars.CALL_PROTOCOLS)
 
 
 def get_wakunode_peer_id(plan, service_name, port_id):
     extract = {"peer_id": '.result.listenAddresses | .[0] | split("/") | .[-1]'}
 
-    response = send_json_rpc(plan, service_name, port_id,
+    response = call_protocols.send_json_rpc(plan, service_name, port_id,
                              vars.GET_WAKU_INFO_METHOD, "", extract)
 
     plan.assert(value=response["code"], assertion="==", target_value = 200)
@@ -34,7 +17,6 @@ def get_wakunode_peer_id(plan, service_name, port_id):
     return response["extract.peer_id"]
 
 
-# todo better name for this function
 def create_node_multiaddress(node_id, node_information):
     ip = node_information[vars.IP_KEY]
     port = node_information[vars.PORTS_KEY][vars.WAKU_LIBP2P_PORT_ID + "_" + node_id][0]
@@ -52,7 +34,7 @@ def connect_wakunode_to_peers(plan, service_name, node_id, port_id, peer_ids):
     params = _merge_peer_ids(peer_ids)
     port_id = port_id + "_" + node_id
 
-    response = send_json_rpc(plan, service_name, port_id, method, params)
+    response = call_protocols.send_json_rpc(plan, service_name, port_id, method, params)
 
     plan.assert(value=response["code"], assertion="==", target_value = 200)
 
@@ -70,7 +52,7 @@ def make_service_wait(plan, service_name, time):
 def get_waku_peers(plan, waku_service_name):
     extract = {"peers": '.result | length'}
 
-    response = send_json_rpc(plan, waku_service_name, vars.RPC_PORT_ID,
+    response = call_protocols.send_json_rpc(plan, waku_service_name, vars.RPC_PORT_ID,
                              vars.GET_PEERS_METHOD, "", extract)
 
     plan.assert(value=response["code"], assertion="==", target_value=200)
