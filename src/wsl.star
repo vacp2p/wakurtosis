@@ -25,7 +25,7 @@ def create_config(plan, wls_config):
 def create_targets(plan, services):
     
     # Get private ip and ports of all nodes
-    template_data = files.generate_template_node_targets(services, vars.WAKU_RPC_PORT_ID)
+    template_data = files.generate_template_node_targets(services, vars.RPC_PORT_ID)
 
     # Template
     template = """
