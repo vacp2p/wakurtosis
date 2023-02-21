@@ -100,6 +100,7 @@ ARGUMENT_PARSER_MODULE = "github.com/logos-co/wakurtosis/src/arguments_parser.st
 FILE_HELPERS_MODULE = "github.com/logos-co/wakurtosis/src/file_helpers.star"
 TEMPLATES_MODULE = "github.com/logos-co/wakurtosis/src/templates.star"
 WLS_MODULE = "github.com/logos-co/wakurtosis/src/wls.star"
+CALL_PROTOCOLS = "github.com/logos-co/wakurtosis/src/call_protocols.star"
 
 TEST_ARGUMENTS_MODULE = "github.com/logos-co/wakurtosis/src/tests/test_arguments_parser.star"
 TEST_FILES_MODULE = "github.com/logos-co/wakurtosis/src/tests/test_file_helpers.star"
