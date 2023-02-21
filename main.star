@@ -17,10 +17,9 @@ def run(plan, args):
     config_json = read_file(src=config_file)
     config = json.decode(config_json)
 
-    kurtosis_config = config['kurtosis']
-    wsl_config = config['wsl']
-    interconnection_batch = kurtosis_config['interconnection_batch']
-    nodes_per_container = kurtosis_config['nodes_per_container']
+    kurtosis_config = config[vars.KURTOSIS_KEY]
+    wsl_config = config[vars.WLS_KEY]
+    interconnection_batch = kurtosis_config[vars.INTERCONNECTION_BATCH_KEY]
 
     # Load network topology
     network_topology = read_file(src=vars.TOPOLOGIES_LOCATION + vars.DEFAULT_TOPOLOGY_FILE)

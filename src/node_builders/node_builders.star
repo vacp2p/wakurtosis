@@ -10,14 +10,14 @@ gowaku_builder = import_module(vars.GOWAKU_BUILDER_MODULE)
 
 
 service_builder_dispatcher = {
-    "go-waku": gowaku_builder.prepare_gowaku_service,
-    "nim-waku": nwaku_builder.prepare_nwaku_service
+    vars.GENNET_GOWAKU_IMAGE_VALUE: gowaku_builder.prepare_gowaku_service,
+    vars.GENNET_NWAKU_IMAGE_VALUE: nwaku_builder.prepare_nwaku_service
     # nomos: nomos_builder.prepare_nomos_service
 }
 
 ports_dispatcher = {
-    "go-waku": waku_builder._add_waku_ports_info_to_topology,
-    "nim-waku": waku_builder._add_waku_ports_info_to_topology
+    vars.GENNET_GOWAKU_IMAGE_VALUE: waku_builder._add_waku_ports_info_to_topology,
+    vars.GENNET_NWAKU_IMAGE_VALUE: waku_builder._add_waku_ports_info_to_topology
     # nomos: nomos_builder._add_nomos_ports_info_to_topology
 }
 
@@ -77,19 +77,10 @@ def _add_service_info_to_topology(plan, all_services_information, network_topolo
         node_peer_id = waku.get_wakunode_peer_id(plan, node_info[vars.GENNET_NODE_CONTAINER_KEY],
                                                  node_rpc_port_id)
 
-        network_topology[vars.GENNET_NODES_KEY][node_id][vars.GENNET_PEER_ID_KEY] = node_peer_id
+        network_topology[vars.GENNET_NODES_KEY][node_id][vars.PEER_ID_KEY] = node_peer_id
 
-        network_topology[vars.GENNET_NODES_KEY][node_id][vars.GENNET_IP_KEY] = \
+        network_topology[vars.GENNET_NODES_KEY][node_id][vars.IP_KEY] = \
             all_services_information[node_info[vars.GENNET_NODE_CONTAINER_KEY]].ip_address
 
         ports_adder = ports_dispatcher[node_info[vars.GENNET_IMAGE_KEY]]
         ports_adder(network_topology, all_services_information, node_info, node_id)
-
-
-def prepare_config_files_in_service(node_names, artifact_ids):
-    prepared_files = {}
-
-    for i in range(len(node_names)):
-        prepared_files[vars.CONTAINER_NODE_CONFIG_FILE_LOCATION + node_names[i]] = artifact_ids[i]
-
-    return prepared_files

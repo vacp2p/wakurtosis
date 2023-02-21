@@ -59,7 +59,7 @@ def test_create_waku_id(plan):
                             ports={vars.WAKU_LIBP2P_PORT_ID: PortSpec(number=1234)})
     services_example = {"service_info": service_struct, "peer_id": "ASDFGHJKL"}
 
-    waku_id = waku.create_waku_id(services_example)
+    waku_id = waku.create_node_multiaddress(services_example)
 
     plan.assert(value=waku_id, assertion="==", target_value='"/ip4/1.1.1.1/tcp/1234/p2p/ASDFGHJKL"')
 
