@@ -40,8 +40,7 @@ def _add_waku_ports_info_to_topology(network_topology, all_services_information,
 
 
 def _add_waku_port(network_topology, all_services_information, node_id, node_info, port_id):
-    network_topology[vars.GENNET_NODES_KEY][node_id][vars.TOPOLOGY_PORTS_KEY] = {}
-    network_topology[vars.GENNET_NODES_KEY][node_id][vars.TOPOLOGY_PORTS_KEY][port_id] = \
+    network_topology[vars.GENNET_NODES_KEY][node_id][vars.PORTS_KEY][port_id] = \
         (all_services_information[node_info[vars.GENNET_NODE_CONTAINER_KEY]].ports[
              port_id].number,
          all_services_information[node_info[vars.GENNET_NODE_CONTAINER_KEY]].ports[

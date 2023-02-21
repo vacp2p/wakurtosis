@@ -19,17 +19,19 @@ def get_toml_configuration_artifact(plan, config_file, name, testing):
     return artifact_id
 
 
-def generate_template_node_targets(services, port_id):
+def generate_template_node_targets(services, port_id, key_value):
     template_data = {}
     targets_data = []
-    for service_name in services["nodes"].keys():
-        service_ip = services["nodes"][service_name]["ip_address"]
-        service_port_number = str(services["nodes"][service_name]["ports"][port_id+"_"+service_name][0])
+    for service_name in services[vars.GENNET_NODES_KEY].keys():
+        service_info = services[vars.GENNET_NODES_KEY][service_name]
+
+        service_ip = service_info[vars.IP_KEY]
+        service_port_number = str(service_info[vars.PORTS_KEY][port_id+"_"+service_name][0])
         targets_data.append('"' + service_ip + ":" + service_port_number + '"')
 
     data_as_string = ",".join(targets_data)
     targets_payload = "[" + data_as_string + "]"
-    template_data["targets"] = targets_payload
+    template_data[key_value] = targets_payload
 
     return template_data
 

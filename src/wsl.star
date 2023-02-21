@@ -25,7 +25,7 @@ def create_config(plan, wls_config):
 def create_targets(plan, services):
     
     # Get private ip and ports of all nodes
-    template_data = files.generate_template_node_targets(services, vars.RPC_PORT_ID)
+    template_data = files.generate_template_node_targets(services, vars.RPC_PORT_ID, "targets")
 
     # Template
     template = """
@@ -66,7 +66,7 @@ def init(plan, services, wsl_config):
             vars.WSL_TARGETS_PATH: wsl_targets,
             vars.WSL_TOMLS_PATH: tomls_artifact
         },
-        cmd=["python3", "wsl.py"]
+        cmd=vars.WLS_CMD
     )
     wsl_service = plan.add_service(
         service_name=vars.WSL_SERVICE_NAME,

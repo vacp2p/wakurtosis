@@ -44,7 +44,7 @@ def create_prometheus_targets(plan, network_topology):
     # get ip and ports of all nodes
 
     template_data = files.generate_template_node_targets(network_topology,
-                                                         vars.PROMETHEUS_PORT_ID)
+                                                         vars.PROMETHEUS_PORT_ID, "targets")
 
     template = templates.get_prometheus_template()
 
@@ -55,7 +55,7 @@ def create_prometheus_targets(plan, network_topology):
                 data=template_data,
             )
         },
-        name="prometheus_targets"
+        name=vars.PROMETHEUS_TEMPLATE_NAME
     )
 
     return artifact_id

@@ -2,11 +2,16 @@
 NWAKU_IMAGE = "statusteam/nim-waku:nwaku-trace"
 GOWAKU_IMAGE = "gowaku"
 
-NODE_IMAGES_FROM_GENNET = ["go-waku", "nim-waku"]
 RPC_PORT_ID = "rpc"
 NODE_CONFIG_FILE_LOCATION = "github.com/logos-co/wakurtosis/config/topology_generated/"
 CONTAINER_NODE_CONFIG_FILE_LOCATION = "/node/configuration_file/"
 GENERAL_ENTRYPOINT = ["/bin/sh", "-c"]
+CONFIG_FILE_STARLARK_PARAMETER = "config_file"
+
+# Config file keys
+KURTOSIS_KEY = "kurtosis"
+WLS_KEY = "wls"
+INTERCONNECTION_BATCH_KEY = "interconnection_batch"
 
 # Waku Configuration
 WAKU_RPC_PORT_PROTOCOL = "TCP"
@@ -28,6 +33,8 @@ PROMETHEUS_PORT_ID = "prometheus"
 PROMETHEUS_PORT_PROTOCOL = "TCP"
 PROMETHEUS_PORT_NUMBER = 8008
 PROMETHEUS_CONFIGURATION_PATH = "github.com/logos-co/wakurtosis/monitoring/prometheus.yml"
+PROMETHEUS_TEMPLATE_NAME = "prometheus_targets"
+
 
 CONTAINER_CONFIGURATION_LOCATION_PROMETHEUS = "/test/"
 CONTAINER_CONFIGURATION_LOCATION_PROMETHEUS_2 = "/tmp/"
@@ -57,9 +64,13 @@ GENNET_ALL_CONTAINERS_KEY = "containers"
 GENNET_IMAGE_KEY = "image"
 GENNET_CONFIG_KEY = "node_config"
 GENNET_NODE_CONTAINER_KEY = "container_id"
-GENNET_PEER_ID_KEY = "peer_id"
-GENNET_IP_KEY = "ip_address"
-TOPOLOGY_PORTS_KEY = "ports"
+GENNET_STATIC_NODES_KEY = "static_nodes"
+GENNET_GOWAKU_IMAGE_VALUE = "go-waku"
+GENNET_NWAKU_IMAGE_VALUE = "nim-waku"
+
+PEER_ID_KEY = "peer_id"
+IP_KEY = "ip_address"
+PORTS_KEY = "ports"
 
 # WSL Configuration
 WSL_IMAGE = "wsl:0.0.1"
@@ -67,6 +78,8 @@ WSL_SERVICE_NAME = "wsl"
 WSL_CONFIG_PATH = "/wsl/config"
 WSL_TARGETS_PATH = "/wsl/targets"
 WSL_TOMLS_PATH = "/wsl/tomls"
+WLS_CMD = ["python3", "wsl.py"]
+
 CONTAINER_WSL_CONFIGURATION_FILE_NAME = "wsl.yml"
 CONTAINER_TARGETS_FILE_NAME_WSL = "targets.json"
 
@@ -79,9 +92,9 @@ GET_PEERS_METHOD = "get_waku_v2_admin_v1_peers"
 # Import locations
 WAKU_MODULE = "github.com/logos-co/wakurtosis/src/waku.star"
 NODE_BUILDERS_MODULE = "github.com/logos-co/wakurtosis/src/node_builders/node_builders.star"
-WAKU_BUILDER_MODULE = "github.com/logos-co/wakurtosis/src/node_builders/waku_builder.star"
-NWAKU_BUILDER_MODULE = "github.com/logos-co/wakurtosis/src/node_builders/nwaku_builder.star"
-GOWAKU_BUILDER_MODULE = "github.com/logos-co/wakurtosis/src/node_builders/gowaku_builder.star"
+WAKU_BUILDER_MODULE = "github.com/logos-co/wakurtosis/src/node_builders/types/waku_builder.star"
+NWAKU_BUILDER_MODULE = "github.com/logos-co/wakurtosis/src/node_builders/types/nwaku_builder.star"
+GOWAKU_BUILDER_MODULE = "github.com/logos-co/wakurtosis/src/node_builders/types/gowaku_builder.star"
 PROMETHEUS_MODULE = "github.com/logos-co/wakurtosis/src/monitoring/prometheus.star"
 GRAFANA_MODULE = "github.com/logos-co/wakurtosis/src/monitoring/grafana.star"
 ARGUMENT_PARSER_MODULE = "github.com/logos-co/wakurtosis/src/arguments_parser.star"
