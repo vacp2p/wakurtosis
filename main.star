@@ -6,7 +6,7 @@ waku = import_module(vars.WAKU_MODULE)
 prometheus = import_module(vars.PROMETHEUS_MODULE)
 grafana = import_module(vars.GRAFANA_MODULE)
 args_parser = import_module(vars.ARGUMENT_PARSER_MODULE)
-wsl = import_module(vars.WSL_MODULE)
+wls = import_module(vars.WLS_MODULE)
 nodes = import_module(vars.NODE_BUILDERS_MODULE)
 
 
@@ -18,7 +18,7 @@ def run(plan, args):
     config = json.decode(config_json)
 
     kurtosis_config = config[vars.KURTOSIS_KEY]
-    wsl_config = config[vars.WLS_KEY]
+    wls_config = config[vars.WLS_KEY]
     interconnection_batch = kurtosis_config[vars.INTERCONNECTION_BATCH_KEY]
 
     # Load network topology
@@ -35,5 +35,5 @@ def run(plan, args):
 
     waku.interconnect_waku_nodes(plan, network_topology, interconnection_batch)
 
-    # Setup WSL & Start the Simulation
-    wsl_service = wsl.init(plan, network_topology, wsl_config)
+    # Setup WLS & Start the Simulation
+    wls_service = wls.init(plan, network_topology, wls_config)

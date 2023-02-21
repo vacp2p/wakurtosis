@@ -72,16 +72,16 @@ PEER_ID_KEY = "peer_id"
 IP_KEY = "ip_address"
 PORTS_KEY = "ports"
 
-# WSL Configuration
-WSL_IMAGE = "wsl:0.0.1"
-WSL_SERVICE_NAME = "wsl"
-WSL_CONFIG_PATH = "/wsl/config"
-WSL_TARGETS_PATH = "/wsl/targets"
-WSL_TOMLS_PATH = "/wsl/tomls"
-WLS_CMD = ["python3", "wsl.py"]
+# WLS Configuration
+WLS_IMAGE = "wls:0.0.1"
+WLS_SERVICE_NAME = "wls"
+WLS_CONFIG_PATH = "/wls/config"
+WLS_TARGETS_PATH = "/wls/targets"
+WLS_TOMLS_PATH = "/wls/tomls"
+WLS_CMD = ["python3", "wls.py"]
 
-CONTAINER_WSL_CONFIGURATION_FILE_NAME = "wsl.yml"
-CONTAINER_TARGETS_FILE_NAME_WSL = "targets.json"
+CONTAINER_WLS_CONFIGURATION_FILE_NAME = "wls.yml"
+CONTAINER_TARGETS_FILE_NAME_WLS = "targets.json"
 
 # Waku RPC methods
 POST_RELAY_MESSAGE_METHOD = "post_waku_v2_relay_v1_message"
@@ -100,7 +100,7 @@ GRAFANA_MODULE = "github.com/logos-co/wakurtosis/src/monitoring/grafana.star"
 ARGUMENT_PARSER_MODULE = "github.com/logos-co/wakurtosis/src/arguments_parser.star"
 FILE_HELPERS_MODULE = "github.com/logos-co/wakurtosis/src/file_helpers.star"
 TEMPLATES_MODULE = "github.com/logos-co/wakurtosis/src/templates.star"
-WSL_MODULE = "github.com/logos-co/wakurtosis/src/wsl.star"
+WLS_MODULE = "github.com/logos-co/wakurtosis/src/wls.star"
 
 TEST_ARGUMENTS_MODULE = "github.com/logos-co/wakurtosis/src/tests/test_arguments_parser.star"
 TEST_FILES_MODULE = "github.com/logos-co/wakurtosis/src/tests/test_file_helpers.star"
