@@ -298,7 +298,7 @@ def conf_callback(ctx: typer.Context, param: typer.CallbackParam, cfile: str):
                 conf = json.load(f)
                 if "gennet" not in conf:
                     print(f"Gennet configuration not found in {cfile}. Skipping topology generation.")
-                    sys.exit(1)
+                    sys.exit(0)
                 if "general" in conf and "prng_seed" in conf["general"]:
                     conf["gennet"]["prng_seed"] = conf["general"]["prng_seed"]
                 # TODO : type-check and sanity-check the config.json
