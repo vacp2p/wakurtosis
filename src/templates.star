@@ -33,10 +33,10 @@ def  get_prometheus_template():
 
     return template
 
-# WSL
-def get_wsl_template():
+# WLS
+def get_wls_template():
     # Traffic simulation parameters
-    wsl_yml_template = """
+    wls_yml_template = """
             general:
 
                 debug_level : "DEBUG"
@@ -68,4 +68,4 @@ def get_wsl_template():
                 inter_msg_type : {{.inter_msg_type}} 
             """
 
-    return wsl_yml_template
+    return wls_yml_template

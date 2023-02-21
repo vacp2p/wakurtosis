@@ -34,7 +34,7 @@ These are arguments that can be modified:
 - _jobs_: int. Defines how many services will be instantiated at the same time.
 - _interconnection_batch_: int. If nodes are being connected by a given topology, this tells kurtosis how many connections will try to set up in the same node at a time. Used to avoid timeouts if a node has a lot of connections.
 
-- [WLS](wsl-module/README.md) module configuration
+- [WLS](wls-module/README.md) module configuration
 - [Gennet](gennet-module/Readme.md) module configuration
 
 #### What will happen
@@ -50,7 +50,7 @@ Once all nodes have been interconnected the simulation starts and will inject tr
 
 - Simulation log:
 
-'kurtosis service logs wakurtosis $(kurtosis enclave inspect <enclave-name> | grep wsl- | awk '{print $1}')'
+'kurtosis service logs wakurtosis $(kurtosis enclave inspect <enclave-name> | grep wls- | awk '{print $1}')'
 
 - Grafana server:
 

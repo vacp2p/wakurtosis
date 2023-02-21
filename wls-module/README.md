@@ -1,4 +1,4 @@
-Wakurtosis Load Simualtor (WSL)
+Wakurtosis Load Simualtor (WLS)
 ===============================
 
 Kurtosis: https://docs.kurtosis.com/
@@ -8,7 +8,7 @@ Kurtosis: https://docs.kurtosis.com/
 To build docker image:
     `sh ./build.sh`
 
-Name of the image is wsl:0.0.1
+Name of the image is wls:0.0.1
 
 ### Parameters
 

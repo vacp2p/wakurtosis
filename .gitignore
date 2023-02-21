@@ -16,8 +16,8 @@ node_modules/
 targets.json
 data/
 enclave.dump/
-wsl-module/requirements.txt
-wsl-module/__pycache__
+wls-module/requirements.txt
+wls-module/__pycache__
 config/network_topology_auto/
 config/config.json
 gennet-module/topology/

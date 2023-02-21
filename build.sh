@@ -13,9 +13,9 @@ sudo apt install kurtosis-cli=$kurtosis_version
 sudo apt-mark hold kurtosis-cli
 sudo rm /etc/apt/sources.list.d/kurtosis.list
 
-# Build WSL and Gennet docker image
-cd wsl-module
-docker build -t wsl:0.0.1 .
+# Build WLS and Gennet docker image
+cd wls-module
+docker build -t wls:0.0.1 .
 cd ..
 
 cd gennet-module
