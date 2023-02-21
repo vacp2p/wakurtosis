@@ -19,12 +19,21 @@ def prepare_waku_ports_in_service(wakunode_names):
 
     return prepared_ports
 
+def prepare_waku_config_files_in_service(node_names, artifact_ids):
+    prepared_files = {}
+
+    for i in range(len(node_names)):
+        prepared_files[vars.CONTAINER_NODE_CONFIG_FILE_LOCATION + node_names[i]] = artifact_ids[i]
+
+    return prepared_files
+
 
 def _add_waku_ports_info_to_topology(network_topology, all_services_information, node_info, node_id):
     waku_rpc_port_id = vars.RPC_PORT_ID + "_" + node_id
     libp2p_port_id = vars.WAKU_LIBP2P_PORT_ID + "_" + node_id
     prometheus_port_id = vars.PROMETHEUS_PORT_ID + "_" + node_id
 
+    network_topology[vars.GENNET_NODES_KEY][node_id][vars.PORTS_KEY] = {}
     _add_waku_port(network_topology, all_services_information, node_id, node_info, waku_rpc_port_id)
     _add_waku_port(network_topology, all_services_information, node_id, node_info, libp2p_port_id)
     _add_waku_port(network_topology, all_services_information, node_id, node_info, prometheus_port_id)

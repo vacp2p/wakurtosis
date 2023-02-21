@@ -2,12 +2,12 @@
 vars = import_module("github.com/logos-co/wakurtosis/src/system_variables.star")
 
 # Module Imports
-builder = import_module("github.com/logos-co/wakurtosis/src/node_builders/node_builders.star")
+waku_builder = import_module(vars.WAKU_BUILDER_MODULE)
 
 
 def prepare_nwaku_service(nwakunode_names, all_services, config_files, artifact_ids, service_id):
-    prepared_ports = builder.prepare_waku_ports_in_service(nwakunode_names)
-    prepared_files = builder.prepare_config_files_in_service(nwakunode_names, artifact_ids)
+    prepared_ports = waku_builder.prepare_waku_ports_in_service(nwakunode_names)
+    prepared_files = waku_builder.prepare_waku_config_files_in_service(nwakunode_names, artifact_ids)
     prepared_cmd = _prepare_nwaku_cmd_in_service(nwakunode_names, config_files)
 
     add_service_config = ServiceConfig(
