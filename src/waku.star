@@ -63,7 +63,7 @@ def post_waku_v2_relay_v1_message_test(plan, service_name, topic):
     waku_message = '{"payload": "0x1a2b3c4d5e6f", "timestamp": 1626813243}'
     params = '"' + topic + '"' + ", " + waku_message
 
-    response = send_json_rpc(plan, service_name, vars.WAKU_RPC_PORT_ID,
+    response = send_json_rpc(plan, service_name, vars.RPC_PORT_ID,
                              vars.POST_RELAY_MESSAGE_METHOD, params)
 
     plan.assert(value=response["code"], assertion="==", target_value = 200)
@@ -80,7 +80,7 @@ def make_service_wait(plan, service_name, time):
 def get_waku_peers(plan, waku_service_name):
     extract = {"peers": '.result | length'}
 
-    response = send_json_rpc(plan, waku_service_name, vars.WAKU_RPC_PORT_ID,
+    response = send_json_rpc(plan, waku_service_name, vars.RPC_PORT_ID,
                              vars.GET_PEERS_METHOD, "", extract)
 
     plan.assert(value=response["code"], assertion="==", target_value=200)
@@ -99,6 +99,6 @@ def interconnect_waku_nodes(plan, topology_information, interconnection_batch):
                         for peer in peers[x:x + interconnection_batch]]
 
             connect_wakunode_to_peers(plan, topology_information["nodes"][node_id]["container_id"],
-                                      node_id, vars.WAKU_RPC_PORT_ID, peer_ids)
+                                      node_id, vars.RPC_PORT_ID, peer_ids)
 
 

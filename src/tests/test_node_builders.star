@@ -16,9 +16,9 @@ def test_prepare_nwaku_service(plan):
     plan.assert(value=test_dict["test"].image,
         assertion="==", target_value=vars.NWAKU_IMAGE)
     plan.assert(value=str(test_dict["test"].ports[vars.WAKU_RPC_PORT_ID].number),
-        assertion="==", target_value=str(vars.WAKU_TCP_PORT))
+        assertion="==", target_value=str(vars.WAKU_RPC_PORT_NUMBER))
     plan.assert(value=str(test_dict["test"].ports[vars.PROMETHEUS_PORT_ID].number),
-        assertion="==", target_value=str(vars.PROMETHEUS_TCP_PORT))
+        assertion="==", target_value=str(vars.PROMETHEUS_PORT_NUMBER))
     plan.assert(value=str(test_dict["test"].ports[vars.WAKU_LIBP2P_PORT_ID].number),
             assertion="==", target_value=str(vars.WAKU_LIBP2P_PORT))
     plan.assert(value=test_dict["test"].files[vars.CONTAINER_NODE_CONFIG_FILE_LOCATION],
@@ -44,9 +44,9 @@ def test_prepare_gowaku_service(plan):
     plan.assert(value=test_dict["test"].image,
         assertion="==", target_value=vars.GOWAKU_IMAGE)
     plan.assert(value=str(test_dict["test"].ports[vars.WAKU_RPC_PORT_ID].number),
-        assertion="==", target_value=str(vars.WAKU_TCP_PORT))
+        assertion="==", target_value=str(vars.WAKU_RPC_PORT_NUMBER))
     plan.assert(value=str(test_dict["test"].ports[vars.PROMETHEUS_PORT_ID].number),
-        assertion="==", target_value=str(vars.PROMETHEUS_TCP_PORT))
+        assertion="==", target_value=str(vars.PROMETHEUS_PORT_NUMBER))
     plan.assert(value=str(test_dict["test"].ports[vars.WAKU_LIBP2P_PORT_ID].number),
             assertion="==", target_value=str(vars.WAKU_LIBP2P_PORT))
     plan.assert(value=test_dict["test"].files[vars.CONTAINER_NODE_CONFIG_FILE_LOCATION],

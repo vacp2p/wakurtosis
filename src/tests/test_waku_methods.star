@@ -43,12 +43,12 @@ def test_send_json_rpc(plan, service_name):
     params = "test, " + waku_message
 
     # Automatically waits for 200
-    waku.send_json_rpc(plan, service_name, vars.WAKU_RPC_PORT_ID,
+    waku.send_json_rpc(plan, service_name, vars.RPC_PORT_ID,
                        vars.POST_RELAY_MESSAGE_METHOD, params)
 
 
 def test_get_wakunode_peer_id(plan, service_name, expected_ids):
-    peer_id = waku.get_wakunode_peer_id(plan, service_name, vars.WAKU_RPC_PORT_ID)
+    peer_id = waku.get_wakunode_peer_id(plan, service_name, vars.RPC_PORT_ID)
 
     plan.assert(value=peer_id, assertion="==",
             target_value=expected_ids[service_name])
@@ -76,7 +76,7 @@ def test__merge_peer_ids(plan):
 
 def test_connect_wakunode_to_peers(plan, service_name):
     # It will print an error but 200 code
-    waku.connect_wakunode_to_peers(plan, service_name, vars.WAKU_RPC_PORT_ID, ["asd"])
+    waku.connect_wakunode_to_peers(plan, service_name, vars.RPC_PORT_ID, ["asd"])
 
 def test_post_waku_v2_relay_v1_message(plan, service_name):
     waku.post_waku_v2_relay_v1_message_test(plan, service_name, "test")
