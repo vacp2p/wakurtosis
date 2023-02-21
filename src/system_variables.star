@@ -20,7 +20,6 @@ WAKU_LIBP2P_PORT_ID = "libp2p"
 WAKU_LIBP2P_PORT_PROTOCOL = "TCP"
 WAKU_LIBP2P_PORT = 60000
 
-WAKUNODE_CONFIGURATION_FILE_EXTENSION = ".toml"
 WAKUNODE_CONFIGURATION_FILE_FLAG = "--config-file="
 WAKUNODE_PORT_SHIFT_FLAG = "--ports-shift="
 NWAKU_ENTRYPOINT = "/usr/bin/wakunode --rpc-address=0.0.0.0 --metrics-server-address=0.0.0.0"
