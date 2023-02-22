@@ -21,7 +21,7 @@
     "output_dir": "network_data",
     "benchmark": "False"
   },
-  "wsl": {
+  "wls": {
     "simulation_time": 60,
     "message_rate": 10,
     "min_packet_size": 2,
