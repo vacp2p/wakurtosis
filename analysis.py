@@ -6,6 +6,8 @@ Description: Wakurtosis simulation analysis
 
 """ Dependencies """
 import sys, logging, yaml, json, time, random, os, argparse, tomllib, glob, re, requests
+import matplotlib.pyplot as plt
+from scipy import stats
 
 """ Globals """
 G_APP_NAME = 'WLS-ANALYSIS'
@@ -35,7 +37,7 @@ class CustomFormatter(logging.Formatter):
         formatter = logging.Formatter(log_fmt, '%d-%m-%Y %H:%M:%S')
         return formatter.format(record)
 
-def fetch_hw_metrics_from_container(container_id):
+def fetch_cadvisor_summary_from_container(container_id):
     
     # cAdvisor API URL endpoint
     url = 'http://localhost:8080/api/v2.1/summary/docker/%s' %container_id
@@ -51,9 +53,41 @@ def fetch_hw_metrics_from_container(container_id):
     
     # Parse the response as JSON
     summary_stats = json.loads(response.text)
-    G_LOGGER.debug(summary_stats)
+    # G_LOGGER.debug(summary_stats)
 
     return summary_stats
+
+def fetch_cadvisor_stats_from_container(container_id):
+    
+    # cAdvisor API URL endpoint
+    url = 'http://localhost:8080/api/v2.1/stats/docker/%s' %container_id
+    # Note: We can also use the endpoint /stats instead of summary to get timepoints
+    G_LOGGER.debug('Fetching cAdvisor stats from %s ...' %url)
+    
+    # Make an HTTP request to the cAdvisor API to get the summary stats of the container
+    try:
+        response = requests.get(url)
+    except Exception as e:
+        G_LOGGER.error('%s: %s' % (e.__doc__, e))
+        return
+    
+    # Parse the response as JSON
+    stats_dict = json.loads(response.text)
+    
+    cpu_usage = []
+    memory_usage = [] 
+    for stats_obj in stats_dict.values():
+        # print(stats_obj['spec'])
+        for data_point in stats_obj['stats']:
+            # print(data_point['timestamp'])
+            # NOTE: This is comes empty. Check in Ubuntu
+            # print(data_point['diskio'])
+            # print('CPU:', data_point['cpu']['usage']['user'])
+            # print('Memory:', data_point['memory']['usage'])
+            cpu_usage.append(data_point['cpu']['usage']['user'])
+            memory_usage.append(data_point['memory']['usage'])
+
+    return {'cpu_usage' : cpu_usage, 'memory_usage' : memory_usage}
 
 def main(): 
 
@@ -143,9 +177,9 @@ def main():
                                 node_logs[node_id]['published'].append([msg_publishTime, msg_topics, msg_topic, msg_hash])
                                 
                                 if msg_hash not in msgs_dict:
-                                    msgs_dict[msg_hash] = {'published_ts' : [msg_publishTime], 'received_ts' : []}
+                                    msgs_dict[msg_hash] = {'published' : [{'ts' : msg_publishTime, 'node_id' : node_id}], 'received' : []}
                                 else:
-                                    msgs_dict[msg_hash]['published_ts'].append(msg_publishTime)
+                                    msgs_dict[msg_hash]['published'].append({'ts' : msg_publishTime, 'node_id' : node_id})
                                 
                                     # G_LOGGER.debug('Published by %s: %s %s %s %s' %(node_id, msg_publishTime, msg_hash, msg_topic, msg_topics))
 
@@ -154,9 +188,9 @@ def main():
                                 node_logs[node_id]['received'].append([msg_receivedTime, msg_topics, msg_topic, msg_hash])
                                 
                                 if msg_hash not in msgs_dict:
-                                    msgs_dict[msg_hash] = {'published_ts' : [], 'received_ts' : [msg_receivedTime]}
+                                    msgs_dict[msg_hash] = {'published' : [], 'received' : [{'ts' : msg_receivedTime, 'node_id' : node_id}]}
                                 else:
-                                    msgs_dict[msg_hash]['received_ts'].append(msg_receivedTime)
+                                    msgs_dict[msg_hash]['received'].append({'ts' : msg_receivedTime, 'node_id' : node_id})
                                 
                                 # G_LOGGER.debug('Received in node %s: %s %s %s %s' %(node_id, msg_receivedTime, msg_hash, msg_topic, msg_topics))
                                 
@@ -173,17 +207,42 @@ def main():
 
     # Calculate tota propagation times, ie time for a messafe to reach all the nodes
     # Easiest way is likely to sort the reception time stamps and get the oldest for a specific message within the node
-    for msg in msgs_dict.items():
-        published_ts = msg[1]['published_ts'][0]
-        msg[1]['latencies'] = []
-        for received_ts in msg[1]['received_ts']:
-            latency = int(received_ts) - int(published_ts)
-            msg[1]['latencies'].append(latency)
-            # print(msg[0], msg[1]['published_ts'], received_ts, latency)
-        msg[1]['max_latency'] = max(msg[1]['latencies'])
-        msg[1]['min_latency'] = min(msg[1]['latencies'])
+    
+    for _, msg_data in msgs_dict.items():
+        # NOTE: Carefull here as I am assuming that every message is published once ...
+        published_ts = int(msg_data['published'][0]['ts'])
+        node_id = msg_data['published'][0]['node_id']
+        
+        # Compute latencies
+        latencies = []
+        for received_data in msg_data['received']:
+            # Skip self
+            if received_data['node_id'] == node_id:
+                continue
+            # NOTE: We are getting some negative latencies meaning that the message appears to be received before it was sent ... I assume this must be because those are the nodes that got the message injected in the first place
+            #  TLDR: Should be safe to ignore all the negative latencies
+            latency = int(received_data['ts']) - published_ts
+            node_id = msg_data['published'][0]['node_id']
+            latencies.append(latency)
+                    
+        msgs_dict[_]['latencies'] = latencies
+            
+    msg_propagation_times = []
+    for msg_hash, msg_data in msgs_dict.items():
+        msg_propagation_times.append(round(max(msg_data['latencies'])/1000000))
+    
+    print(stats.describe(msg_propagation_times))
 
-    # print(msgs_dict)
+    # fig, ax = plt.subplots()
+    # ax.violinplot(msg_propagation_times, showmedians=True)
+    # ax.set_title('Message propagation times (sample size: %d messages)' %len(msg_propagation_times))
+    # ax.set_ylabel('Milliseconds (ms)')
+    # ax.spines[['right', 'top']].set_visible(False)
+    # ax.axes.xaxis.set_visible(False)
+    # plt.tight_layout()
+    # plt.savefig("propagation.pdf", format="pdf", bbox_inches="tight")
+    # plt.show()
+
     ### Statistics we want to compute:
     # 1 - Make sure that all messages have been delivered to their respective peers (x topic)
     # 2 - Calculate the latency of every message at every peer wrt injection time
@@ -191,15 +250,42 @@ def main():
     # 4 - Reconstruct the path of the messages throughout the network where edge weight is latency
     # 5 - Calculate propagation times per message (time for injection to last node)
     # 6 - Pull statistics from cCadvisor using API (memory, CPU, badnwitdh per node)
+    # Pull networking info from prometheus/grafana
 
     # Fetch Hardware metrics from Node containers 
+    cpu_usage = []
+    memory_usage = []
     for node in node_logs.items():
-        node_logs[node[0]]['hw_stats'] = fetch_hw_metrics_from_container(node[1]['container_id'])
-        
-    # Do Some plotting?
+        container_stats = fetch_cadvisor_stats_from_container(node[1]['container_id'])
+        # NOTE: Here we could also chose a different statistic such as mean or average instead of max
+        cpu_usage.append(max(container_stats['cpu_usage']))
+        memory_usage.append(max(container_stats['memory_usage']))
 
-
+    # Generate plots
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15, 10))
     
+    ax1.violinplot(msg_propagation_times, showmedians=True)
+    ax1.set_title('Message propagation times \n(sample size: %d messages)' %len(msg_propagation_times))
+    ax1.set_ylabel('Milliseconds (ms)')
+    ax1.spines[['right', 'top']].set_visible(False)
+    ax1.axes.xaxis.set_visible(False)
+
+    ax2.violinplot(cpu_usage, showmedians=True)
+    ax2.set_title('Maximum CPU usage per Waku node \n(sample size: %d nodes)' %len(cpu_usage))
+    ax2.set_ylabel('CPU Cycles')
+    ax2.spines[['right', 'top']].set_visible(False)
+    ax2.axes.xaxis.set_visible(False)
+
+    ax3.violinplot(memory_usage, showmedians=True)
+    ax3.set_title('Maximum memory usage per Waku node \n(sample size: %d nodes)' %len(memory_usage))
+    ax3.set_ylabel('Bytes')
+    ax3.spines[['right', 'top']].set_visible(False)
+    ax3.axes.xaxis.set_visible(False)
+    
+    plt.tight_layout()
+    plt.savefig("analysis.pdf", format="pdf", bbox_inches="tight")
+    # plt.show()
+
     """ We are done """
     G_LOGGER.info('Ended')
     
