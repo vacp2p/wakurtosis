@@ -1,7 +1,7 @@
 FROM python:3.11.0
 LABEL Maintainer="Daimakaimura"
-WORKDIR /wsl
-COPY wsl.py .
+WORKDIR /wls
+COPY wls.py .
 COPY rtnorm.py .
 COPY requirements.txt ./
 RUN pip install -r requirements.txt

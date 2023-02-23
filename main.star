@@ -6,7 +6,7 @@ waku = import_module(vars.WAKU_MODULE)
 prometheus = import_module(vars.PROMETHEUS_MODULE)
 grafana = import_module(vars.GRAFANA_MODULE)
 args_parser = import_module(vars.ARGUMENT_PARSER_MODULE)
-wsl = import_module(vars.WSL_MODULE)
+wls = import_module(vars.WLS_MODULE)
 nodes = import_module(vars.NODE_BUILDERS_MODULE)
 
 
@@ -17,22 +17,23 @@ def run(plan, args):
     config_json = read_file(src=config_file)
     config = json.decode(config_json)
 
-    kurtosis_config = config['kurtosis']
-    wsl_config = config['wsl']
-    interconnection_batch = kurtosis_config['interconnection_batch']
+    kurtosis_config = config[vars.KURTOSIS_KEY]
+    wls_config = config[vars.WLS_KEY]
+    interconnection_batch = kurtosis_config[vars.INTERCONNECTION_BATCH_KEY]
 
     # Load network topology
-    waku_topology_json = read_file(src=vars.TOPOLOGIES_LOCATION + vars.DEFAULT_TOPOLOGY_FILE)
-    waku_topology = json.decode(waku_topology_json)
+    network_topology = read_file(src=vars.TOPOLOGIES_LOCATION + vars.DEFAULT_TOPOLOGY_FILE)
+    network_topology = json.decode(network_topology)
 
     # Set up nodes
-    services = nodes.instantiate_services(plan, waku_topology, False)
+    nodes.instantiate_services(plan, network_topology, False)
 
-    # Set up prometheus + graphana
-    prometheus_service = prometheus.set_up_prometheus(plan, services)
+    # Set up prometheus + grafana
+    prometheus_service = prometheus.set_up_prometheus(plan, network_topology)
+
     grafana_service = grafana.set_up_grafana(plan, prometheus_service)
 
-    waku.interconnect_waku_nodes(plan, waku_topology, services, interconnection_batch)
+    waku.interconnect_waku_nodes(plan, network_topology, interconnection_batch)
 
-    # # Setup WSL & Start the Simulation
-    wsl_service = wsl.init(plan, services, wsl_config)
+    # Setup WLS & Start the Simulation
+    wls_service = wls.init(plan, network_topology, wls_config)

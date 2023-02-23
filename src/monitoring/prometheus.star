@@ -6,9 +6,9 @@ files = import_module(vars.FILE_HELPERS_MODULE)
 templates = import_module(vars.TEMPLATES_MODULE)
 
 
-def set_up_prometheus(plan, services):
+def set_up_prometheus(plan, network_topology):
     # Create targets.json
-    targets_artifact_id = create_prometheus_targets(plan, services)
+    targets_artifact_id = create_prometheus_targets(plan, network_topology)
 
     # Set up prometheus
     artifact_id = plan.upload_files(
@@ -40,10 +40,11 @@ def set_up_prometheus(plan, services):
     return prometheus_service
 
 
-def create_prometheus_targets(plan, services):
+def create_prometheus_targets(plan, network_topology):
     # get ip and ports of all nodes
-    template_data = files.generate_template_node_targets(services,
-                                                         vars.PROMETHEUS_PORT_ID)
+
+    template_data = files.generate_template_node_targets(network_topology,
+                                                         vars.PROMETHEUS_PORT_ID, "targets")
 
     template = templates.get_prometheus_template()
 
@@ -54,7 +55,7 @@ def create_prometheus_targets(plan, services):
                 data=template_data,
             )
         },
-        name="prometheus_targets"
+        name=vars.PROMETHEUS_TEMPLATE_NAME
     )
 
     return artifact_id

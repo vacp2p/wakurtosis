@@ -45,7 +45,8 @@ class networkType(Enum):
 
 
 NW_DATA_FNAME = "network_data.json"
-NODE_PREFIX, SUBNET_PREFIX, CONTAINER_PREFIX = "node", "subnetwork", "container"
+EXTERNAL_NODES_PREFIX, NODE_PREFIX, SUBNET_PREFIX, CONTAINER_PREFIX = \
+    "nodes", "node", "subnetwork", "containers"
 
 ### I/O related fns ##############################################################
 
@@ -256,6 +257,7 @@ def generate_and_write_files(ctx: typer, G):
 
     json_dump = {}
     json_dump[CONTAINER_PREFIX] = {}
+    json_dump[EXTERNAL_NODES_PREFIX] = {}
     inv = {} 
     for key, val in node2container.items(): 
         if val[1] not in inv: 
@@ -272,19 +274,19 @@ def generate_and_write_files(ctx: typer, G):
         # write the per node toml for the i^ith node of appropriate type
         node_type, i = node_types_enum[i], i+1
         write_toml(ctx.params["output_dir"], node, generate_toml(topics, node_type))
-        json_dump[node] = {}
-        json_dump[node]["static_nodes"] = []
+        json_dump[EXTERNAL_NODES_PREFIX][node] = {}
+        json_dump[EXTERNAL_NODES_PREFIX][node]["static_nodes"] = []
         for edge in G.edges(node):
-            json_dump[node]["static_nodes"].append(edge[1])
-        json_dump[node][SUBNET_PREFIX] = node2subnet[node]
-        json_dump[node]["image"] = nodeTypeToDocker.get(node_type)
+            json_dump[EXTERNAL_NODES_PREFIX][node]["static_nodes"].append(edge[1])
+        json_dump[EXTERNAL_NODES_PREFIX][node][SUBNET_PREFIX] = node2subnet[node]
+        json_dump[EXTERNAL_NODES_PREFIX][node]["image"] = nodeTypeToDocker.get(node_type)
             # the per node tomls will continue for now as they include topics
-        json_dump[node]["node_config"] = f"{node}.toml" 
+        json_dump[EXTERNAL_NODES_PREFIX][node]["node_config"] = f"{node}.toml"
             # logs ought to continue as they need to be unique
-        json_dump[node]["node_log"] = f"{node}.log"
+        json_dump[EXTERNAL_NODES_PREFIX][node]["node_log"] = f"{node}.log"
         port_shift, cid = node2container[node]
-        json_dump[node]["port_shift"] = port_shift
-        json_dump[node]["container_id"] = cid
+        json_dump[EXTERNAL_NODES_PREFIX][node]["port_shift"] = port_shift
+        json_dump[EXTERNAL_NODES_PREFIX][node]["container_id"] = cid
     write_json(ctx.params["output_dir"], json_dump)  # network wide json
 
 
@@ -298,7 +300,7 @@ def conf_callback(ctx: typer.Context, param: typer.CallbackParam, cfile: str):
                 conf = json.load(f)
                 if "gennet" not in conf:
                     print(f"Gennet configuration not found in {cfile}. Skipping topology generation.")
-                    sys.exit(1)
+                    sys.exit(0)
                 if "general" in conf and "prng_seed" in conf["general"]:
                     conf["gennet"]["prng_seed"] = conf["general"]["prng_seed"]
                 # TODO : type-check and sanity-check the config.json

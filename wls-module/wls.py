@@ -17,7 +17,7 @@ import rtnorm
 """ Globals """
 G_APP_NAME = 'WLS'
 G_LOG_LEVEL = 'DEBUG'
-G_DEFAULT_CONFIG_FILE = './config/wsl.yml'
+G_DEFAULT_CONFIG_FILE = './config/wls.yml'
 G_LOGGER = None
 
 """ Custom logging formatter """

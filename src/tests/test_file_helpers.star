@@ -41,7 +41,7 @@ def test_generate_template_node_targets_multiple(plan):
 def test_generate_template_prometheus_url(plan):
     prometheus_service_struct = struct(ip_address="1.2.3.4",
                                        ports={vars.PROMETHEUS_PORT_ID:
-                                          PortSpec(number=vars.PROMETHEUS_TCP_PORT)})
+                                          PortSpec(number=vars.PROMETHEUS_PORT_NUMBER)})
 
     result = files.generate_template_prometheus_url(prometheus_service_struct)
     plan.assert(value=result["prometheus_url"], assertion="==", target_value="1.2.3.4:8008")
