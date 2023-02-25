@@ -8,6 +8,7 @@ Description: Wakurtosis load simulator
 import sys, logging, yaml, json, time, random, os, argparse, tomllib, glob
 import requests
 import rtnorm
+import nomos
 # from pathlib import Path
 # import numpy as np
 # import pandas as pd
@@ -18,6 +19,7 @@ import rtnorm
 G_APP_NAME = 'WLS'
 G_LOG_LEVEL = 'DEBUG'
 G_DEFAULT_CONFIG_FILE = './config/wsl.yml'
+G_DEFAULT_TOPOLOGY_FILE = './tomls/network_data.json'
 G_LOGGER = None
 
 """ Custom logging formatter """
@@ -67,139 +69,30 @@ def add_nomos_tx(node_address, tx):
         G_LOGGER.debug('%s: %s' % (e.__doc__, e))
         return False
 
-    G_LOGGER.debug('Response from %s: %s' %(url, response.text))
+    if len(response.text) > 0:
+        G_LOGGER.debug('Response from %s: %s' %(url, response.text))
+        return False
     
     return True
 
-def get_nomos_mempool_metrics(node_address):
+def get_nomos_mempool_metrics(node_address, iteration_s):
     url = node_address + "mempool/metrics"
 
     try:
         response = requests.get(url)
     except Exception as e:
         G_LOGGER.debug('%s: %s' % (e.__doc__, e))
-        return False
+        return "error", -1
 
     try:
         response_obj = response.json()
     except Exception as e:
         G_LOGGER.debug('%s: %s' % (e.__doc__, e))
-        return False
-
+        return "error", -1
     G_LOGGER.debug('Response from %s: %s' %(node_address, response_obj))
+    time_e = int(time.time() * 1000)
     
-    return True
-
-
-# Generate a random interval using a Poisson distribution
-def poisson_interval(rate):
-    return random.expovariate(rate)
-
-def make_payload(size):
-    payload = hex(random.getrandbits(4*size))     
-    G_LOGGER.debug('Payload of size %d bytes: %s' %(size, payload))
-    return payload
-
-def make_payload_dist(dist_type, min_size, max_size):
-
-    # Check if min and max packet sizes are the same
-    if min_size == max_size:
-        G_LOGGER.warning('Packet size is constant: min_size=max_size=%d' %min_size)
-        return make_payload(min_size)
-
-    # Payload sizes are even integers uniformly distributed in [min_size, max_size] 
-    if dist_type == 'uniform':
-        size = int(random.uniform(min_size, max_size))
-        
-        # Reject non even sizes
-        while(size % 2) != 0:
-            size = int(random.uniform(min_size, max_size))
-            
-        return make_payload(size)
-
-    # Payload sizes are even integers ~"normally" distributed in [min_size, max_size] 
-    if dist_type == 'gaussian':
-        σ = (max_size - min_size) / 5.
-        μ = (max_size - min_size) / 2.
-        size = int(rtnorm.rtnorm(min_size, max_size, sigma=σ, mu=μ, size=1))
-        
-        # Reject non even sizes
-        while(size % 2) != 0:
-            size = int(rtnorm.rtnorm(min_size, max_size, sigma=σ, mu=μ, size=1))
-
-        return make_payload(size)
-
-    G_LOGGER.error('Unknown distribution type %s')
-
-    return '0x00'
-
-def parse_targets(enclave_dump_path, waku_port=8545):
-
-    targets = []
-
-    G_LOGGER.info('Extracting Waku node addresses from Kurtosus enclance dump in %s' %enclave_dump_path)            
-
-    for path_obj in os.walk(enclave_dump_path):
-        if 'waku_' in path_obj[0]:
-            with open(path_obj[0] + '/spec.json', "r") as read_file:
-                spec_obj = json.load(read_file)
-                network_settings = spec_obj['NetworkSettings']
-                waku_address = network_settings['Ports']['%d/tcp' %waku_port]
-                targets.append('%s:%s' %(waku_address[0]['HostIp'], waku_address[0]['HostPort']))
-
-    G_LOGGER.info('Parsed %d Waku nodes' %len(targets))            
-
-    return targets
-
-def get_next_time_to_msg(inter_msg_type, msg_rate, simulation_time):
-    
-    if inter_msg_type == 'poisson':
-        return poisson_interval(msg_rate) 
-    
-    if inter_msg_type == 'uniform':
-        return simulation_time / msg_rate
-        
-    G_LOGGER.error('%s is not a valid inter_msg_type. Aborting.' %inter_msg_type)
-    sys.exit()
-
-def get_all_messages_from_node_from_topic(node_address, topic):
-
-    page_cnt = 0
-    msg_cnt = 0
-
-    # Retrieve the first page
-    response, elapsed = get_waku_msgs(node_address, topic)
-    if 'error' in response:
-        G_LOGGER.error(response['error'])
-        return 0
-    
-    messages = response['result']['messages']
-    msg_cnt += len(messages)
-    G_LOGGER.debug('Got page %d with %d messages from node %s and topic: %s' %(page_cnt, len(messages), node_address, topic))
-
-    for msg_idx, msg in enumerate(messages):
-        # Decode the payload
-        payload_obj = json.loads(''.join(map(chr, msg['payload'])))
-        
-    # Retrieve further pages
-    while(response['result']['pagingOptions']):
-        page_cnt += 1
-        cursor = response['result']['pagingOptions']['cursor']
-        index = {"digest" : cursor['digest'], "receivedTime" : cursor['receiverTime']}
-        response, elapsed = get_waku_msgs(node_address, topic, cursor)
-        if 'error' in response:
-            G_LOGGER.error(response['error'])
-            break
-
-        messages = response['result']['messages']
-        msg_cnt += len(messages)
-        G_LOGGER.debug('Got page %d with %d messages from node %s and topic: %s' %(page_cnt, len(messages), node_address, topic))
-
-        for msg_idx, msg in enumerate(messages):
-            # Decode the payload
-            payload_obj = json.loads(''.join(map(chr, msg['payload'])))
-    
-    return msg_cnt
+    return response_obj, time_e - iteration_s
 
 def main(): 
 
@@ -216,9 +109,11 @@ def main():
     """ Parse command line args. """
     parser = argparse.ArgumentParser()
     parser.add_argument("-cfg", "--config_file", help="Config file", action="store_true", default=G_DEFAULT_CONFIG_FILE)
+    parser.add_argument("-topo", "--topology_file", help="Topology file", action="store_true", default=G_DEFAULT_TOPOLOGY_FILE)
     args = parser.parse_args()
 
     config_file = args.config_file
+    topology_file = args.topology_file
         
     """ Load config file """
     try:
@@ -246,13 +141,20 @@ def main():
         G_LOGGER.error('%s: %s' % (e.__doc__, e))
         sys.exit()
 
+    try:
+        with open(topology_file) as read_file:
+            topology = json.load(read_file)
+    except Exception as e:
+        G_LOGGER.error('%s: %s' % (e.__doc__, e))
+        sys.exit()
+
     if len(targets) == 0:
         G_LOGGER.error('Cannot find valid targets. Aborting.')
         sys.exit(1)
 
     G_LOGGER.debug(targets)
     G_LOGGER.info('%d targets loaded' %len(targets))
-    
+
     """ Check all nodes are reachable """
     for i, target in enumerate(targets):
         if not check_nomos_node('http://%s/' %target):
@@ -260,16 +162,101 @@ def main():
             sys.exit(1)
     G_LOGGER.info('All %d Waku nodes are reachable.' %len(targets))
 
-    G_LOGGER.info('Tx addition start time: %d' %int(time.time()))
+    """ Start simulation """
+    msg_cnt = 0
+    failed_addtx_cnt = 0
+    failed_metrics_cnt = 0
+    bytes_cnt = 0
+    s_time = time.time()
+    last_msg_time = 0
+    next_time_to_msg = 0
+    failed_dissemination_cnt = 0
+    batch_size = 40 
+    iterations = []
+    tx_id = 0
+
+    G_LOGGER.info('Tx addition start time: %d' %int(round(time.time() * 1000)))
     """ Add new transaction to every node """
     for i, target in enumerate(targets):
-        if not add_nomos_tx('http://%s/' %target, 'tx%s' %i):
-            G_LOGGER.error('Unable to add new tx. Node %d (%s).' %(i, target))
+        iteration_s = int(time.time() * 1000)
+        last_tx_sent = iteration_s
 
-    """ Collect mempool metrics from nodes """
-    for i, target in enumerate(targets):
-        if not get_nomos_mempool_metrics('http://%s/' %target):
-            G_LOGGER.error('Unable to add new tx. Node %d (%s).' %(i, target))
+        tx_id = tx_id + msg_cnt+failed_addtx_cnt+1
+        for j in range(batch_size):
+            tx_id += j
+            tx_target = random.choice(targets)
+            G_LOGGER.debug('sending tx_id: %s to target: %s' %(tx_id, tx_target))
+
+            if not add_nomos_tx('http://%s/' %tx_target, 'tx%s' %tx_id):
+                G_LOGGER.error('Unable to add new tx. Node %s.' %(tx_target))
+                failed_addtx_cnt += 1
+                continue
+
+            last_tx_sent = int(time.time() * 1000)
+            msg_cnt += 1
+
+        time.sleep(1.5)
+
+        results = []
+        """ Collect mempool metrics from nodes """
+        for n, target in enumerate(targets):
+            res, t = get_nomos_mempool_metrics('http://%s/' %target, iteration_s)
+            if 'error' in res:
+                G_LOGGER.error('Unable to pull metrics. Node %d (%s).' %(n, target))
+                failed_metrics_cnt += 1
+                continue
+
+            is_ok = True
+            delta = res['last_tx'] - last_tx_sent
+            start_finish = res['last_tx'] - iteration_s
+
+            # Tolerate one second difference between finish and start times.
+            if -1000 < delta < 0:
+                delta = 0
+
+            if delta < 0:
+                G_LOGGER.error('delta should be gt that zero: %d' %delta)
+                delta = -1
+
+            G_LOGGER.debug('should be %s' %msg_cnt)
+            if res['pending_tx'] != msg_cnt:
+                delta = -1
+                is_ok = False
+                failed_dissemination_cnt += 1
+
+            results.append({
+                "node": n,
+                "is_ok": is_ok,
+                "delta": delta,
+                "start_finish": start_finish
+            })
+
+        iterations.append({
+            "iteration": iteration_s,
+            "results": results
+        })
+
+    stats = {
+        "msg_cnt": msg_cnt,
+        "failed_addtx_cnt": failed_addtx_cnt,
+        "failed_metrics_cnt": failed_metrics_cnt,
+        "failed_dissemination_cnt": failed_dissemination_cnt,
+        "batch_size": batch_size,
+        "bytes_cnt": bytes_cnt,
+        "s_time": s_time,
+        "last_msg_time": last_msg_time,
+        "next_time_to_msg": next_time_to_msg,
+        "iterations": iterations,
+    }
+
+    G_LOGGER.info("Results: %s" %json.dumps(stats))
+
+    with open('./summary.json', 'w') as summary_file:
+        summary_file.write(json.dumps(stats, indent=4))
+
+    nomos.network_graph("1.png", topology)
+    nomos.hist_delta("2.png", stats['iterations'])
+    nomos.concat_images("collage.png", ["1.png", "2.png"])
 
     """ We are done """
     G_LOGGER.info('Ended')
