@@ -27,7 +27,7 @@ def send_req(plan, service_id, port_id, endpoint, method, body, extract={}):
 def get_nomos_peer_id(plan, service_id, port_id):
     extract = {"peer_id": '.peer_id'}
 
-    response = send_req(plan, service_id, port_id, system_variables.NOMOS_NET_INFO_URL
+    response = send_req(plan, service_id, port_id, system_variables.NOMOS_NET_INFO_URL,
                              "GET", "", extract)
 
     plan.assert(value=response["code"], assertion="==", target_value = 200)
@@ -52,7 +52,7 @@ def _merge_peer_ids(peer_ids):
 def connect_nomos_to_peers(plan, service_id, port_id, peer_ids):
     body = _merge_peer_ids(peer_ids)
 
-    response = send_req(plan, service_id, port_id, system_variables.NOMOS_NET_CONN_URL
+    response = send_req(plan, service_id, port_id, system_variables.NOMOS_NET_CONN_URL,
                              "POST", body) 
 
     plan.assert(value=response["code"], assertion="==", target_value = 200)
