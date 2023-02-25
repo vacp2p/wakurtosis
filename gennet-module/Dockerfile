@@ -21,7 +21,7 @@ COPY --from=build-image /opt/venv /opt/venv
 
 # Copy the gennet files to the production image
 WORKDIR /gennet
-COPY Dockerfile batch_gen.sh gennet.py requirements.txt Readme.md ./
+COPY . .
 
 # Deploy the virtualenv in production image
 ENV PATH="/opt/venv/bin:$PATH"
