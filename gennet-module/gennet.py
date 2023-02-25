@@ -19,8 +19,9 @@ from enum import Enum
 
 # To add a new node type, add appropriate entries to the nodeType and nodeTypeSwitch
 class nodeType(Enum):
-    NWAKU = "nwaku"     # waku desktop config
-    GOWAKU = "gowaku"   # waku mobile config
+    NWAKU = "nwaku"  # waku desktop config
+    GOWAKU = "gowaku"  # waku mobile config
+    NOMOS = "nomos" # incompatible with waku nodes
 
 
 nodeTypeToToml = {
@@ -30,9 +31,16 @@ nodeTypeToToml = {
 
 nodeTypeToDocker = {
     nodeType.NWAKU: "nim-waku",
-    nodeType.GOWAKU: "go-waku"
+    nodeType.GOWAKU: "go-waku",
+    nodeType.NOMOS: "nomos"
 }
 
+<<<<<<< HEAD
+=======
+#NODES = [nodeType.NWAKU, nodeType.GOWAKU, nodeType.NOMOS]
+#NODE_PROBABILITIES = (0, 0, 100)
+
+>>>>>>> b6a76d5 (Gennet and WSL changes for nomos node)
 # To add a new network type, add appropriate entries to the networkType and networkTypeSwitch
 # the networkTypeSwitch is placed before generate_network(): fwd declaration mismatch with typer/python :/
 class networkType(Enum):
