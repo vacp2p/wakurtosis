@@ -25,6 +25,8 @@ WAKUNODE_CONFIGURATION_FILE_FLAG = "--config-file="
 WAKUNODE_PORT_SHIFT_FLAG = "--ports-shift="
 NWAKU_ENTRYPOINT = "/usr/bin/wakunode --rpc-address=0.0.0.0 --metrics-server-address=0.0.0.0 --log-level=TRACE"
 GOWAKU_ENTRYPOINT = "/usr/bin/waku --rpc-address=0.0.0.0 --metrics-server-address=0.0.0.0"
+NOMOS_ENTRYPOINT = ["/usr/bin/nomos-node"]
+NOMOS_CONTAINER_CONFIG_FILE_LOCATION = '/etc/nomos/config.yml'
 
 # Nomos Configuration
 NOMOS_IMAGE = "nomos"
