@@ -2,9 +2,9 @@
 system_variables = import_module("github.com/logos-co/wakurtosis/src/system_variables.star")
 
 # Module Imports
-waku = import_module(system_variables.WAKU_MODULE)
-nomos = import_module(system_variables.NOMOS_MODULE)
-files = import_module(system_variables.FILE_HELPERS_MODULE)
+waku = import_module(vars.WAKU_MODULE)
+nomos = import_module(vars.NOMOS_MODULE)
+files = import_module(vars.FILE_HELPERS_MODULE)
 
 
 def prepare_nwaku_service(plan, nwakunode_name, all_services, use_general_configuration):
@@ -78,26 +78,26 @@ def prepare_nomos_service(plan, node_name, all_services, use_general_configurati
                                                                             node_name)
 
     plan.print("Configuration being used file is " + configuration_file)
-    plan.print("Entrypoint is "+ str(system_variables.NOMOS_ENTRYPOINT))
+    plan.print("Entrypoint is "+ str(vars.NOMOS_ENTRYPOINT))
 
     nomos_service_config = ServiceConfig(
-	image=system_variables.NOMOS_IMAGE,
+	image=vars.NOMOS_IMAGE,
 	ports={
-	    system_variables.NOMOS_HTTP_PORT_ID: PortSpec(number=system_variables.NOMOS_HTTP_PORT,
+	    vars.NOMOS_HTTP_PORT_ID: PortSpec(number=vars.NOMOS_HTTP_PORT,
 	    					    transport_protocol="TCP"),
-	    system_variables.PROMETHEUS_PORT_ID: PortSpec(
-	        number=system_variables.PROMETHEUS_TCP_PORT,
+	    vars.PROMETHEUS_PORT_ID: PortSpec(
+	        number=vars.PROMETHEUS_TCP_PORT,
 	        transport_protocol="TCP"),
-	    system_variables.NOMOS_LIBP2P_PORT_ID: PortSpec(
-	        number=system_variables.NOMOS_LIBP2P_PORT,
+	    vars.NOMOS_LIBP2P_PORT_ID: PortSpec(
+	        number=vars.NOMOS_LIBP2P_PORT,
 	        transport_protocol="TCP"),
 	},
 	files={
-	    system_variables.CONTAINER_NODE_CONFIG_FILE_LOCATION: artifact_id
+	    vars.CONTAINER_NODE_CONFIG_FILE_LOCATION: artifact_id
 	},
-	entrypoint=system_variables.NOMOS_ENTRYPOINT,
+	entrypoint=vars.NOMOS_ENTRYPOINT,
 	cmd=[
-	    system_variables.NOMOS_CONTAINER_CONFIG_FILE_LOCATION 
+	    vars.NOMOS_CONTAINER_CONFIG_FILE_LOCATION 
 	]
     )
 
@@ -134,49 +134,65 @@ def instantiate_services(plan, network_topology, use_general_configuration):
     for service_name in network_topology.keys():
         image = network_topology[service_name]["image"]
 
-        service_builder = service_dispatcher[image]
+        service_builder = service_dispatcher[image][0]
 
         service_builder(plan, service_name, all_services, use_general_configuration)
 
     all_services_information = plan.add_services(
         configs = all_services
     )
+<<<<<<< HEAD
     #services_information = _add_waku_service_information(plan, all_services_information)
     services_information = _add_nomos_service_information(plan, all_services_information)
+=======
+    services_information = add_service_information(plan, all_services_information, network_topology)
+>>>>>>> 1e3f147 (Make node init code agnostic to the node type)
 
     return services_information
 
 
-def _add_waku_service_information(plan, all_services_information):
-
+def add_service_information(plan, all_services_information, network_topology):
     new_services_information = {}
 
     for service_name in all_services_information:
+<<<<<<< HEAD
         node_peer_id = waku.get_wakunode_peer_id(plan, service_name, system_variables.WAKU_RPC_PORT_ID)
 
         new_services_information[service_name] = {}
         new_services_information[service_name]["peer_id"] = node_peer_id
         new_services_information[service_name]["service_info"] = all_services_information[service_name]
+=======
+        image = network_topology[service_name]["image"]
+    	info_getter = service_dispatcher[image][1]
+	service_info = all_services_information[service_name]
+	new_service_info = info_getter(plan, service_name, service_info)
+	new_service_info["image"] = image
+	new_services_information[service_name] = new_service_info
+>>>>>>> 1e3f147 (Make node init code agnostic to the node type)
 
     return new_services_information
 
 
-def _add_nomos_service_information(plan, all_services_information):
+def _add_waku_service_information(plan, service_name, service_info):
+    node_peer_id = waku.get_wakunode_peer_id(plan, service_name, vars.WAKU_RPC_PORT_ID)
+    new_service_info = {}
+    new_service_info["peer_id"] = node_peer_id
+    new_service_info["service_info"] = service_info
 
-    new_services_information = {}
+    return new_service_info
 
-    for service_name in all_services_information:
-	node_peer_id = nomos.get_nomos_peer_id(plan, service_name, system_variables.NOMOS_HTTP_PORT_ID)
 
-        new_services_information[service_name] = {}
-        new_services_information[service_name]["peer_id"] = node_peer_id
-        new_services_information[service_name]["service_info"] = all_services_information[service_name]
+def _add_nomos_service_information(plan, service_name, service_info):
+    node_peer_id = nomos.get_nomos_peer_id(plan, service_name, vars.NOMOS_HTTP_PORT_ID)
+    new_service_info = {}
+    new_service_info["peer_id"] = node_peer_id
+    new_service_info["service_info"] = service_info
 
-    return new_services_information
+    return new_service_info
 
 
 service_dispatcher = {
-    "go-waku": prepare_gowaku_service,
-    "nim-waku": prepare_nwaku_service,
-    "nomos": prepare_nomos_service
+    "go-waku": [prepare_gowaku_service, _add_waku_service_information],
+    "nim-waku": [prepare_nwaku_service, _add_waku_service_information],
+    "nomos": [prepare_nomos_service, _add_nomos_service_information]
 }

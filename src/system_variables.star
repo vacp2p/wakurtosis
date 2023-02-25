@@ -30,7 +30,7 @@ NOMOS_CONTAINER_CONFIG_FILE_LOCATION = '/etc/nomos/config.yml'
 
 # Nomos Configuration
 NOMOS_IMAGE = "nomos"
-NOMOS_HTTP_PORT_ID = "http"
+NOMOS_HTTP_PORT_ID = "rpc"
 NOMOS_HTTP_PORT = 8080
 NOMOS_LIBP2P_PORT_ID = "libp2p"
 NOMOS_LIBP2P_PORT = 3000

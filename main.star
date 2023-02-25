@@ -8,6 +8,7 @@ grafana = import_module(vars.GRAFANA_MODULE)
 args_parser = import_module(vars.ARGUMENT_PARSER_MODULE)
 wls = import_module(vars.WLS_MODULE)
 nodes = import_module(vars.NODE_BUILDERS_MODULE)
+nomos = import_module(vars.NOMOS_MODULE)
 
 
 def run(plan, args):
