@@ -147,12 +147,12 @@ def instantiate_services(plan, network_topology, testing):
     all_services_information = plan.add_services(
         configs = all_services
     )
-    services_information = add_service_information(plan, all_services_information, network_topology)
+    services_information = add_services_information(plan, all_services_information, network_topology)
 
     return services_information
 
 
-def add_service_information(plan, all_services_information, network_topology):
+def add_services_information(plan, all_services_information, network_topology):
     new_services_information = {}
 
     for service_name in all_services_information:
@@ -192,7 +192,7 @@ service_dispatcher = {
         connect_peers = waku.connect_wakunode_to_peers
     ),
     "nim-waku": struct(
-        prepare_service = prepare_gowaku_service,
+        prepare_service = prepare_nwaku_service,
         add_service_information = _add_waku_service_information,
         create_id = waku.create_waku_id,
         connect_peers = waku.connect_wakunode_to_peers
