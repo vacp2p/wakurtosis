@@ -4,23 +4,26 @@ import json
 import random
 import matplotlib.pyplot as plt
 import networkx as nx
+import statistics
 from PIL import Image
 
 LOGGER = None
 
 # Histogram of time delta in millis of tx being sent
 # and received by all nodes.
+
 def hist_delta(name, iterations):
     results = []
     for iteration in iterations:
         iteration_results = [result["delta"] for result in iteration["results"]]
         results.extend(iteration_results)
 
-    plt.hist(results, bins=20)
-    plt.xlabel("delta in (ms)")
-    plt.ylabel("Frequency")
-    plt.title("TX dissemination over network")
-    plt.savefig(name)
+    plt.hist(results, bins=30, color="#000000")
+    plt.xlabel("Delta time (milliseconds)", fontsize=12)
+    plt.ylabel("Frequency", fontsize=12)
+    plt.title("TX dissemination over network", fontsize=14)
+
+    plt.savefig(name, dpi=200)
     plt.close()
 
 def network_graph(name, topology):
@@ -31,8 +34,17 @@ def network_graph(name, topology):
         for connection in node_data["static_nodes"]:
             G.add_edge(node_name, connection)
 
-    nx.draw(G, with_labels=True)
-    plt.savefig(name)
+    pos = nx.spring_layout(G, seed=1)
+    node_size = 100
+    font_size = 8
+
+    nx.draw(G, pos, with_labels=False, node_size=node_size, font_size=font_size, node_color='white', edge_color='black')
+    shift_amount = 0.07
+    label_pos = {k: (v[0], v[1]+shift_amount) for k, v in pos.items()}
+    nx.draw_networkx_labels(G, label_pos, font_size=font_size)
+    nx.draw_networkx_nodes(G, pos, node_size=node_size, node_color='black', edgecolors='white')
+
+    plt.savefig(name, dpi=200)
     plt.close()
 
 def concat_images(name, images):
@@ -104,7 +116,7 @@ def get_nomos_mempool_metrics(node_address, iteration_s):
  
     return response_obj, time_e - iteration_s
 
-def run_tests(logger, targets, topology):
+def run_tests(logger, config, targets, topology):
     global LOGGER
     LOGGER = logger
 
@@ -119,14 +131,12 @@ def run_tests(logger, targets, topology):
     msg_cnt = 0
     failed_addtx_cnt = 0
     failed_metrics_cnt = 0
-    bytes_cnt = 0
     s_time = time.time()
-    last_msg_time = 0
-    next_time_to_msg = 0
     failed_dissemination_cnt = 0
     batch_size = 40
     iterations = []
     tx_id = 0
+    all_response_deltas = []
 
     LOGGER.info('Tx addition start time: %d' %int(round(time.time() * 1000)))
     """ Add new transaction to every node """
@@ -148,7 +158,7 @@ def run_tests(logger, targets, topology):
             last_tx_sent = int(time.time() * 1000)
             msg_cnt += 1
 
-        time.sleep(1.5)
+        time.sleep(1)
 
         results = []
         """ Collect mempool metrics from nodes """
@@ -177,6 +187,9 @@ def run_tests(logger, targets, topology):
                 is_ok = False
                 failed_dissemination_cnt += 1
 
+            if delta >= 0:
+                all_response_deltas.append(delta)
+
             results.append({
                 "node": n,
                 "is_ok": is_ok,
@@ -195,14 +208,13 @@ def run_tests(logger, targets, topology):
         "failed_metrics_cnt": failed_metrics_cnt,
         "failed_dissemination_cnt": failed_dissemination_cnt,
         "batch_size": batch_size,
-        "bytes_cnt": bytes_cnt,
         "s_time": s_time,
-        "last_msg_time": last_msg_time,
-        "next_time_to_msg": next_time_to_msg,
+        "median_response_delta": statistics.median(all_response_deltas),
         "iterations": iterations,
     }
 
-    LOGGER.info("Results: %s" %json.dumps(stats))
+    with open('./topology.json', 'w') as summary_file:
+        summary_file.write(json.dumps(topology, indent=4))
 
     with open('./summary.json', 'w') as summary_file:
         summary_file.write(json.dumps(stats, indent=4))

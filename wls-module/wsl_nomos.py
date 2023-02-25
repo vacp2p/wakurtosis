@@ -103,7 +103,7 @@ def main():
     G_LOGGER.debug(targets)
     G_LOGGER.info('%d targets loaded' %len(targets))
 
-    nomos.run_tests(G_LOGGER, targets, topology)
+    nomos.run_tests(G_LOGGER, config, targets, topology)
 
     
 if __name__ == "__main__":
