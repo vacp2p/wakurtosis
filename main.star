@@ -34,7 +34,8 @@ def run(plan, args):
 
     grafana_service = grafana.set_up_grafana(plan, prometheus_service)
 
-    waku.interconnect_waku_nodes(plan, network_topology, interconnection_batch)
+    # nomos.interconnect_nomos_nodes(plan, waku_topology, services)
+    nodes.interconnect_nodes(plan, network_topology, services, interconnection_batch)
 
     # Setup WLS & Start the Simulation
     wls_service = wls.init(plan, network_topology, wls_config)
