@@ -8,6 +8,7 @@ Description: Wakurtosis load simulator
 import sys, logging, yaml, json, time, random, os, argparse, tomllib, glob, hashlib
 import requests
 import rtnorm
+import nomos
 # from pathlib import Path
 # import numpy as np
 # import pandas as pd

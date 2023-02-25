@@ -71,15 +71,7 @@ def prepare_gowaku_service(plan, gowakunode_name, all_services, use_general_conf
     all_services[gowakunode_name] = add_service_config
 
 
-def prepare_nomos_service(plan, node_name, all_services, use_general_configuration):
-    plan.print("nomos")
-    artifact_id, configuration_file = files.get_toml_configuration_artifact(plan, node_name,
-                                                                            use_general_configuration,
-                                                                            node_name)
-
-    plan.print("Configuration being used file is " + configuration_file)
-    plan.print("Entrypoint is "+ str(vars.NOMOS_ENTRYPOINT))
-
+def prepare_nomos_service(node_name, all_services, config_file, artifact_id):
     nomos_service_config = ServiceConfig(
 	image=vars.NOMOS_IMAGE,
 	ports={
@@ -104,7 +96,21 @@ def prepare_nomos_service(plan, node_name, all_services, use_general_configurati
     all_services[node_name] = nomos_service_config
 
 
-def instantiate_services(plan, network_topology, use_general_configuration):
+def interconnect_nodes(plan, topology_information, services, interconnection_batch):
+    for waku_service_name in services.keys():
+        peers = topology_information[waku_service_name]["static_nodes"]
+
+        for i in range(0, len(peers), interconnection_batch):
+            x = i
+            image = services[waku_service_name]["image"]
+            create_id = service_dispatcher[image].create_id
+            connect_peers = service_dispatcher[image].connect_peers
+            peer_ids = [create_id(services[peer]) for peer in peers[x:x + interconnection_batch]]
+
+            connect_peers(plan, waku_service_name, vars.WAKU_RPC_PORT_ID, peer_ids)
+
+
+def instantiate_services(plan, network_topology, testing):
     """
     As we will need to access for the service information later, the structure is the following:
 
@@ -134,19 +140,14 @@ def instantiate_services(plan, network_topology, use_general_configuration):
     for service_name in network_topology.keys():
         image = network_topology[service_name]["image"]
 
-        service_builder = service_dispatcher[image][0]
+        service_builder = service_dispatcher[image].prepare_service
 
         service_builder(plan, service_name, all_services, use_general_configuration)
 
     all_services_information = plan.add_services(
         configs = all_services
     )
-<<<<<<< HEAD
-    #services_information = _add_waku_service_information(plan, all_services_information)
-    services_information = _add_nomos_service_information(plan, all_services_information)
-=======
     services_information = add_service_information(plan, all_services_information, network_topology)
->>>>>>> 1e3f147 (Make node init code agnostic to the node type)
 
     return services_information
 
@@ -155,20 +156,12 @@ def add_service_information(plan, all_services_information, network_topology):
     new_services_information = {}
 
     for service_name in all_services_information:
-<<<<<<< HEAD
-        node_peer_id = waku.get_wakunode_peer_id(plan, service_name, system_variables.WAKU_RPC_PORT_ID)
-
-        new_services_information[service_name] = {}
-        new_services_information[service_name]["peer_id"] = node_peer_id
-        new_services_information[service_name]["service_info"] = all_services_information[service_name]
-=======
         image = network_topology[service_name]["image"]
-    	info_getter = service_dispatcher[image][1]
+        info_getter = service_dispatcher[image].add_service_information
 	service_info = all_services_information[service_name]
 	new_service_info = info_getter(plan, service_name, service_info)
 	new_service_info["image"] = image
 	new_services_information[service_name] = new_service_info
->>>>>>> 1e3f147 (Make node init code agnostic to the node type)
 
     return new_services_information
 
@@ -192,7 +185,22 @@ def _add_nomos_service_information(plan, service_name, service_info):
 
 
 service_dispatcher = {
-    "go-waku": [prepare_gowaku_service, _add_waku_service_information],
-    "nim-waku": [prepare_nwaku_service, _add_waku_service_information],
-    "nomos": [prepare_nomos_service, _add_nomos_service_information]
+    "go-waku": struct(
+        prepare_service = prepare_gowaku_service,
+        add_service_information = _add_waku_service_information,
+        create_id = waku.create_waku_id,
+        connect_peers = waku.connect_wakunode_to_peers
+    ),
+    "nim-waku": struct(
+        prepare_service = prepare_gowaku_service,
+        add_service_information = _add_waku_service_information,
+        create_id = waku.create_waku_id,
+        connect_peers = waku.connect_wakunode_to_peers
+    ),
+    "nomos": struct(
+        prepare_service = prepare_nomos_service,
+        add_service_information = _add_nomos_service_information,
+        create_id = nomos.create_nomos_id,
+        connect_peers = nomos.connect_nomos_to_peers
+    ),
 }
