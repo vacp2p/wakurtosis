@@ -25,13 +25,15 @@ WAKUNODE_CONFIGURATION_FILE_FLAG = "--config-file="
 WAKUNODE_PORT_SHIFT_FLAG = "--ports-shift="
 NWAKU_ENTRYPOINT = "/usr/bin/wakunode --rpc-address=0.0.0.0 --metrics-server-address=0.0.0.0 --log-level=TRACE"
 GOWAKU_ENTRYPOINT = "/usr/bin/waku --rpc-address=0.0.0.0 --metrics-server-address=0.0.0.0"
-NOMOS_ENTRYPOINT = ["/usr/bin/nomos-node"]
+NOMOS_ENTRYPOINT = "/usr/bin/nomos-node"
+NOMOS_PORT_SHIFT_FLAG = "--ports-shift="
 NOMOS_CONTAINER_CONFIG_FILE_LOCATION = '/etc/nomos/config.yml'
 
 # Nomos Configuration
 NOMOS_IMAGE = "nomos"
-NOMOS_HTTP_PORT_ID = "rpc"
-NOMOS_HTTP_PORT = 8080
+NOMOS_RPC_PORT_PROTOCOL = "TCP"
+NOMOS_RPC_PORT_NUMBER = 8080
+NOMOS_LIBP2P_PORT_PROTOCOL = "TCP"
 NOMOS_LIBP2P_PORT_ID = "libp2p"
 NOMOS_LIBP2P_PORT = 3000
 NOMOS_SETUP_WAIT_TIME = "5"
@@ -79,6 +81,7 @@ GENNET_NODE_CONTAINER_KEY = "container_id"
 GENNET_STATIC_NODES_KEY = "static_nodes"
 GENNET_GOWAKU_IMAGE_VALUE = "go-waku"
 GENNET_NWAKU_IMAGE_VALUE = "nim-waku"
+GENNET_NOMOS_IMAGE_VALUE = "nomos"
 
 PEER_ID_KEY = "peer_id"
 IP_KEY = "ip_address"
@@ -107,6 +110,7 @@ NODE_BUILDERS_MODULE = "github.com/logos-co/wakurtosis/src/node_builders/node_bu
 WAKU_BUILDER_MODULE = "github.com/logos-co/wakurtosis/src/node_builders/types/waku_builder.star"
 NWAKU_BUILDER_MODULE = "github.com/logos-co/wakurtosis/src/node_builders/types/nwaku_builder.star"
 GOWAKU_BUILDER_MODULE = "github.com/logos-co/wakurtosis/src/node_builders/types/gowaku_builder.star"
+NOMOS_BUILDER_MODULE = "github.com/logos-co/wakurtosis/src/node_builders/types/nomos_builder.star"
 PROMETHEUS_MODULE = "github.com/logos-co/wakurtosis/src/monitoring/prometheus.star"
 GRAFANA_MODULE = "github.com/logos-co/wakurtosis/src/monitoring/grafana.star"
 ARGUMENT_PARSER_MODULE = "github.com/logos-co/wakurtosis/src/arguments_parser.star"
