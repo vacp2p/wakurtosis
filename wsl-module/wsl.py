@@ -419,31 +419,7 @@ def main():
     
     elapsed_s = time.time() - s_time
         
-    # Retrieve messages from every node and topic
-    # G_LOGGER.info('Retriving messages from the enclave ...')
-    # for node_idx, target in enumerate(targets):
-    #     node_address = 'http://%s/' %target
-        
-    #     for topic_idx, topic in enumerate(topics[node_idx]):
-    #         msg_cnt = get_all_messages_from_node_from_topic(node_address, topic)
-    #         msg_lost = topics_msg_cnt[topic] - msg_cnt
-    #         G_LOGGER.info('- Retrieved %d messages on topic %s from node %s. Lost %d message(s).' %(msg_cnt, topic, node_address, msg_lost))
-        
-    # Output
-    # summary = {
-    #     "end_ts" : time.time(),
-    #     "params" : config['general'],
-    #     "topics" : list(topics_msg_cnt.keys()),
-    #     "topics_msg_cnt" : topics_msg_cnt,
-    #     "simulation_time" : elapsed_s,
-    #     "total_messages" : len()
-    # }
-
-    # G_LOGGER.info('Simulation sumnmary: %s' %summary)
-
-    # with open('./summary.json', 'w') as summary_file:
-    #     summary_file.write(json.dumps(summary, indent=4))
-
+    # Save messages for further analysis
     with open('./messages.json', 'w') as f:
         f.write(json.dumps(msgs_dict, indent=4))
 
