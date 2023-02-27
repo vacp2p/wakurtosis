@@ -11,3 +11,7 @@ scrape_configs:
     file_sd_configs:
     - files:
       - '/tmp/targets.json'
+  - job_name: 'cadvisor'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['cadvisor:8080']
