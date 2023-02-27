@@ -14,7 +14,7 @@
     "num_partitions": 1,
     "num_subnets": 1,
     "container_size": "1",
-    "node_type_distribution": { "nwaku":100, "gowaku":0 },
+    "node_type_distribution": { "nwaku":100, "gowaku":0, "nomos":0 },
     "node_type": "desktop",
     "network_type": "newmanwattsstrogatz",
     "output_dir": "network_data",
