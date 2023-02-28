@@ -157,7 +157,6 @@ def fetch_cadvisor_stats_from_container(container_id, start_ts, end_ts):
     memory_usage = [] 
     network_usage = {'rx_mbytes' : [], 'tx_mbytes' : []}
     for stats_obj in stats_dict.values():
-        
         for data_point in stats_obj['stats']:
             
             # Only take into account data points wihtin the simulation time
