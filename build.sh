@@ -2,8 +2,10 @@
 sudo apt-get update
 sudo apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin
 
+apt-get install -y jq
+
 # Install the suitable kurtosis-cli
-kurtosis_version=0.66.2
+kurtosis_version=0.67.1
 echo "deb [trusted=yes] https://apt.fury.io/kurtosis-tech/ /" | sudo tee /etc/apt/sources.list.d/kurtosis.list
 sudo apt update
 sudo apt-mark unhold kurtosis-cli

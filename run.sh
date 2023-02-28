@@ -18,6 +18,36 @@ wakurtosis_config_file=$ARGS2
 echo "- Enclave name: " $enclave_name
 echo "- Configuration file: " $wakurtosis_config_file
 
+# Delete the enclave just in case
+echo -e "\nCleaning up Kurtosis environment "$enclave_name
+docker container stop cadvisor > /dev/null 2>&1
+docker container rm cadvisor > /dev/null 2>&1
+kurtosis enclave rm -f $enclave_name > /dev/null 2>&1
+# kurtosis clean -a > /dev/null 2>&1 we do not want to delete all enclaves, just the one we will execute
+
+# Delete previous logs
+echo -e "\Deleting previous logs in ${enclave_name}_logs"
+rm -rf ./${enclave_name}_logs > /dev/null 2>&1
+rm ./kurtosisrun_log.txt > /dev/null 2>&1
+
+# Preparing enclave
+echo "Preparing enclave..."
+kurtosis enclave add --name ${enclave_name}
+enclave_preffix="$(kurtosis enclave inspect --full-uuids $enclave_name | grep UUID: | awk '{print $2}')"
+echo "Enclave network: "$enclave_preffix
+
+# Get enclave last IP
+subnet="$(docker network inspect $enclave_preffix | jq -r '.[].IPAM.Config[0].Subnet')"
+echo "Enclave subnetork: $subnet"
+last_ip="$(ipcalc $subnet | grep HostMax | awk '{print $2}')"
+echo "cAdvisor IP: $last_ip"
+
+
+# Set up Cadvisor
+# docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev/disk/:/dev/disk:ro --volume=/sys:/sys:ro --volume=/etc/machine-id:/etc/machine-id:ro --publish=8080:8080 --detach=true --name=cadvisor --privileged --device=/dev/kmsg gcr.io/cadvisor/cadvisor
+docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev/disk/:/dev/disk:ro --volume=/sys:/sys:ro --volume=/etc/machine-id:/etc/machine-id:ro --publish=8080:8080 --detach=true --name=cadvisor --privileged --device=/dev/kmsg --network $enclave_preffix --ip=$last_ip gcr.io/cadvisor/cadvisor:v0.47.0
+
+
 # Delete topology
 sudo rm -rf ./config/topology_generated > /dev/null 2>&1
 
@@ -40,16 +70,6 @@ fi
 
 docker rm gennet-container > /dev/null 2>&1
 
-# Delete the enclave just in case
-echo -e "\nCleaning up Kurtosis environment "$enclave_name
-kurtosis enclave rm -f $enclave_name > /dev/null 2>&1
-kurtosis clean -a > /dev/null 2>&1
-
-# Delete previous logs
-echo -e "\Deleting previous logs in ${enclave_name}_logs"
-rm -rf ./${enclave_name}_logs > /dev/null 2>&1
-rm ./kurtosisrun_log.txt > /dev/null 2>&1
-
 # Create the new enclave and run the simulation
 jobs=$(cat config/${wakurtosis_config_file} | jq -r ".kurtosis.jobs")
 
@@ -64,7 +84,7 @@ wsl_service_name=$(kurtosis enclave inspect $enclave_name 2>/dev/null | grep wsl
 echo -e "\n--> To see simulation logs run: kurtosis service logs $enclave_name $wsl_service_name <--"
 
 # Fetch the Grafana address & port
-grafana_host=$(kurtosis enclave inspect $enclave_name 2>/dev/null | grep grafana- | awk '{print $6}')
+grafana_host=$(kurtosis enclave inspect $enclave_name | grep grafana | awk '{print $6}')
 echo -e "\n--> Statistics in Grafana server at http://$grafana_host/ <--"
 
 echo "Output of kurtosis run command written in kurtosisrun_log.txt"
@@ -78,7 +98,7 @@ cid_suffix="$(kurtosis enclave inspect --full-uuids $enclave_name | grep $wsl_se
 # Construct the fully qualified container name that kurtosis created
 cid="$enclave_preffix--user-service--$cid_suffix"
 
-# Wait for the container to halt; this will block 
+# Wait for the container to halt; this will block
 echo -e "Waiting for simulation to finish ..."
 status_code="$(docker container wait $cid)"
 
