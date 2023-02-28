@@ -74,7 +74,7 @@ def plot_figure(msg_propagation_times, cpu_usage, memory_usage, network_usage, s
     ax4.set_xticks([1, 2])
     ax4.set_xticklabels(['Received (Rx)', 'Sent (Tx)'])
     
-    fig.suptitle('Simulation Analisys \n(%d nodes, %d topic(s), Rate: %d msg/s, Time: %.2f s.)' %(simulation_summary['num_nodes'], \
+    fig.suptitle('Simulation Analysis \n(%d nodes, %d topic(s), Rate: %d msg/s, Time: %.2f s.)' %(simulation_summary['num_nodes'], \
     simulation_summary['num_topics'], simulation_config['wsl']['message_rate'], simulation_summary['simulation_time_ms'] / 1000.0, ), fontsize=20)
     
     plt.tight_layout()
