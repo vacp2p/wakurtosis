@@ -3,6 +3,7 @@ sudo apt-get update
 sudo apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin
 
 apt-get install -y jq
+apt-get install -y ipcalc
 
 # Install the suitable kurtosis-cli
 kurtosis_version=0.67.1
