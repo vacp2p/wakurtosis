@@ -2,11 +2,6 @@
 
 dir=$(pwd)
 
-# Set up Cadvisor
-# docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev/disk/:/dev/disk:ro --volume=/sys:/sys:ro --volume=/etc/machine-id:/etc/machine-id:ro --publish=8080:8080 --detach=true --name=cadvisor --privileged --device=/dev/kmsg gcr.io/cadvisor/cadvisor
-docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev/disk/:/dev/disk:ro --volume=/sys:/sys:ro --volume=/etc/machine-id:/etc/machine-id:ro --publish=8080:8080 --detach=true --name=cadvisor --privileged --device=/dev/kmsg gcr.io/cadvisor/cadvisor:v0.47.0 --storage_duration=24h
-docker start cadvisor > /dev/null 2>&1
-
 # Parse arg if any
 ARGS1=${1:-"wakurtosis"}
 ARGS2=${2:-"config.json"}
@@ -42,11 +37,10 @@ echo "Enclave subnetork: $subnet"
 last_ip="$(ipcalc $subnet | grep HostMax | awk '{print $2}')"
 echo "cAdvisor IP: $last_ip"
 
-
 # Set up Cadvisor
 # docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev/disk/:/dev/disk:ro --volume=/sys:/sys:ro --volume=/etc/machine-id:/etc/machine-id:ro --publish=8080:8080 --detach=true --name=cadvisor --privileged --device=/dev/kmsg gcr.io/cadvisor/cadvisor
-docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev/disk/:/dev/disk:ro --volume=/sys:/sys:ro --volume=/etc/machine-id:/etc/machine-id:ro --publish=8080:8080 --detach=true --name=cadvisor --privileged --device=/dev/kmsg --network $enclave_preffix --ip=$last_ip gcr.io/cadvisor/cadvisor:v0.47.0
-
+docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev/disk/:/dev/disk:ro --volume=/sys:/sys:ro --volume=/etc/machine-id:/etc/machine-id:ro --publish=8080:8080 --detach=true --name=cadvisor --privileged --device=/dev/kmsg --network $enclave_preffix --ip=$last_ip gcr.io/cadvisor/cadvisor:v0.47.0 --storage_duration=24h
+# docker start cadvisor > /dev/null 2>&1
 
 # Delete topology
 sudo rm -rf ./config/topology_generated > /dev/null 2>&1
