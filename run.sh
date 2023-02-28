@@ -4,7 +4,9 @@ dir=$(pwd)
 
 # Set up Cadvisor
 # docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev/disk/:/dev/disk:ro --volume=/sys:/sys:ro --volume=/etc/machine-id:/etc/machine-id:ro --publish=8080:8080 --detach=true --name=cadvisor --privileged --device=/dev/kmsg gcr.io/cadvisor/cadvisor
-docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev/disk/:/dev/disk:ro --volume=/sys:/sys:ro --volume=/etc/machine-id:/etc/machine-id:ro --publish=8080:8080 --detach=true --name=cadvisor --privileged --device=/dev/kmsg gcr.io/cadvisor/cadvisor:v0.47.0
+docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev/disk/:/dev/disk:ro --volume=/sys:/sys:ro --volume=/etc/machine-id:/etc/machine-id:ro --publish=8080:8080 --detach=true --name=cadvisor --privileged --device=/dev/kmsg gcr.io/cadvisor/cadvisor:v0.47.0 --storage_duration=24h
+docker start cadvisor > /dev/null 2>&1
+
 # Parse arg if any
 ARGS1=${1:-"wakurtosis"}
 ARGS2=${2:-"config.json"}
@@ -17,7 +19,7 @@ echo "- Enclave name: " $enclave_name
 echo "- Configuration file: " $wakurtosis_config_file
 
 # Delete topology
-rm -rf ./config/topology_generated > /dev/null 2>&1
+sudo rm -rf ./config/topology_generated > /dev/null 2>&1
 
 # Remove previous logs
 rm -rf ./$enclave_name_logs > /dev/null 2>&1
@@ -88,9 +90,16 @@ echo -e "Simulation ended with code $status_code Results in ./${enclave_name}_lo
 # docker cp "$cid:/wsl/summary.json" "./${enclave_name}_logs" > /dev/null 2>&1
 docker cp "$cid:/wsl/messages.json" "./${enclave_name}_logs"
 
+# Run analysis
+python3 analysis.py 
+echo -e "Analysis results in ./${enclave_name}_logs"
+
+# Stop cAdvisor
+docker stop cadvisor > /dev/null 2>&1
+
 # Stop and delete the enclave
-# kurtosis enclave stop $enclave_name > /dev/null 2>&1
-# kurtosis enclave rm -f $enclave_name > /dev/null 2>&1
-# echo "Enclave $enclave_name stopped and deleted."
+kurtosis enclave stop $enclave_name > /dev/null 2>&1
+kurtosis enclave rm -f $enclave_name > /dev/null 2>&1
+echo "Enclave $enclave_name stopped and deleted."
 
 echo "Done."
