@@ -5,6 +5,7 @@ GOWAKU_IMAGE = "gowaku"
 RPC_PORT_ID = "rpc"
 
 NODE_CONFIG_FILE_LOCATION = "github.com/logos-co/wakurtosis/config/topology_generated/"
+CONFIG_FILE_LOCATION = "github.com/logos-co/wakurtosis/config/"
 CONTAINER_NODE_CONFIG_FILE_LOCATION = "/node/configuration_file/"
 GENERAL_ENTRYPOINT = ["/bin/sh", "-c"]
 CONFIG_FILE_STARLARK_PARAMETER = "config_file"
@@ -92,10 +93,14 @@ WLS_SERVICE_NAME = "wls"
 WLS_CONFIG_PATH = "/wls/config"
 WLS_TARGETS_PATH = "/wls/targets"
 WLS_TOMLS_PATH = "/wls/tomls"
-WLS_CMD = ["python3", "wls.py"]
+WLS_TOPOLOGY_PATH = "/wls/network_topology"
+# WLS_CMD = ["python3", "wls.py"]
+WLS_CMD = ["/bin/bash"]
 
-CONTAINER_WLS_CONFIGURATION_FILE_NAME = "wls.yml"
-CONTAINER_TARGETS_FILE_NAME_WLS = "targets.json"
+
+CONTAINER_WLS_CONFIGURATION_FILE_NAME = "config.json"
+# CONTAINER_TARGETS_FILE_NAME_WLS = "targets.json"
+CONTAINER_TOPOLOGY_FILE_NAME_WLS = "network_data.json"
 
 # Waku RPC methods
 POST_RELAY_MESSAGE_METHOD = "post_waku_v2_relay_v1_message"

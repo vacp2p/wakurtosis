@@ -1,24 +1,19 @@
 #!/usr/bin/env python3
 """
 Description: Wakurtosis load simulator
-
 """
 
 """ Dependencies """
-import sys, logging, yaml, json, time, random, os, argparse, tomllib, glob, hashlib
+import sys, logging, json, time, random, os, argparse, tomllib, glob, hashlib
 import requests
 import rtnorm
-import nomos
-# from pathlib import Path
-# import numpy as np
-# import pandas as pd
-# import matplotlib.pyplot as plt
-# import cloudpickle as pickle
+
 
 """ Globals """
 G_APP_NAME = 'WLS'
 G_LOG_LEVEL = 'DEBUG'
-G_DEFAULT_CONFIG_FILE = './config/wls.yml'
+G_DEFAULT_CONFIG_FILE = './config/config.json'
+G_DEFAULT_TOPOLOGY_FILE = './network_topology/network_data.json'
 G_LOGGER = None
 
 """ Custom logging formatter """
@@ -47,7 +42,7 @@ def check_waku_node(node_address):
         'method': 'get_waku_v2_debug_v1_info',
         # 'method' : 'get_waku_v2_debug_v1_version',
         'id': 1,
-        'params' : []}
+        'params': []}
 
     G_LOGGER.info('Waku RPC: %s from %s' %(data['method'], node_address))
     
@@ -73,7 +68,7 @@ def get_waku_msgs(node_address, topic, cursor=None):
         'jsonrpc': '2.0',
         'method': 'get_waku_v2_store_v1_messages',
         'id': 1,
-        'params' : [topic, None, None, None, {"pageSize": 100, "cursor": cursor,"forward": True}]
+        'params': [topic, None, None, None, {"pageSize": 100, "cursor": cursor,"forward": True}]
     }
 
     G_LOGGER.debug('Waku RPC: %s from %s' %(data['method'], node_address))
@@ -277,49 +272,56 @@ def main():
     """ Parse command line args. """
     parser = argparse.ArgumentParser()
     parser.add_argument("-cfg", "--config_file", help="Config file", action="store_true", default=G_DEFAULT_CONFIG_FILE)
+    parser.add_argument("-t", "--topology_file", help="Topology file", action="store_true",
+                        default=G_DEFAULT_TOPOLOGY_FILE)
+
     args = parser.parse_args()
 
     config_file = args.config_file
+    topology_file = args.topology_file
         
     """ Load config file """
     try:
         with open(config_file, 'r') as f:
-            config = yaml.safe_load(f)
+            config = json.load(f)
     except Exception as e:
         G_LOGGER.error('%s: %s' % (e.__doc__, e))
         sys.exit()
     
     # Set loglevel from config
-    G_LOGGER.setLevel(config['general']['debug_level'])
-    handler.setLevel(config['general']['debug_level'])
+    wls_config = config['wls']
 
-    G_LOGGER.debug(config)
+    G_LOGGER.setLevel(wls_config['debug_level'])
+    handler.setLevel(wls_config['debug_level'])
+
+    G_LOGGER.debug(wls_config)
     G_LOGGER.info('Configuration loaded from %s' %config_file)
 
     # Set RPNG seed from config
     random.seed(config['general']['prng_seed'])
-    
-    """ Load targets """
+
+    """ Load topology """
     try:
-        with open(config['general']['targets_file'], 'r') as read_file:
-            targets = json.load(read_file)
+        with open(topology_file, 'r') as read_file:
+            topology = json.load(read_file)
     except Exception as e:
         G_LOGGER.error('%s: %s' % (e.__doc__, e))
         sys.exit()
 
-    if len(targets) == 0:
-        G_LOGGER.error('Cannot find valid targets. Aborting.')
+    if len(topology) == 0:
+        G_LOGGER.error('Cannot find valid topology. Aborting.')
         sys.exit(1)
 
-    G_LOGGER.debug(targets)
-    G_LOGGER.info('%d targets loaded' %len(targets))
+    G_LOGGER.debug(topology)
+    G_LOGGER.info('%d topology loaded' %len(topology))
     
     """ Check all nodes are reachable """
-    for i, target in enumerate(targets):
-        if not check_waku_node('http://%s/' %target):
-            G_LOGGER.error('Node %d (%s) is not online. Aborted.' %(i, target))
+    for node_key, node_info in topology.items():
+        node_address = node_info["ip_address"]+":"+node_info["ports"]["waku_rpc_"+node_key]
+        if not check_waku_node(f"http://{node_address}/"):
+            G_LOGGER.error(f"Node {node_key} is not online. Aborted.")
             sys.exit(1)
-    G_LOGGER.info('All %d Waku nodes are reachable.' %len(targets))
+    G_LOGGER.info(f"All {len(topology)} nodes are reachable.")
 
     """ Load Topics """
     topics = []
@@ -354,17 +356,17 @@ def main():
     G_LOGGER.info('Loaded nodes topics from toml files: %s' %topics_msg_cnt.keys())
 
     """ Define the subset of emitters """
-    num_emitters = int(len(targets) * config['general']['emitters_fraction'])
+    num_emitters = int(len(topology) * wls_config['emitters_fraction'])
     if num_emitters == 0:
         G_LOGGER.error('The number of emitters must be greater than zero. Try increasing the fraction of emitters.')
         sys.exit()
 
     """ NOTE: Emitters will only inject topics they are subscribed to """
-    emitters_indices = random.sample(range(len(targets)), num_emitters)
-    emitters = [targets[i] for i in emitters_indices]
+    emitters_indices = random.sample(range(len(topology)), num_emitters)
+    emitters = [topology[i] for i in emitters_indices]
     emitters_topics = [topics[i] for i in emitters_indices]
-    #  emitters = random.sample(targets, num_emitters)
-    G_LOGGER.info('Selected %d emitters out of %d total nodes' %(len(emitters), len(targets)))
+    #  emitters = random.sample(topology, num_emitters)
+    G_LOGGER.info('Selected %d emitters out of %d total nodes' %(len(emitters), len(topology)))
 
     """ Start simulation """
     s_time = time.time()
@@ -372,13 +374,13 @@ def main():
     next_time_to_msg = 0
     msgs_dict = {}
 
-    G_LOGGER.info('Starting a simulation of %d seconds ...' %config['general']['simulation_time'])
+    G_LOGGER.info('Starting a simulation of %d seconds ...' %wls_config['simulation_time'])
 
     while True:
         
         # Check end condition
         elapsed_s = time.time() - s_time
-        if  elapsed_s >= config['general']['simulation_time']:
+        if  elapsed_s >= wls_config['simulation_time']:
             G_LOGGER.info('Simulation ended. Sent %d messages in %ds.' %(len(msgs_dict), elapsed_s))
             break
 
@@ -401,10 +403,9 @@ def main():
         emitter_topic = random.choice(emitter_topics)
 
         G_LOGGER.info('Injecting message of topic %s to network through Waku node %s ...' %(emitter_topic, node_address))
-        
-        payload, size = make_payload_dist(dist_type=config['general']['dist_type'].lower(), min_size=config['general']['min_packet_size'], max_size=config['general']['max_packet_size'])
-        response, elapsed, waku_msg, ts = send_waku_msg(node_address, topic=emitter_topic, payload=payload, nonce=len(msgs_dict))
 
+        payload, size = make_payload_dist(dist_type=wls_config['dist_type'].lower(), min_size=wls_config['min_packet_size'], max_size=wls_config['max_packet_size'])
+        response, elapsed, waku_msg, ts = send_waku_msg(node_address, topic=emitter_topic, payload=payload, nonce=len(msgs_dict))
         if response['result']:
             msg_hash = hashlib.sha256(waku_msg.encode('utf-8')).hexdigest()
             if msg_hash in msgs_dict:
@@ -413,20 +414,21 @@ def main():
             msgs_dict[msg_hash] = {'ts' : ts, 'injection_point' : node_address, 'nonce' : len(msgs_dict), 'topic' : emitter_topic, 'payload' : payload, 'payload_size' : size}
         
         # Compute the time to next message
-        next_time_to_msg = get_next_time_to_msg(config['general']['inter_msg_type'], config['general']['msg_rate'], config['general']['simulation_time']) 
+        next_time_to_msg = get_next_time_to_msg(wls_config['inter_msg_type'], wls_config['msg_rate'], wls_config['simulation_time'])
         G_LOGGER.debug('Next message will happen in %d ms.' %(next_time_to_msg * 1000.0))
         
         last_msg_time = time.time()
     
     elapsed_s = time.time() - s_time
-        
+
     # Save messages for further analysis
     with open('./messages.json', 'w') as f:
         f.write(json.dumps(msgs_dict, indent=4))
 
     """ We are done """
     G_LOGGER.info('Ended')
-    
+
+
 if __name__ == "__main__":
     
     main()

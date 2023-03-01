@@ -5,22 +5,13 @@ vars = import_module("github.com/logos-co/wakurtosis/src/system_variables.star")
 files = import_module(vars.FILE_HELPERS_MODULE)
 templates = import_module(vars.TEMPLATES_MODULE)
 
-def create_config(plan, wls_config):
-    
-    # Traffic simulation parameters
-    wls_yml_template = templates.get_wls_template()
-
-    artifact_id = plan.render_templates(
-        config={
-            vars.CONTAINER_WLS_CONFIGURATION_FILE_NAME: struct(
-                template=wls_yml_template,
-                data=wls_config,
-            )
-        },
-        name="wls_config"
+def upload_config(plan, config_file):
+    config_artifact = plan.upload_files(
+        src=config_file,
+        name="config_file"
     )
-    
-    return artifact_id
+
+    return config_artifact
 
 def create_targets(plan, services):
     
@@ -44,27 +35,46 @@ def create_targets(plan, services):
 
     return artifact_id
 
-def init(plan, services, wls_config):
+def create_new_topology_information(plan, network_topology):
+    template = """
+        {{.information}}
+    """
+    info = {}
+    info["information"] = network_topology
+
+    artifact_id = plan.render_templates(
+        config={
+            vars.CONTAINER_TOPOLOGY_FILE_NAME_WLS: struct(
+                template=template,
+                data=info,
+            )
+        },
+        name="wls_topology"
+    )
+
+    return artifact_id
+
+
+def init(plan, network_topology, config_file):
     
     # Generate simulation config
-    wls_config = create_config(plan, wls_config)
+    config_artifact = upload_config(plan, config_file)
 
     tomls_artifact = plan.upload_files(
         src = vars.NODE_CONFIG_FILE_LOCATION,
         name = "tomls_artifact",
     )
 
-    # Create targets.json
-    wls_targets = create_targets(plan, services)
-
+    # Get complete network topology information
+    wls_topology = create_new_topology_information(plan, network_topology)
 
     add_service_config = ServiceConfig(
         image=vars.WLS_IMAGE,
         ports={},
         files={
-            vars.WLS_CONFIG_PATH: wls_config,
-            vars.WLS_TARGETS_PATH: wls_targets,
-            vars.WLS_TOMLS_PATH: tomls_artifact
+            vars.WLS_CONFIG_PATH: config_artifact,
+            vars.WLS_TOMLS_PATH: tomls_artifact,
+            vars.WLS_TOPOLOGY_PATH: wls_topology
         },
         cmd=vars.WLS_CMD
     )
