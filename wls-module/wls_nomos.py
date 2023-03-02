@@ -18,7 +18,7 @@ import nomos
 """ Globals """
 G_APP_NAME = 'WLS'
 G_LOG_LEVEL = 'DEBUG'
-G_DEFAULT_CONFIG_FILE = './config/wsl.yml'
+G_DEFAULT_CONFIG_FILE = './config/config.json'
 G_DEFAULT_TOPOLOGY_FILE = './tomls/network_data.json'
 G_LOGGER = None
 

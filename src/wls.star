@@ -40,7 +40,7 @@ def create_new_topology_information(plan, network_topology):
         {{.information}}
     """
     info = {}
-    info["information"] = network_topology
+    info["information"] = json.encode(network_topology)
 
     artifact_id = plan.render_templates(
         config={

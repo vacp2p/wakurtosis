@@ -54,7 +54,7 @@ def instantiate_services(plan, network_topology, testing):
                 "peer_id" : peer id of the node, as string,
                 "ip_address": ip of the container that has the node, as string
                 "ports": {
-                    "waku_rpc_node_0": (port_number, port_protocol)
+                    "rpc_node_0": (port_number, port_protocol)
                     "libp2p_node_0": (port_number, port_protocol),
                     "prometheus_node_0": (port_number, port_protocol)
                 }

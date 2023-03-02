@@ -314,59 +314,83 @@ def main():
 
     G_LOGGER.debug(topology)
     G_LOGGER.info('%d topology loaded' %len(topology))
-    
-    """ Check all nodes are reachable """
-    for node_key, node_info in topology.items():
-        node_address = node_info["ip_address"]+":"+node_info["ports"]["waku_rpc_"+node_key]
+
+
+    """ Check all nodes are reachable 
+    for node_key, node_info in topology["nodes"].items():
+        node_address = node_info["ip_address"]+":"+str(node_info["ports"]["rpc_"+node_key][0])
         if not check_waku_node(f"http://{node_address}/"):
             G_LOGGER.error(f"Node {node_key} is not online. Aborted.")
             sys.exit(1)
     G_LOGGER.info(f"All {len(topology)} nodes are reachable.")
-
-    """ Load Topics """
-    topics = []
-    try:
-        tomls = glob.glob('./tomls/*.toml')
-        tomls.sort()
-        for toml_file in tomls:
-            with open(toml_file, mode='rb') as read_file:
-                toml_config = tomllib.load(read_file)
-                node_topics_str = toml_config['topics']
-                
-                # Make sure we are tokenising the topics depending if Nim-Waku or Go-Waku
-                # Ideally we should also pass the network_data.json so we can check directly the type of node
-                if isinstance(node_topics_str, list):
-                
-                    # Parses Go Waku style topics list: ["topic_a", "topic_b"]
-                    topics.append(node_topics_str)
-                else:
-                    # Parses Nim Waku style topics list: "topic_a" "topic_b"
-                    topics.append(list(node_topics_str.split(' ')))
-
-    except Exception as e:
-        G_LOGGER.error('%s: %s' % (e.__doc__, e))
-        sys.exit()
+    """
 
     # Dictionary to count messages of every topic being sent
     topics_msg_cnt = {}
-    for node_topics in topics:
-        for topic in node_topics:
-            topics_msg_cnt[topic] = 0
+    """ Load Topics """
+    nodes = topology["nodes"]
+    for node, node_info in nodes.items():
+        try:
+            with open("tomls/"+node_info["node_config"],  mode='rb') as read_file:
+                toml_config = tomllib.load(read_file)
+                if node_info["image"] == "nim-waku":
+                    topics = list(toml_config["topics"].split(" "))
+                elif node_info["image"] == "go-waku":
+                    topics = toml_config["topics"]
+
+                for topic in topics:
+                    topics_msg_cnt[topic] = 0
+
+                nodes[node]["topics"] = topics
+        except Exception as e:
+            G_LOGGER.error('%s: %s' % (e.__doc__, e))
+            sys.exit()
+
+
+    # topics = []
+    #try:
+    #    # tomls = glob.glob('./tomls/*.toml')
+    #    tomls = glob.glob('topology_generated/*.toml')
+    #    tomls.sort()
+    #    for toml_file in tomls:
+    #        with open(toml_file, mode='rb') as read_file:
+    #            toml_config = tomllib.load(read_file)
+    #            node_topics_str = toml_config['topics']
+    #
+    #            # Make sure we are tokenising the topics depending if Nim-Waku or Go-Waku
+    #            # Ideally we should also pass the network_data.json so we can check directly the type of node
+    #            if isinstance(node_topics_str, list):
+    #
+    #                # Parses Go Waku style topics list: ["topic_a", "topic_b"]
+    #                topics.append(node_topics_str)
+    #            else:
+    #                # Parses Nim Waku style topics list: "topic_a" "topic_b"
+    #                topics.append(list(node_topics_str.split(' ')))
+    #
+    #    except Exception as e:
+    #        G_LOGGER.error('%s: %s' % (e.__doc__, e))
+    #        sys.exit()
+
+
     
     G_LOGGER.info('Loaded nodes topics from toml files: %s' %topics_msg_cnt.keys())
 
     """ Define the subset of emitters """
-    num_emitters = int(len(topology) * wls_config['emitters_fraction'])
+    num_emitters = int(len(nodes) * wls_config["emitters_fraction"])
+
     if num_emitters == 0:
         G_LOGGER.error('The number of emitters must be greater than zero. Try increasing the fraction of emitters.')
         sys.exit()
 
-    """ NOTE: Emitters will only inject topics they are subscribed to """
-    emitters_indices = random.sample(range(len(topology)), num_emitters)
-    emitters = [topology[i] for i in emitters_indices]
-    emitters_topics = [topics[i] for i in emitters_indices]
-    #  emitters = random.sample(topology, num_emitters)
-    G_LOGGER.info('Selected %d emitters out of %d total nodes' %(len(emitters), len(topology)))
+    random_emitters = dict(random.sample(list(nodes.items()), num_emitters))
+    G_LOGGER.info('Selected %d emitters out of %d total nodes' % (len(random_emitters), len(nodes)))
+
+    #""" NOTE: Emitters will only inject topics they are subscribed to """
+    #emitters_indices = random.sample(range(len(topology["nodes"])), num_emitters)
+    #emitters = [topology[i] for i in emitters_indices]
+    #emitters_topics = [topics[i] for i in emitters_indices]
+    ##  emitters = random.sample(topology, num_emitters)
+    #G_LOGGER.info('Selected %d emitters out of %d total nodes' %(len(emitters), len(topology)))
 
     """ Start simulation """
     s_time = time.time()
@@ -380,6 +404,7 @@ def main():
         
         # Check end condition
         elapsed_s = time.time() - s_time
+
         if  elapsed_s >= wls_config['simulation_time']:
             G_LOGGER.info('Simulation ended. Sent %d messages in %ds.' %(len(msgs_dict), elapsed_s))
             break
@@ -393,28 +418,29 @@ def main():
         G_LOGGER.debug('Time Δ: %.6f ms.' %((msg_elapsed - next_time_to_msg) * 1000.0))
         
         # Pick an emitter at random from the emitters list
-        emitter_idx = random.choice(emitters_indices)
+        # emitter_idx = random.choice(emitters_indices)
+        random_emitter, random_emitter_info = random.choice(list(random_emitters.items()))
         
-        node_address = 'http://%s/' %emitters[emitter_idx]
-
-        emitter_topics = emitters_topics[emitter_idx]
+        emitter_address = f"http://{random_emitter_info['ip_address']}:{random_emitter_info['ports']['rpc_'+random_emitter][0]}/"
+        emitter_topics = random_emitter_info["topics"]
 
         # Pick a topic at random from the topics supported by the emitter
         emitter_topic = random.choice(emitter_topics)
 
-        G_LOGGER.info('Injecting message of topic %s to network through Waku node %s ...' %(emitter_topic, node_address))
+        G_LOGGER.info('Injecting message of topic %s to network through Waku node %s ...' %(emitter_topic, emitter_address))
 
         payload, size = make_payload_dist(dist_type=wls_config['dist_type'].lower(), min_size=wls_config['min_packet_size'], max_size=wls_config['max_packet_size'])
-        response, elapsed, waku_msg, ts = send_waku_msg(node_address, topic=emitter_topic, payload=payload, nonce=len(msgs_dict))
+        response, elapsed, waku_msg, ts = send_waku_msg(emitter_address, topic=emitter_topic, payload=payload, nonce=len(msgs_dict))
+
         if response['result']:
             msg_hash = hashlib.sha256(waku_msg.encode('utf-8')).hexdigest()
             if msg_hash in msgs_dict:
                 G_LOGGER.error('Hash collision. %s already exists in dictionary' %msg_hash)
                 continue
-            msgs_dict[msg_hash] = {'ts' : ts, 'injection_point' : node_address, 'nonce' : len(msgs_dict), 'topic' : emitter_topic, 'payload' : payload, 'payload_size' : size}
+            msgs_dict[msg_hash] = {'ts' : ts, 'injection_point' : emitter_address, 'nonce' : len(msgs_dict), 'topic' : emitter_topic, 'payload' : payload, 'payload_size' : size}
         
         # Compute the time to next message
-        next_time_to_msg = get_next_time_to_msg(wls_config['inter_msg_type'], wls_config['msg_rate'], wls_config['simulation_time'])
+        next_time_to_msg = get_next_time_to_msg(wls_config['inter_msg_type'], wls_config['message_rate'], wls_config['simulation_time'])
         G_LOGGER.debug('Next message will happen in %d ms.' %(next_time_to_msg * 1000.0))
         
         last_msg_time = time.time()
