@@ -141,7 +141,7 @@ def generate_newmanwattsstrogatz_graph(ctx):
     fanout = ctx.params["fanout"]
     return nx.newman_watts_strogatz_graph(n, fanout, 0.5)
 
-# |G| = n (if odd) or n+1 (if even)
+# |G| = n (if odd); n+1 (if even)
 def generate_barbell_graph(ctx):
     n = ctx.params["num_nodes"]
     return nx.barbell_graph(int(n / 2), 1)
@@ -154,19 +154,17 @@ def generate_balanced_tree(ctx):
     return nx.balanced_tree(fanout, height)
 
 # nomostree is a balanced binary tree with even number of leaves
-# |G| == n if n is odd; n+1 if n is even
+# |G| = n (if odd); n+1 (if even)
 def generate_nomos_tree(ctx):
     n = ctx.params["num_nodes"]
     fanout = ctx.params["fanout"]
-    # nomos currently support only binary trees
+    # nomos currently insists on binary trees
     assert(fanout == 2)             
     height = int(math.log(n) / math.log(fanout))
     G = nx.balanced_tree(fanout, height)
-    #return G
     i, diff = 0, G.number_of_nodes() - n
     leaves = [x for x in G.nodes() if G.degree(x) == 1]
     nleaves = len(leaves)
-    #print(G.number_of_nodes(), n, diff, nleaves) 
     if (nleaves - diff) % 2 != 0 :
         diff -= 1 
     for node in leaves :
@@ -174,7 +172,6 @@ def generate_nomos_tree(ctx):
             break
         G.remove_node(node)
         i += 1
-    #draw(ctx.params["output_dir"], G)
     G = nx.convert_node_labels_to_integers(G)
     return G
 
