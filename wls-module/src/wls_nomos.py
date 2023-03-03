@@ -5,9 +5,7 @@ Description: Wakurtosis load simulator
 """
 
 """ Dependencies """
-import sys, logging, yaml, json, random, os, argparse, tomllib, glob
-import requests
-import rtnorm
+import sys, logging, yaml, json, random, argparse
 import nomos
 # from pathlib import Path
 # import numpy as np
