@@ -315,16 +315,6 @@ def main():
     G_LOGGER.debug(topology)
     G_LOGGER.info('%d topology loaded' %len(topology))
 
-
-    """ Check all nodes are reachable 
-    for node_key, node_info in topology["nodes"].items():
-        node_address = node_info["ip_address"]+":"+str(node_info["ports"]["rpc_"+node_key][0])
-        if not check_waku_node(f"http://{node_address}/"):
-            G_LOGGER.error(f"Node {node_key} is not online. Aborted.")
-            sys.exit(1)
-    G_LOGGER.info(f"All {len(topology)} nodes are reachable.")
-    """
-
     # Dictionary to count messages of every topic being sent
     topics_msg_cnt = {}
     """ Load Topics """
@@ -341,37 +331,11 @@ def main():
                 for topic in topics:
                     topics_msg_cnt[topic] = 0
 
+                # Load topics into topology for easier access
                 nodes[node]["topics"] = topics
         except Exception as e:
             G_LOGGER.error('%s: %s' % (e.__doc__, e))
             sys.exit()
-
-
-    # topics = []
-    #try:
-    #    # tomls = glob.glob('./tomls/*.toml')
-    #    tomls = glob.glob('topology_generated/*.toml')
-    #    tomls.sort()
-    #    for toml_file in tomls:
-    #        with open(toml_file, mode='rb') as read_file:
-    #            toml_config = tomllib.load(read_file)
-    #            node_topics_str = toml_config['topics']
-    #
-    #            # Make sure we are tokenising the topics depending if Nim-Waku or Go-Waku
-    #            # Ideally we should also pass the network_data.json so we can check directly the type of node
-    #            if isinstance(node_topics_str, list):
-    #
-    #                # Parses Go Waku style topics list: ["topic_a", "topic_b"]
-    #                topics.append(node_topics_str)
-    #            else:
-    #                # Parses Nim Waku style topics list: "topic_a" "topic_b"
-    #                topics.append(list(node_topics_str.split(' ')))
-    #
-    #    except Exception as e:
-    #        G_LOGGER.error('%s: %s' % (e.__doc__, e))
-    #        sys.exit()
-
-
     
     G_LOGGER.info('Loaded nodes topics from toml files: %s' %topics_msg_cnt.keys())
 
@@ -385,13 +349,6 @@ def main():
     random_emitters = dict(random.sample(list(nodes.items()), num_emitters))
     G_LOGGER.info('Selected %d emitters out of %d total nodes' % (len(random_emitters), len(nodes)))
 
-    #""" NOTE: Emitters will only inject topics they are subscribed to """
-    #emitters_indices = random.sample(range(len(topology["nodes"])), num_emitters)
-    #emitters = [topology[i] for i in emitters_indices]
-    #emitters_topics = [topics[i] for i in emitters_indices]
-    ##  emitters = random.sample(topology, num_emitters)
-    #G_LOGGER.info('Selected %d emitters out of %d total nodes' %(len(emitters), len(topology)))
-
     """ Start simulation """
     s_time = time.time()
     last_msg_time = 0
@@ -401,7 +358,6 @@ def main():
     G_LOGGER.info('Starting a simulation of %d seconds ...' %wls_config['simulation_time'])
 
     while True:
-        
         # Check end condition
         elapsed_s = time.time() - s_time
 

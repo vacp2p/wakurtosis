@@ -9,11 +9,11 @@
     "interconnection_batch": 10
   },
   "gennet": {
-    "num_nodes": 3,
+    "num_nodes": 10,
     "num_topics": 1,
     "num_partitions": 1,
     "num_subnets": 1,
-    "container_size": "1",
+    "container_size": "3",
     "node_type_distribution": { "nwaku":100, "gowaku":0, "nomos":0 },
     "node_type": "desktop",
     "network_type": "newmanwattsstrogatz",
