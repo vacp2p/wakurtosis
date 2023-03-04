@@ -82,4 +82,3 @@ def get_next_time_to_msg(inter_msg_type, msg_rate, simulation_time):
 
     G_LOGGER.error('%s is not a valid inter_msg_type. Aborting.' % inter_msg_type)
     sys.exit()
-

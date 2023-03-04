@@ -37,3 +37,12 @@ def load_topology(topology_file):
     G_LOGGER.info('%d topology loaded' % len(topology))
 
     return topology
+
+
+def save_messages_to_json(msgs_dict):
+    # Save messages for further analysis
+    with open('./messages.json', 'w') as f:
+        f.write(json.dumps(msgs_dict, indent=4))
+
+    """ We are done """
+    G_LOGGER.info('Ended')
