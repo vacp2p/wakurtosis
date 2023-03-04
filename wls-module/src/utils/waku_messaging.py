@@ -6,9 +6,7 @@ import sys
 import random
 
 # Project Imports
-import logger
-
-G_LOGGER, handler = logger.innit_logging()
+from . import wls_logger
 
 
 def _poisson_interval(rate):
@@ -41,7 +39,7 @@ def _create_waku_rpc_data(topic, waku_msg, node_address):
         'id': 1,
         'params': [topic, waku_msg]}
 
-    G_LOGGER.debug(f"Waku RPC: {data['method']} from {node_address} Topic: {topic}")
+    wls_logger.G_LOGGER.debug(f"Waku RPC: {data['method']} from {node_address} Topic: {topic}")
 
     return data
 
@@ -58,7 +56,7 @@ def _send_waku_rpc(data, node_address):
 
     response_obj = response.json()
 
-    G_LOGGER.debug(f"Response from {node_address}: {response_obj} [{elapsed_ms:.4f} ms.]")
+    wls_logger.G_LOGGER.debug(f"Response from {node_address}: {response_obj} [{elapsed_ms:.4f} ms.]")
 
     return response_obj, elapsed_ms
 
@@ -80,5 +78,5 @@ def get_next_time_to_msg(inter_msg_type, msg_rate, simulation_time):
     if inter_msg_type == 'uniform':
         return simulation_time / msg_rate
 
-    G_LOGGER.error('%s is not a valid inter_msg_type. Aborting.' % inter_msg_type)
+    wls_logger.G_LOGGER.error('%s is not a valid inter_msg_type. Aborting.' % inter_msg_type)
     sys.exit()

@@ -7,15 +7,16 @@ import time
 import tomllib
 
 # Project Imports
-from utils import logger
+from utils import wls_logger
 from utils import waku_messaging
 from utils import payloads
 from utils import files
 
 """ Globals """
 G_DEFAULT_CONFIG_FILE = './config/config.json'
+# G_DEFAULT_CONFIG_FILE = 'config.json'
 G_DEFAULT_TOPOLOGY_FILE = './network_topology/network_data.json'
-G_LOGGER, handler = logger.innit_logging()
+# G_DEFAULT_TOPOLOGY_FILE = 'topology_generated/network_data.json'
 
 
 def parse_cli():
@@ -46,10 +47,10 @@ def load_topics_into_topology(topology):
                 # Load topics into topology for easier access
                 nodes[node]["topics"] = topics
         except Exception as e:
-            G_LOGGER.error('%s: %s' % (e.__doc__, e))
+            wls_logger.G_LOGGER.error('%s: %s' % (e.__doc__, e))
             sys.exit()
 
-    G_LOGGER.info('Loaded nodes topics from toml files')
+    wls_logger.G_LOGGER.info('Loaded nodes topics from toml files')
 
 
 def get_random_emitters(topology, wls_config):
@@ -58,13 +59,13 @@ def get_random_emitters(topology, wls_config):
     num_emitters = int(len(nodes) * wls_config["emitters_fraction"])
 
     if num_emitters == 0:
-        G_LOGGER.error(
+        wls_logger.G_LOGGER.error(
             'The number of emitters must be greater than zero. '
             'Try increasing the fraction of emitters.')
         sys.exit()
 
     random_emitters = dict(random.sample(list(nodes.items()), num_emitters))
-    G_LOGGER.info('Selected %d emitters out of %d total nodes' % (len(random_emitters), len(nodes)))
+    wls_logger.G_LOGGER.info('Selected %d emitters out of %d total nodes' % (len(random_emitters), len(nodes)))
 
     return random_emitters
 
@@ -74,7 +75,7 @@ def _is_simulation_finished(start_time, wls_config, msgs_dict):
     elapsed_s = time.time() - start_time
 
     if elapsed_s >= wls_config['simulation_time']:
-        G_LOGGER.info(f"Simulation ended. Sent {len(msgs_dict)} messages in {elapsed_s}.")
+        wls_logger.G_LOGGER.info(f"Simulation ended. Sent {len(msgs_dict)} messages in {elapsed_s}.")
         return True
 
     return False
@@ -89,7 +90,7 @@ def _time_to_send_next_message(last_msg_time, next_time_to_msg):
     if msg_elapsed <= next_time_to_msg:
         return False
 
-    G_LOGGER.debug(f"Time Δ: {(msg_elapsed - next_time_to_msg) * 1000.0:6f}ms.")
+    wls_logger.G_LOGGER.debug(f"Time Δ: {(msg_elapsed - next_time_to_msg) * 1000.0:6f}ms.")
 
     return True
 
@@ -103,7 +104,7 @@ def _select_emitter_and_topic(random_emitters):
     # Pick a topic at random from the topics supported by the emitter
     emitter_topic = random.choice(emitter_topics)
 
-    G_LOGGER.info(f"Injecting message of topic {emitter_topic} to network "
+    wls_logger.G_LOGGER.info(f"Injecting message of topic {emitter_topic} to network "
                   f"through Waku node {emitter_address} ...")
 
     return emitter_address, emitter_topic
@@ -122,7 +123,7 @@ def _inyect_message(emitter_address, emitter_topic, msgs_dict, wls_config):
     if response['result']:
         msg_hash = hashlib.sha256(waku_msg.encode('utf-8')).hexdigest()
         if msg_hash in msgs_dict:
-            G_LOGGER.error(f"Hash collision. {msg_hash} already exists in dictionary")
+            wls_logger.G_LOGGER.error(f"Hash collision. {msg_hash} already exists in dictionary")
             raise RuntimeWarning
 
         msgs_dict[msg_hash] = {'ts': ts, 'injection_point': emitter_address,
@@ -137,7 +138,7 @@ def start_traffic_inyection(wls_config, random_emitters):
     next_time_to_msg = 0
     msgs_dict = {}
 
-    G_LOGGER.info(f"Starting a simulation of {wls_config['simulation_time']} seconds...")
+    wls_logger.G_LOGGER.info(f"Starting a simulation of {wls_config['simulation_time']} seconds...")
 
     while True:
         if _is_simulation_finished(start_time, wls_config, msgs_dict):
@@ -157,7 +158,7 @@ def start_traffic_inyection(wls_config, random_emitters):
         next_time_to_msg = waku_messaging.get_next_time_to_msg(wls_config['inter_msg_type'],
                                                                wls_config['message_rate'],
                                                                wls_config['simulation_time'])
-        G_LOGGER.debug('Next message will happen in %d ms.' % (next_time_to_msg * 1000.0))
+        wls_logger.G_LOGGER.debug('Next message will happen in %d ms.' % (next_time_to_msg * 1000.0))
 
         last_msg_time = time.time()
 
@@ -175,7 +176,7 @@ def main():
     # Set loglevel from config
     wls_config = config['wls']
 
-    logger.configure_logging(G_LOGGER, handler, wls_config, config_file)
+    wls_logger.configure_logging(wls_logger.G_LOGGER, wls_logger.handler, wls_config, config_file)
 
     # Set RPNG seed from config
     random.seed(config['general']['prng_seed'])

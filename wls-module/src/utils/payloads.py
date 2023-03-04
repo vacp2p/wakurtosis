@@ -2,22 +2,20 @@
 import random
 
 # Project Imports
-import logger
-import rtnorm
-
-G_LOGGER, handler = logger.innit_logging()
+from . import wls_logger
+from . import rtnorm
 
 
 def _make_payload(size):
     payload = hex(random.getrandbits(4 * size))
-    G_LOGGER.debug('Payload of size %d bytes: %s' % (size, payload))
+    wls_logger.G_LOGGER.debug('Payload of size %d bytes: %s' % (size, payload))
     return payload
 
 
 def make_payload_dist(dist_type, min_size, max_size):
     # Check if min and max packet sizes are the same
     if min_size == max_size:
-        G_LOGGER.warning('Packet size is constant: min_size=max_size=%d' % min_size)
+        wls_logger.G_LOGGER.warning('Packet size is constant: min_size=max_size=%d' % min_size)
         return _make_payload(min_size), min_size
 
     # Payload sizes are even integers uniformly distributed in [min_size, max_size]
@@ -42,6 +40,6 @@ def make_payload_dist(dist_type, min_size, max_size):
 
         return _make_payload(size), size
 
-    G_LOGGER.error('Unknown distribution type %s')
+    wls_logger.G_LOGGER.error('Unknown distribution type %s')
 
     return '0x00', 0

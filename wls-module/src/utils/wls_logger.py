@@ -41,5 +41,4 @@ def configure_logging(G_LOGGER, handler, wls_config, config_file):
     G_LOGGER.info('Configuration loaded from %s' % config_file)
 
 
-
-
+G_LOGGER, handler = innit_logging()

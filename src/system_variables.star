@@ -94,7 +94,7 @@ WLS_CONFIG_PATH = "/wls/config"
 WLS_TARGETS_PATH = "/wls/targets"
 WLS_TOMLS_PATH = "/wls/tomls"
 WLS_TOPOLOGY_PATH = "/wls/network_topology"
-WLS_CMD = ["python3", "wls.py"]
+WLS_CMD = ["python3", "src/wls.py"]
 
 
 CONTAINER_WLS_CONFIGURATION_FILE_NAME = "config.json"
