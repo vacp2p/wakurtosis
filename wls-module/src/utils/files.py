@@ -27,10 +27,6 @@ def load_topology(topology_file):
         wls_logger.G_LOGGER.error('%s: %s' % (e.__doc__, e))
         sys.exit()
 
-    if len(topology) == 0:
-        wls_logger.G_LOGGER.error('Cannot find valid topology. Aborting.')
-        sys.exit(1)
-
     wls_logger.G_LOGGER.debug(topology)
     wls_logger.G_LOGGER.info('Topology loaded')
 
