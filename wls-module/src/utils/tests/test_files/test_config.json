@@ -1,0 +1,8 @@
+{
+  "general":{
+    "prng_seed" : 1234
+  },
+  "kurtosis": {
+    "enclave_name": "test"
+  }
+}

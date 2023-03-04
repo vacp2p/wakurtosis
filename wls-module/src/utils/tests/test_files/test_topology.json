@@ -1,0 +1,18 @@
+{
+  "containers": {
+    "containers_0": [
+      "node_0"
+    ]
+  },
+  "nodes": {
+    "node_0": {
+      "static_nodes": [],
+      "subnetwork": "subnetwork_0",
+      "image": "nim-waku",
+      "node_config": "node_0.toml",
+      "node_log": "node_0.log",
+      "port_shift": 0,
+      "container_id": "containers_0"
+    }
+  }
+}
