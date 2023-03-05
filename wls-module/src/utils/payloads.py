@@ -2,8 +2,8 @@
 import random
 
 # Project Imports
-import wls_logger
-import rtnorm
+from src.utils import wls_logger
+from src.utils import rtnorm
 
 
 def _make_payload(bytes_size):
