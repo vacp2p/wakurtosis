@@ -2,7 +2,7 @@ import json
 import unittest
 import os
 
-from .. import files
+from src.utils import files
 
 
 class TestFiles(unittest.TestCase):

@@ -3,7 +3,7 @@ import json
 import sys
 
 # Project Imports
-from . import wls_logger
+from src.utils import wls_logger
 
 
 def load_config_file(config_file):
