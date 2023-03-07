@@ -32,14 +32,14 @@ enclave_preffix="$(kurtosis enclave inspect --full-uuids $enclave_name | grep UU
 echo "Enclave network: "$enclave_preffix
 
 # Get enclave last IP
-subnet="$(docker network inspect $enclave_preffix | jq -r '.[].IPAM.Config[0].Subnet')"
-echo "Enclave subnetork: $subnet"
-last_ip="$(ipcalc $subnet | grep HostMax | awk '{print $2}')"
-echo "cAdvisor IP: $last_ip"
+# subnet="$(docker network inspect $enclave_preffix | jq -r '.[].IPAM.Config[0].Subnet')"
+# echo "Enclave subnetork: $subnet"
+# last_ip="$(ipcalc $subnet | grep HostMax | awk '{print $2}')"
+# echo "cAdvisor IP: $last_ip"
 
 # Set up Cadvisor
 # docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev/disk/:/dev/disk:ro --volume=/sys:/sys:ro --volume=/etc/machine-id:/etc/machine-id:ro --publish=8080:8080 --detach=true --name=cadvisor --privileged --device=/dev/kmsg gcr.io/cadvisor/cadvisor
-docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev/disk/:/dev/disk:ro --volume=/sys:/sys:ro --volume=/etc/machine-id:/etc/machine-id:ro --publish=8080:8080 --detach=true --name=cadvisor --privileged --device=/dev/kmsg --network $enclave_preffix --ip=$last_ip gcr.io/cadvisor/cadvisor:v0.47.0 --storage_duration=24h
+# docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev/disk/:/dev/disk:ro --volume=/sys:/sys:ro --volume=/etc/machine-id:/etc/machine-id:ro --publish=8080:8080 --detach=true --name=cadvisor --privileged --device=/dev/kmsg --network $enclave_preffix --ip=$last_ip gcr.io/cadvisor/cadvisor:v0.47.0 --storage_duration=24h
 # docker start cadvisor > /dev/null 2>&1
 
 # Delete topology
@@ -63,6 +63,11 @@ then
 fi
 
 docker rm gennet-container > /dev/null 2>&1
+
+# Start monitoring Docker stats
+echo -e "\nStarting monitoring ..."
+nohup python3 ./monitor.py &
+monitor_pid=$!
 
 # Create the new enclave and run the simulation
 jobs=$(cat config/${wakurtosis_config_file} | jq -r ".kurtosis.jobs")
@@ -104,16 +109,20 @@ echo -e "Simulation ended with code $status_code Results in ./${enclave_name}_lo
 # docker cp "$cid:/wsl/summary.json" "./${enclave_name}_logs" > /dev/null 2>&1
 docker cp "$cid:/wsl/messages.json" "./${enclave_name}_logs"
 
+# Wait for metrics to finish
+echo -e "Waiting monitoring to finish ..."
+wait $monitor_pid
+
 # Run analysis
 python3 analysis.py 
 echo -e "Analysis results in ./${enclave_name}_logs"
 
 # Stop cAdvisor
-docker stop cadvisor > /dev/null 2>&1
+# docker stop cadvisor > /dev/null 2>&1
 
 # Stop and delete the enclave
-kurtosis enclave stop $enclave_name > /dev/null 2>&1
-kurtosis enclave rm -f $enclave_name > /dev/null 2>&1
-echo "Enclave $enclave_name stopped and deleted."
+# kurtosis enclave stop $enclave_name > /dev/null 2>&1
+# kurtosis enclave rm -f $enclave_name > /dev/null 2>&1
+# echo "Enclave $enclave_name stopped and deleted."
 
 echo "Done."
