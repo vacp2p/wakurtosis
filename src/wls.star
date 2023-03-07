@@ -55,6 +55,16 @@ def create_new_topology_information(plan, network_topology):
     return artifact_id
 
 
+def create_cmd(config_file):
+    config_file_name = config_file.split("/")[-1]
+
+    config_file = vars.WLS_CONFIG_FILE_FLAG + " " + \
+                  vars.WLS_CONFIG_PATH + config_file_name
+    topology_file = vars.WLS_TOPOLOGY_FILE_FLAG + " " + \
+                    vars.WLS_TOPOLOGY_PATH + vars.CONTAINER_TOPOLOGY_FILE_NAME_WLS
+
+    return config_file + " " + topology_file
+
 def init(plan, network_topology, config_file):
     
     # Generate simulation config
@@ -68,6 +78,8 @@ def init(plan, network_topology, config_file):
     # Get complete network topology information
     wls_topology = create_new_topology_information(plan, network_topology)
 
+    wls_cmd = create_cmd(config_file)
+
     add_service_config = ServiceConfig(
         image=vars.WLS_IMAGE,
         ports={},
@@ -76,7 +88,7 @@ def init(plan, network_topology, config_file):
             vars.WLS_TOMLS_PATH: tomls_artifact,
             vars.WLS_TOPOLOGY_PATH: wls_topology
         },
-        cmd=vars.WLS_CMD
+        cmd=wls_cmd
     )
     wls_service = plan.add_service(
         service_name=vars.WLS_SERVICE_NAME,
@@ -84,4 +96,3 @@ def init(plan, network_topology, config_file):
     )
 
     return wls_service
-

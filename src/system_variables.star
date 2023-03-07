@@ -90,15 +90,15 @@ PORTS_KEY = "ports"
 # WLS Configuration
 WLS_IMAGE = "wls:0.0.1"
 WLS_SERVICE_NAME = "wls"
-WLS_CONFIG_PATH = "/wls/config"
+WLS_CONFIG_PATH = "/wls/config/"
 WLS_TARGETS_PATH = "/wls/targets"
 WLS_TOMLS_PATH = "/wls/tomls"
 WLS_TOPOLOGY_PATH = "/wls/network_topology"
-WLS_CMD = ["python3", "src/wls.py"]
+WLS_CONFIG_FILE_FLAG = "--config-file"
+WLS_TOPOLOGY_FILE_FLAG = "--topology-file"
 
 
 CONTAINER_WLS_CONFIGURATION_FILE_NAME = "config.json"
-# CONTAINER_TARGETS_FILE_NAME_WLS = "targets.json"
 CONTAINER_TOPOLOGY_FILE_NAME_WLS = "network_data.json"
 
 # Waku RPC methods

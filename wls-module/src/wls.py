@@ -7,29 +7,41 @@ import time
 import tomllib
 
 # Project Imports
-from utils import wls_logger
-from utils import waku_messaging
-from utils import payloads
-from utils import files
+from .utils import wls_logger
+from .utils import waku_messaging
+from .utils import payloads
+from .utils import files
 
 """ Globals """
-G_DEFAULT_CONFIG_FILE = './config/config.json'
-# G_DEFAULT_CONFIG_FILE = 'config.json'
-G_DEFAULT_TOPOLOGY_FILE = './network_topology/network_data.json'
-# G_DEFAULT_TOPOLOGY_FILE = 'topology_generated/network_data.json'
+G_DEFAULT_CONFIG_FILE = 'config.json'
+G_DEFAULT_TOPOLOGY_FILE = 'topology_generated/network_data.json'
 
 
-def parse_cli():
+def parse_cli(args):
     """ Parse command line args. """
     parser = argparse.ArgumentParser()
-    parser.add_argument("-cfg", "--config_file", help="Config file", action="store_true",
+    parser.add_argument("-cfg", "--config_file", type=str, help="Config file",
                         default=G_DEFAULT_CONFIG_FILE)
-    parser.add_argument("-t", "--topology_file", help="Topology file", action="store_true",
+    parser.add_argument("-t", "--topology_file", type=str, help="Topology file",
                         default=G_DEFAULT_TOPOLOGY_FILE)
 
-    args = parser.parse_args()
+    parsed_args = parser.parse_args(args)
 
-    return args
+    return parsed_args
+
+
+def _load_topics(node_info, nodes, node):
+    topics = None
+    with open("tomls/" + node_info["node_config"], mode='rb') as read_file:
+        toml_config = tomllib.load(read_file)
+        if node_info["image"] == "nim-waku":
+            topics = list(toml_config["topics"].split(" "))
+        elif node_info["image"] == "go-waku":
+            topics = toml_config["topics"]
+        else:
+            raise ValueError("Unknown image type")
+    # Load topics into topology for easier access
+    nodes[node]["topics"] = topics
 
 
 def load_topics_into_topology(topology):
@@ -37,16 +49,8 @@ def load_topics_into_topology(topology):
     nodes = topology["nodes"]
     for node, node_info in nodes.items():
         try:
-            with open("tomls/" + node_info["node_config"], mode='rb') as read_file:
-                toml_config = tomllib.load(read_file)
-                if node_info["image"] == "nim-waku":
-                    topics = list(toml_config["topics"].split(" "))
-                elif node_info["image"] == "go-waku":
-                    topics = toml_config["topics"]
-
-                # Load topics into topology for easier access
-                nodes[node]["topics"] = topics
-        except Exception as e:
+            _load_topics(node_info, nodes, node)
+        except ValueError as e:
             wls_logger.G_LOGGER.error('%s: %s' % (e.__doc__, e))
             sys.exit()
 
@@ -58,10 +62,9 @@ def get_random_emitters(topology, wls_config):
     """ Define the subset of emitters """
     num_emitters = int(len(nodes) * wls_config["emitters_fraction"])
 
-    if num_emitters == 0:
+    if num_emitters == 0 or num_emitters > len(nodes):
         wls_logger.G_LOGGER.error(
-            'The number of emitters must be greater than zero. '
-            'Try increasing the fraction of emitters.')
+            'The number of emitters must be greater than zero and less or equals than one.')
         sys.exit()
 
     random_emitters = dict(random.sample(list(nodes.items()), num_emitters))
@@ -95,7 +98,7 @@ def _time_to_send_next_message(last_msg_time, next_time_to_msg):
     return True
 
 
-def _select_emitter_and_topic(random_emitters):
+def _select_emitter_with_topic(random_emitters):
     # Pick an emitter at random from the emitters list
     random_emitter, random_emitter_info = random.choice(list(random_emitters.items()))
     emitter_address = f"http://{random_emitter_info['ip_address']}:" \
@@ -110,7 +113,7 @@ def _select_emitter_and_topic(random_emitters):
     return emitter_address, emitter_topic
 
 
-def _inyect_message(emitter_address, emitter_topic, msgs_dict, wls_config):
+def _inject_message(emitter_address, emitter_topic, msgs_dict, wls_config):
     payload, size = payloads.make_payload_dist(dist_type=wls_config['dist_type'].lower(),
                                                min_size=wls_config['min_packet_size'],
                                                max_size=wls_config['max_packet_size'])
@@ -124,14 +127,14 @@ def _inyect_message(emitter_address, emitter_topic, msgs_dict, wls_config):
         msg_hash = hashlib.sha256(waku_msg.encode('utf-8')).hexdigest()
         if msg_hash in msgs_dict:
             wls_logger.G_LOGGER.error(f"Hash collision. {msg_hash} already exists in dictionary")
-            raise RuntimeWarning
+            return
 
         msgs_dict[msg_hash] = {'ts': ts, 'injection_point': emitter_address,
                                'nonce': len(msgs_dict), 'topic': emitter_topic,
                                'payload': payload, 'payload_size': size}
 
 
-def start_traffic_inyection(wls_config, random_emitters):
+def start_traffic_injection(wls_config, random_emitters):
     """ Start simulation """
     start_time = time.time()
     last_msg_time = 0
@@ -147,12 +150,9 @@ def start_traffic_inyection(wls_config, random_emitters):
         if not _time_to_send_next_message(last_msg_time, next_time_to_msg):
             continue
 
-        emitter_address, emitter_topic = _select_emitter_and_topic(random_emitters)
+        emitter_address, emitter_topic = _select_emitter_with_topic(random_emitters)
 
-        try:
-            _inyect_message(emitter_address, emitter_topic, msgs_dict, wls_config)
-        except RuntimeWarning:
-            continue
+        _inject_message(emitter_address, emitter_topic, msgs_dict, wls_config)
 
         # Compute the time to next message
         next_time_to_msg = waku_messaging.get_next_time_to_msg(wls_config['inter_msg_type'],
@@ -166,7 +166,7 @@ def start_traffic_inyection(wls_config, random_emitters):
 
 
 def main():
-    args = parse_cli()
+    args = parse_cli(sys.argv[1:])
 
     config_file = args.config_file
     topology_file = args.topology_file
@@ -187,7 +187,7 @@ def main():
 
     random_emitters = get_random_emitters(topology, wls_config)
 
-    msgs_dict = start_traffic_inyection(wls_config, random_emitters)
+    msgs_dict = start_traffic_injection(wls_config, random_emitters)
 
     files.save_messages_to_json(msgs_dict)
 
