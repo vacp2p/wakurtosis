@@ -7,11 +7,15 @@ from src.utils import rtnorm
 
 
 def _make_payload(bytes_size):
-    # todo preguntar: cuando enviamos un payload, se tiene en cuenta el 0x en el tamaño?
-    # todo por que coño se multiplica por 4, si el tamaño es en bytes?
-    # Si multiplicamos por 4, tenemos 4 bits, que es medio byte, 1 hexadecimal, deberian ser 2.
+    # Multiplied by 4 because each character in a string is one byte, so in a hex
+    # we cannot go to two characters, this means we can only use 4 bits per byte.
+    # We send half of the information but with the correct size, and as this is for testing purposes
+    # we don't care about the information we are sending.
+    if bytes_size == 0:
+        raise ValueError('Payload size cannot be 0')
+
     payload = hex(random.getrandbits(4 * bytes_size))
-    # payload = hex(random.getrandbits(8 * bytes_size))
+
     wls_logger.G_LOGGER.debug(f"Payload of size {bytes_size} bytes: {payload}")
     return payload
 
