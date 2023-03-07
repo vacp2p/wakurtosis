@@ -12,8 +12,10 @@ from tqdm_loggable.auto import tqdm
 from tqdm_loggable.tqdm_logging import tqdm_logging
 import matplotlib.pyplot as plt
 from scipy import stats
+import docker
+import psutil
 
-# from prometheus_api_client import PrometheusConnect
+#from prometheus_api_client import PrometheusConnect
 
 """ Globals """
 G_APP_NAME = 'WLS-ANALYSIS'
@@ -21,8 +23,10 @@ G_LOG_LEVEL = 'INFO'
 G_DEFAULT_CONFIG_FILE = './config/config.json'
 G_DEFAULT_TOPOLOGY_PATH = './config/topology_generated'
 G_DEFAULT_SIMULATION_PATH = './wakurtosis_logs'
-G_DEFAULT_FIG_FILENAME = 'analysis.pdf'
+G_DEFAULT_NODES_FIG_FILENAME = 'nodes_analysis.pdf'
+G_DEFAULT_MSGS_FIG_FILENAME = 'msg_distributions.pdf'
 G_DEFAULT_SUMMARY_FILENAME = 'summary.json'
+G_DEFAULT_METRICS_FILENAME = 'docker_metrics.log'
 G_LOGGER = None
 
 """ Custom logging formatter """
@@ -44,7 +48,25 @@ class CustomFormatter(logging.Formatter):
         formatter = logging.Formatter(log_fmt, '%d-%m-%Y %H:%M:%S')
         return formatter.format(record)
 
-def plot_figure(msg_propagation_times, cpu_usage, memory_usage, network_usage, simulation_summary, simulation_config):
+def plot_msg_distributions(messages, simulation_config):
+
+    # msg_sizes_bytes = []
+    # for msg in messages.values():
+    #     print(msg)
+    #     msg_sizes_bytes.append(msg['payload_size'])
+    msg_sizes_bytes = [msg['payload_size'] for msg in messages.values()]
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(15, 15))
+    ax1.hist(msg_sizes_bytes, 1000, density = 1, color ='blue', alpha = 0.7)
+    
+    plt.tight_layout()
+
+    figure_path = '%s/%s' %(G_DEFAULT_SIMULATION_PATH, G_DEFAULT_MSGS_FIG_FILENAME)
+    plt.savefig(figure_path, format="pdf", bbox_inches="tight")
+
+    G_LOGGER.info('Messages distribution figure saved in %s' %figure_path)
+
+def plot_node_stats(msg_propagation_times, cpu_usage, memory_usage, network_usage, disk_usage, simulation_summary, simulation_config):
 
     fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 15))
     
@@ -55,66 +77,129 @@ def plot_figure(msg_propagation_times, cpu_usage, memory_usage, network_usage, s
     ax1.axes.xaxis.set_visible(False)
 
     ax2.violinplot(cpu_usage, showmedians=True)
-    ax2.set_title('Maximum CPU usage per Waku node')
-    ax2.set_ylabel('CPU Cycles')
+    ax2.set_title('Peack CPU usage per Waku node')
+    ax2.set_ylabel('CPU Usage (%)')
     ax2.spines[['right', 'top']].set_visible(False)
     ax2.axes.xaxis.set_visible(False)
 
     ax3.violinplot(memory_usage, showmedians=True)
-    ax3.set_title('Maximum memory usage per Waku node')
+    ax3.set_title('Peack memory usage per Waku node')
     ax3.set_ylabel('Memory (MBytes)')
     ax3.spines[['right', 'top']].set_visible(False)
     ax3.axes.xaxis.set_visible(False)
 
     ax4.violinplot([network_usage['rx_mbytes'], network_usage['tx_mbytes']], showmedians=True)
     # ax4.violinplot(network_usage['tx_mbytes'], showmedians=True)
-    ax4.set_title('Bandwidth per Waku node')
+    ax4.set_title('Total bandwidth per Waku node')
     ax4.set_ylabel('Bandwidth (MBytes)')
     ax4.spines[['right', 'top']].set_visible(False)
     ax4.set_xticks([1, 2])
     ax4.set_xticklabels(['Received (Rx)', 'Sent (Tx)'])
     
-    fig.suptitle('Simulation Analysis \n(%d nodes, %d topic(s), Rate: %d msg/s, Time: %.2f s.)' %(simulation_summary['num_nodes'], \
-    simulation_summary['num_topics'], simulation_config['wsl']['message_rate'], simulation_summary['simulation_time_ms'] / 1000.0, ), fontsize=20)
+    fig.suptitle('Wakurtosis Simulation Analysis \n(%d nodes, %d topic(s), Rate: %d msg/s, Time: %.2f s.)' %(simulation_summary['num_nodes'], \
+    simulation_summary['num_topics'], simulation_config['wsl']['message_rate'], simulation_summary['simulation_time_ms'] / 1000.0), fontsize=20)
     
     plt.tight_layout()
 
-    figure_path = '%s/%s' %(G_DEFAULT_SIMULATION_PATH, G_DEFAULT_FIG_FILENAME)
+    figure_path = '%s/%s' %(G_DEFAULT_SIMULATION_PATH, G_DEFAULT_NODES_FIG_FILENAME)
     plt.savefig(figure_path, format="pdf", bbox_inches="tight")
 
-    G_LOGGER.info('Figure saved in %s' %figure_path)
+    G_LOGGER.info('Nodes analysis figure saved in %s' %figure_path)
 
-# def fetch_cadvisor_stats_from_container(container_id, start_ts, end_ts, prometheus_port=52118):
 
-#     url='http://localhost:%d' %52118
+def fetch_performance_from_docker(container_id):
     
-#     try:
-#         G_LOGGER.debug('Connecting to Prometheus server in %s' %url)
-#         prometheus = PrometheusConnect(url, disable_ssl=True, container_label="container_label_com_docker_container_id=%s" %container_id)
-#         print(prometheus)
-#     except Exception as e:
-#         G_LOGGER.error('%s: %s' % (e.__doc__, e))
-#         return None
+    # Connect to the Docker API
+    client = docker.from_env()
+
+    # Get the container ID for the container running the process you're interested in
+    container = client.containers.get(container_id)
+
+    # Get the process ID for the process you're interested in
+    process_str = "waku"
+   
+    processess = container.top(ps_args="-eo pid,cmd").get("Processes")
+
+    for process in processess:
+        process_id = process[0]
+        process_name = process[1]
+        if process_str not in process_name:
+            continue
+        
+        print(process_name, process_id)
+        
+        # Get the process object for the process ID
+        process = psutil.Process(int(process_id))
+
+        # Get the CPU usage percentage for the process
+        cpu_percent = process.cpu_percent()
+
+        # Get the memory usage for the process
+        memory_info = process.memory_info()
+        memory_usage = memory_info.rss / 1024 / 1024  # convert from bytes to megabytes
+
+        # Get the network I/O metrics for the process
+        network_stats = container.stats(stream=True)
+        network_rx_bytes = 0
+        network_tx_bytes = 0
+        for network_interface in network_stats["networks"]:
+            network_rx_bytes += network_stats["networks"][network_interface]["rx_bytes"]
+            network_tx_bytes += network_stats["networks"][network_interface]["tx_bytes"]
+
+        # Get the disk I/O metrics for the process
+        blkio_stats = container.stats(stream=False)["blkio_stats"]
+        disk_read_bytes = 0
+        disk_write_bytes = 0
+        for bio_entry in blkio_stats["io_service_bytes_recursive"]:
+            if "op" in bio_entry and "value" in bio_entry and "major" in bio_entry and "minor" in bio_entry:
+                if bio_entry["op"] == "Read" and bio_entry["major"] == 8 and bio_entry["minor"] == 0:
+                    disk_read_bytes += bio_entry["value"]
+                elif bio_entry["op"] == "Write" and bio_entry["major"] == 8 and bio_entry["minor"] == 0:
+                    disk_write_bytes += bio_entry["value"]
+
+        # print(f"CPU usage for process {process_name}: {cpu_percent}")
+        # print(f"Memory usage for process {process_name}: {memory_usage} MB")
+        # print(f"Network RX bytes for process {process_name}: {network_rx_bytes} bytes")
+        # print(f"Network TX bytes for process {process_name}: {network_tx_bytes} bytes")
+        # print(f"Disk read bytes for process {process_name}: {disk_read_bytes} bytes")
+        # print(f"Disk write bytes for process {process_name}: {disk_write_bytes} bytes")
+
+def fetch_prometheus_stats_from_container(container_id, start_ts, end_ts, prometheus_port=32816):
+
+    url='http://localhost:%d' %prometheus_port
     
-#     metrics = prometheus.get_label_values("__name__")
-#     print(metrics)
-
-#     try:
-#         # query = '100 - (avg by(instance) (irate(container_cpu_usage_seconds_total{container_label_com_docker_container_id="<%s>"}[5m])) * 100)' %container_id
-#         # query = "container_file_descriptors{process_cpu_seconds_total=\"<%s>\"}" %container_id
-#         # result = prometheus.query(query)
-#         query = 'process_cpu_seconds_total'
-#         result = prometheus.custom_query(query)
-#         G_LOGGER.debug('Querying: %s' %query)
-#     except Exception as e:
-#         G_LOGGER.error('%s: %s' % (e.__doc__, e))
-#         return None
-
+    txt = requests.get(url +'/api/v1/metrics').text
+    print(txt)
+    j = json.loads(txt)
+    print(j['data'])
     
+    # try:
+    #     G_LOGGER.debug('Connecting to Prometheus server in %s' %url)
+    #     prometheus = PrometheusConnect(url, disable_ssl=True, container_label="container_label_com_docker_container_id=%s" %container_id)
+    #     print(prometheus)1
+    # except Exception as e:
+    #     G_LOGGER.error('%s: %s' % (e.__doc__, e))
+    #     return None
+    
+    # metrics = prometheus.get_label_values("__name__")
+    # print(metrics)
 
-#     print('--->', result)
+    # try:
+    #     # query = '100 - (avg by(instance) (irate(container_cpu_usage_seconds_total{container_label_com_docker_container_id="<%s>"}[5m])) * 100)' %container_id
+    #     # query = "container_file_descriptors{process_cpu_seconds_total=\"<%s>\"}" %container_id
+    #     # result = prometheus.query(query)
+    #     query = 'process_cpu_seconds_total'
+    #     print(result)
+    #     result = prometheus.custom_query(query)
+    #     G_LOGGER.debug('Querying: %s' %query)
+    # except Exception as e:
+    #     G_LOGGER.error('%s: %s' % (e.__doc__, e))
+    #     return None
 
-#     return {'cpu_usage' : 0, 'memory_usage' : 0, 'bandwidth_in' : 0, 'bandwidth_out' : 0}
+
+    # print('--->', result)
+
+    return {'cpu_usage' : 0, 'memory_usage' : 0, 'bandwidth_in' : 0, 'bandwidth_out' : 0}
 
 def fetch_cadvisor_summary_from_container(container_id):
     
@@ -173,8 +258,14 @@ def fetch_cadvisor_stats_from_container(container_id, start_ts, end_ts):
             #     continue
 
             G_LOGGER.debug('Data point %d' %(timestamp_ns))
+            
+            # CPU Cycles
             cpu_usage.append(data_point['cpu']['usage']['user'])
+            
+            # Memory Usage Bytes
             memory_usage.append(data_point['memory']['usage'] / 1024 / 1024)
+            
+            # Network Usage Bytes
             network_usage['rx_mbytes'].append(data_point['network']['interfaces'][0]['rx_bytes'] / 1024 / 1024)
             network_usage['tx_mbytes'].append(data_point['network']['interfaces'][0]['tx_bytes'] /1024 / 1024)
 
@@ -260,7 +351,10 @@ def main():
     tss = []
     try:
         services_log_paths = glob.glob('%s/*--user-service--*' %simulation_path)
-    
+        if len(services_log_paths) == 0:
+            G_LOGGER.error('No services logs found in %s' %simulation_path)
+            sys.exit()  
+
         pbar = tqdm(services_log_paths)
         for log_path in pbar:
             with open('%s/spec.json' %log_path, mode='r') as f:
@@ -404,30 +498,102 @@ def main():
     cpu_usage = []
     memory_usage = []
     network_usage = {'rx_mbytes' : [], 'tx_mbytes' : []}
-    pbar = tqdm(node_logs.items())
-    for node in pbar:
-        pbar.set_description('Fetching hardware stats from container %s' %node[1]['container_id'])
-        container_stats = fetch_cadvisor_stats_from_container(node[1]['container_id'], simulation_start_ts, simulation_end_ts)
-        
-        # NOTE: Here we could also chose a different statistic such as mean or average instead of max
-        max_cpu_usage = max(container_stats['cpu_usage'])
-        cpu_usage.append(max_cpu_usage)
-        simulation_summary['nodes'][node[0]]['max_cpu_usage_cycles'] = max_cpu_usage
-        
-        max_memory_usage = max(container_stats['memory_usage'])
-        memory_usage.append(max_memory_usage)
-        simulation_summary['nodes'][node[0]]['max_memory_usage_mbytes'] = max_memory_usage
-        
-        rx_mbytes = max(container_stats['network_usage']['rx_mbytes'])
-        network_usage['rx_mbytes'].append(rx_mbytes)
-        simulation_summary['nodes'][node[0]]['max_rx_mbytes'] = rx_mbytes
-        
-        tx_mbytes = max(container_stats['network_usage']['tx_mbytes'])
-        network_usage['tx_mbytes'].append(tx_mbytes)
-        simulation_summary['nodes'][node[0]]['max_tx_mbytes'] = tx_mbytes
+    # pbar = tqdm(node_logs.items())
+    # for node in pbar:
+    #     pbar.set_description('Fetching hardware stats from container %s' %node[1]['container_id'])
 
-    # Generate Figure
-    plot_figure(msg_propagation_times, cpu_usage, memory_usage, network_usage, simulation_summary['general'], simulation_config)
+    #     fetch_performance_from_docker(node[1]['container_id'])
+
+    #     # fetch_prometheus_stats_from_container(node[1]['container_id'], simulation_start_ts, simulation_end_ts)
+
+    #     # container_stats = fetch_cadvisor_stats_from_container(node[1]['container_id'], simulation_start_ts, simulation_end_ts)
+        
+    #     # # NOTE: Here we could also chose a different statistic such as mean or average instead of max
+    #     # max_cpu_usage = max(container_stats['cpu_usage'])
+    #     # cpu_usage.append(max_cpu_usage)
+    #     # simulation_summary['nodes'][node[0]]['max_cpu_usage_cycles'] = max_cpu_usage
+        
+    #     # max_memory_usage = max(container_stats['memory_usage'])
+    #     # memory_usage.append(max_memory_usage)
+    #     # simulation_summary['nodes'][node[0]]['max_memory_usage_mbytes'] = max_memory_usage
+        
+    #     # rx_mbytes = sum(container_stats['network_usage']['rx_mbytes'])
+    #     # network_usage['rx_mbytes'].append(rx_mbytes)
+    #     # simulation_summary['nodes'][node[0]]['max_rx_mbytes'] = rx_mbytes
+        
+    #     # tx_mbytes = sum(container_stats['network_usage']['tx_mbytes'])
+    #     # network_usage['tx_mbytes'].append(tx_mbytes)
+    #     # simulation_summary['nodes'][node[0]]['max_tx_mbytes'] = tx_mbytes
+
+    """ Load Dockers Stats """
+    log_metrics = {}
+    try:
+        with open('%s/%s' %(simulation_path,G_DEFAULT_METRICS_FILENAME), 'r') as f:
+            log_metrics = json.load(f)
+    except Exception as e:
+        G_LOGGER.error('%s: %s' % (e.__doc__, e))
+        sys.exit()
+
+    G_LOGGER.info('Loaded %d log metrics entries.' %len(log_metrics))
+    # G_LOGGER.debug(injected_msgs_dict)
+
+    """ Parse Dockers Stats """
+    node_metrics = {}
+    for log_metrics_entry in log_metrics:
+        
+        node_id = log_metrics_entry['node']
+        
+        if node_id not in node_metrics:
+            node_metrics[node_id] = {'cpu_usage_percent' : [], 'memory_usage_mbytes' : [], 'network_usage' : {'rx_mbytes' : [], 'tx_mbytes' : []}, 'disk_usage' : {'disk_read_mbytes' : [], 'disk_write_mbytes' : []}}
+        
+        node_metrics[node_id]['cpu_usage_percent'].append(log_metrics_entry['cpu_percent'])
+        
+        if log_metrics_entry['memory_usage'] > 0:
+            # Values are already in MB
+            node_metrics[node_id]['memory_usage_mbytes'].append(log_metrics_entry['memory_usage'])
+        else:
+            node_metrics[node_id]['memory_usage_mbytes'].append(0)
+        
+        if log_metrics_entry['network_rx_bytes'] > 0:
+            node_metrics[node_id]['network_usage']['rx_mbytes'].append(log_metrics_entry['network_rx_bytes'] / 1024 / 1024)
+        else:
+            node_metrics[node_id]['network_usage']['rx_mbytes'].append(0)
+        
+        if log_metrics_entry['network_tx_bytes'] > 0:
+            node_metrics[node_id]['network_usage']['tx_mbytes'].append(log_metrics_entry['network_tx_bytes'] / 1024 / 1024)
+        else:
+            node_metrics[node_id]['network_usage']['tx_mbytes'].append(0)
+
+        if log_metrics_entry['disk_read_bytes'] > 0:
+            node_metrics[node_id]['disk_usage']['disk_read_mbytes'].append(log_metrics_entry['disk_read_bytes'] / 1024 / 1024)
+        else:
+            node_metrics[node_id]['disk_usage']['disk_read_mbytes'].append(0)
+
+        if log_metrics_entry['disk_write_bytes'] > 0:
+            node_metrics[node_id]['disk_usage']['disk_write_mbytes'].append(log_metrics_entry['disk_write_bytes']) / 1024 / 1024
+        else:
+            node_metrics[node_id]['disk_usage']['disk_write_mbytes'].append(0)
+
+    # Aggregate metric per node
+    max_cpu_usage = []
+    max_memory_usage = []
+    total_network_usage = {'rx_mbytes' : [], 'tx_mbytes' : []}
+    max_disk_usage = {'disk_read_mbytes' : [], 'disk_write_mbytes' : []}
+
+    for node_id, node_data in node_metrics.items():
+        
+        max_cpu_usage.append(max(node_data['cpu_usage_percent']))
+        max_memory_usage.append(max(node_data['memory_usage_mbytes']))
+        
+        total_network_usage['rx_mbytes'].append(sum(node_data['network_usage']['rx_mbytes']))
+        total_network_usage['tx_mbytes'].append(sum(node_data['network_usage']['tx_mbytes']))
+
+        max_disk_usage['disk_read_mbytes'].append(max(node_data['disk_usage']['disk_read_mbytes']))
+        max_disk_usage['disk_write_mbytes'].append(max(node_data['disk_usage']['disk_write_mbytes']))
+
+    # Generate Figures
+    plot_node_stats(msg_propagation_times, max_cpu_usage, max_memory_usage, total_network_usage, max_disk_usage, simulation_summary['general'], simulation_config)
+    plot_msg_distributions(injected_msgs_dict, simulation_config)
 
     # Generate summary
     summary_path = '%s/%s' %(G_DEFAULT_SIMULATION_PATH, G_DEFAULT_SUMMARY_FILENAME)
