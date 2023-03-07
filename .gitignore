@@ -29,3 +29,4 @@ kurtosisrun_log.txt
 summary.json
 wakurtosis_logs/
 log_trace_test
+nohup.out
