@@ -13,28 +13,6 @@ def upload_config(plan, config_file):
 
     return config_artifact
 
-def create_targets(plan, services):
-    
-    # Get private ip and ports of all nodes
-    template_data = files.generate_template_node_targets(services, vars.RPC_PORT_ID, "targets")
-
-    # Template
-    template = """
-        {{.targets}}
-    """
-
-    artifact_id = plan.render_templates(
-        config={
-            vars.CONTAINER_TARGETS_FILE_NAME_WLS: struct(
-                template=template,
-                data=template_data,
-            )
-        },
-        name="wls_targets"
-    )
-
-    return artifact_id
-
 def create_new_topology_information(plan, network_topology):
     template = """
         {{.information}}
