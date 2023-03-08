@@ -1,5 +1,5 @@
 # Waku Configuration
-NWAKU_IMAGE = "statusteam/nim-waku:nwaku-trace"
+NWAKU_IMAGE = "statusteam/nim-waku:nwaku-trace2"
 GOWAKU_IMAGE = "gowaku"
 
 RPC_PORT_ID = "rpc"
@@ -74,6 +74,7 @@ CONTAINER_DATASOURCES_FILE_NAME_GRAFANA = "datasources.yaml"
 
 # Gennet topology Keys
 GENNET_NODES_KEY = "nodes"
+GENNET_PORT_SHIFT_KEY = "port_shift"
 GENNET_ALL_CONTAINERS_KEY = "containers"
 GENNET_IMAGE_KEY = "image"
 GENNET_CONFIG_KEY = "node_config"
@@ -110,6 +111,7 @@ GET_PEERS_METHOD = "get_waku_v2_admin_v1_peers"
 # Import locations
 WAKU_MODULE = "github.com/logos-co/wakurtosis/src/waku.star"
 NODE_BUILDERS_MODULE = "github.com/logos-co/wakurtosis/src/node_builders/node_builders.star"
+DISPATCHERS_MODULE = "github.com/logos-co/wakurtosis/src/node_builders/dispatchers.star"
 WAKU_BUILDER_MODULE = "github.com/logos-co/wakurtosis/src/node_builders/types/waku_builder.star"
 NWAKU_BUILDER_MODULE = "github.com/logos-co/wakurtosis/src/node_builders/types/nwaku_builder.star"
 GOWAKU_BUILDER_MODULE = "github.com/logos-co/wakurtosis/src/node_builders/types/gowaku_builder.star"
@@ -123,10 +125,14 @@ WLS_MODULE = "github.com/logos-co/wakurtosis/src/wls.star"
 CALL_PROTOCOLS = "github.com/logos-co/wakurtosis/src/call_protocols.star"
 NOMOS_MODULE = "github.com/logos-co/wakurtosis/src/nomos.star"
 
+
 TEST_ARGUMENTS_MODULE = "github.com/logos-co/wakurtosis/src/tests/test_arguments_parser.star"
 TEST_FILES_MODULE = "github.com/logos-co/wakurtosis/src/tests/test_file_helpers.star"
-TEST_NODE_BUILDERS_MODULE = "github.com/logos-co/wakurtosis/src/tests/test_node_builders.star"
 TEST_WAKU_MODULE = "github.com/logos-co/wakurtosis/src/tests/test_waku_methods.star"
+TEST_NODE_BUILDERS_MODULE = "github.com/logos-co/wakurtosis/src/node_builders/tests/test_node_builders.star"
+TEST_WAKU_BUILDER_MODULE = "github.com/logos-co/wakurtosis/src/node_builders/types/tests/test_waku_builder.star"
+TEST_GOWAKU_BUILDER_MODULE = "github.com/logos-co/wakurtosis/src/node_builders/types/tests/test_gowaku_builder.star"
+TEST_NWAKU_BUILDER_MODULE = "github.com/logos-co/wakurtosis/src/node_builders/types/tests/test_nwaku_builder.star"
 
 # Default main starlark arguments
 TOPOLOGIES_LOCATION = "github.com/logos-co/wakurtosis/config/topology_generated/"
