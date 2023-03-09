@@ -156,7 +156,7 @@ def main():
         # Filter the list of containers to only include running containers that match the specified image
         matching_containers = [container for container in containers if container.status == 'running' and image_name in container.image.tags[0]]
 
-        print('Monitoring %d containers' %len(matching_containers))
+        print('[%d] Monitoring %d containers' %(nonce, len(matching_containers)))
         
         # Print the names of the matching containers
         ts = time.time_ns()
