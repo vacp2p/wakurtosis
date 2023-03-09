@@ -26,7 +26,7 @@ G_DEFAULT_SIMULATION_PATH = './wakurtosis_logs'
 G_DEFAULT_NODES_FIG_FILENAME = 'nodes_analysis.pdf'
 G_DEFAULT_MSGS_FIG_FILENAME = 'msg_distributions.pdf'
 G_DEFAULT_SUMMARY_FILENAME = 'summary.json'
-G_DEFAULT_METRICS_FILENAME = 'docker_metrics.log'
+G_DEFAULT_METRICS_FILENAME = 'metrics.log'
 G_LOGGER = None
 
 """ Custom logging formatter """
@@ -570,7 +570,7 @@ def main():
             node_metrics[node_id]['disk_usage']['disk_read_mbytes'].append(0)
 
         if log_metrics_entry['disk_write_bytes'] > 0:
-            node_metrics[node_id]['disk_usage']['disk_write_mbytes'].append(log_metrics_entry['disk_write_bytes']) / 1024 / 1024
+            node_metrics[node_id]['disk_usage']['disk_write_mbytes'].append(log_metrics_entry['disk_write_bytes'] / 1024 / 1024)
         else:
             node_metrics[node_id]['disk_usage']['disk_write_mbytes'].append(0)
 

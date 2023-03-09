@@ -27,7 +27,7 @@ G_DEFAULT_SIMULATION_PATH = './wakurtosis_logs'
 G_DEFAULT_NODES_FIG_FILENAME = 'nodes_analysis.pdf'
 G_DEFAULT_MSGS_FIG_FILENAME = 'msg_distributions.pdf'
 G_DEFAULT_SUMMARY_FILENAME = 'summary.json'
-G_DEFAULT_METRICS_FILENAME = 'docker_metrics.log'
+G_DEFAULT_METRICS_FILENAME = 'metrics.log'
 
 G_LOGGER = None
 
@@ -50,11 +50,13 @@ class CustomFormatter(logging.Formatter):
         formatter = logging.Formatter(log_fmt, '%d-%m-%Y %H:%M:%S')
         return formatter.format(record)
 
-def get_snapshot(container, interval, process_str="waku"):
-    
+def get_snapshot(container, interval, nonce, nonce_ts, process_str="waku"):
+
     processes = container.top(ps_args="-eo pid,cmd").get("Processes")
     print('Parsing %d processe(s) from container %s' %(len(processes), container.id))
    
+    node_cnt = 0
+    metrics = []
     for process in processes:
         
         process_id = process[0]
@@ -62,12 +64,14 @@ def get_snapshot(container, interval, process_str="waku"):
         if process_str not in process_name:
             continue
 
+        node_cnt += 1
+
         # Keep track of the node  
         node_id = os.path.splitext(process_name.split('/')[-1])[0]
         toml_name = process_name.split('/')[-1]
         binary_name = process_name.split()[0].split('/')[-1]
 
-        print('Snapshotting process %s in container %s ...' %(node_id, container.name))
+        print('- Monitoring process %s in container %s ...' %(node_id, container.id))
 
         # Get the process object for the process ID
         process = psutil.Process(int(process_id))
@@ -79,7 +83,7 @@ def get_snapshot(container, interval, process_str="waku"):
         memory_info = process.memory_info()
         memory_usage = memory_info.rss / 1024 / 1024  # convert from bytes to megabytes
 
-        # Get the network I/O metrics for the process
+        # Get the network I/O metrics (this is container level, nor process)
         network_stats = container.stats(stream=False)
         network_rx_bytes = 0
         network_tx_bytes = 0
@@ -87,18 +91,24 @@ def get_snapshot(container, interval, process_str="waku"):
             network_rx_bytes += network_stats["networks"][network_interface]["rx_bytes"]
             network_tx_bytes += network_stats["networks"][network_interface]["tx_bytes"]
 
-        # Get the disk I/O metrics for the process
-        blkio_stats = container.stats(stream=False)["blkio_stats"]
-        disk_read_bytes = 0
-        disk_write_bytes = 0
-        for bio_entry in blkio_stats["io_service_bytes_recursive"]:
-            if "op" in bio_entry and "value" in bio_entry and "major" in bio_entry and "minor" in bio_entry:
-                if bio_entry["op"] == "Read" and bio_entry["major"] == 8 and bio_entry["minor"] == 0:
-                    disk_read_bytes += bio_entry["value"]
-                elif bio_entry["op"] == "Write" and bio_entry["major"] == 8 and bio_entry["minor"] == 0:
-                    disk_write_bytes += bio_entry["value"]
+        # Hack that divides the total bandwitdth of the container by the number of nodes
+        # This needs further work in order to try to capture network traffic at a process level instead
+        # We could also try scalling with CPU usages
+        network_rx_bytes /= node_cnt
+        network_tx_bytes /= node_cnt
 
-        return {'container_id' : container.id, 'node' : node_id, 'binary' : binary_name, 'toml' : toml_name, 'cpu_percent' : cpu_percent, 'memory_usage' : memory_usage, 'network_rx_bytes' : network_rx_bytes, 'network_tx_bytes' : network_tx_bytes, 'disk_read_bytes' : disk_read_bytes, 'disk_write_bytes' : disk_write_bytes, 'ts' : time.time_ns()}
+        # Get the disk I/O metrics for the process
+        io_counters = process.io_counters()
+        disk_read_bytes = io_counters.read_chars
+        disk_write_bytes = io_counters.write_chars
+
+        # Keep track of the metrics of the current process/node
+        metrics.append({'nonce' : nonce, 'nonce_ts' : nonce_ts,  'container_id' : container.id, 'process_id' : process_id, 'node' : node_id,
+                        'binary' : binary_name, 'toml' : toml_name, 'cpu_percent' : cpu_percent, 'memory_usage' : memory_usage, 
+                        'network_rx_bytes' : network_rx_bytes, 'network_tx_bytes' : network_tx_bytes, 'disk_read_bytes' : disk_read_bytes, 
+                        'disk_write_bytes' : disk_write_bytes, 'ts' : time.time_ns()})
+
+    return metrics
 
 def main():
 
@@ -107,7 +117,7 @@ def main():
 
     wsl_container = None
 
-    interval_s = 10
+    interval_s = 1
 
     # Wait for WSL to start
     while True:
@@ -125,7 +135,7 @@ def main():
             print('Found WSL container as %s' %wsl_container)
             break
         
-        sleep(5)
+        sleep(interval_s)
     
     # Start monitoring
     print('Starting to monitor Docker stats of the enclave ...')
@@ -146,20 +156,14 @@ def main():
         # Filter the list of containers to only include running containers that match the specified image
         matching_containers = [container for container in containers if container.status == 'running' and image_name in container.image.tags[0]]
 
-        print('Taking metrics snapshot of %d containers' %len(matching_containers))
+        print('Monitoring %d containers' %len(matching_containers))
         
         # Print the names of the matching containers
         ts = time.time_ns()
         for container in matching_containers:
             
-            snapshot = get_snapshot(container, interval_s)
-            snapshot['nonce_ts'] = ts
-            snapshot['nonce'] = nonce
-
-            # print(snapshot)
-
-            docker_data.append(snapshot)
-        
+            snapshot = get_snapshot(container, interval_s, nonce, ts)
+            docker_data.extend(snapshot)
         
         nonce += 1  
                     
