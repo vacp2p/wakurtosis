@@ -25,5 +25,7 @@ COPY . .
 # Deploy the virtualenv in production image
 ENV PATH="/opt/venv/bin:$PATH"
 
+ENV PYTHONPATH "${PYTHONPATH}:/wls/src/"
+
 # Set the entrypoint
-ENTRYPOINT ["python", "wls.py"]
+ENTRYPOINT ["python", "src/wls.py"]
