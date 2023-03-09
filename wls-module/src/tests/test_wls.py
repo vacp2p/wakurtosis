@@ -1,13 +1,17 @@
+# Python Imports
 import unittest
 import random
 from unittest.mock import mock_open, patch
 
+# Project Imports
 from src import wls
-
-random.seed(0)
 
 
 class TestWLS(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        random.seed(1)
 
     def create_patch(self, name):
         patcher = patch(name)
@@ -178,8 +182,8 @@ class TestWLS(unittest.TestCase):
 
         emitter_address, topic = wls._select_emitter_with_topic(emitters)
 
-        self.assertEqual(emitter_address, "http://5:6/")
-        self.assertEqual(topic, "test2b")
+        self.assertEqual(emitter_address, "http://1:2/")
+        self.assertEqual(topic, "test1a")
 
     def test__inject_message(self):
         mock_dist = self.create_patch('src.utils.payloads.make_payload_dist')

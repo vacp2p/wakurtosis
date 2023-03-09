@@ -1,13 +1,17 @@
+# Python Imports
 import unittest
-import random
 from unittest.mock import patch
+import random
 
+# Project Imports
 from src.utils import payloads
-
-random.seed(1)
 
 
 class TestPayloads(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        random.seed(1)
 
     def create_patch(self, name):
         patcher = patch(name)
