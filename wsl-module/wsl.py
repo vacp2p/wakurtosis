@@ -217,7 +217,7 @@ def get_next_time_to_msg(inter_msg_type, msg_rate, simulation_time):
         return poisson_interval(msg_rate) 
     
     if inter_msg_type == 'uniform':
-        return simulation_time / msg_rate
+        return simulation_time / (msg_rate * simulation_time)
         
     G_LOGGER.error('%s is not a valid inter_msg_type. Aborting.' %inter_msg_type)
     sys.exit()
