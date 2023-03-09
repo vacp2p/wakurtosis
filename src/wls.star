@@ -34,14 +34,15 @@ def create_new_topology_information(plan, network_topology):
 
 
 def create_cmd(config_file):
+    cmd = []
     config_file_name = config_file.split("/")[-1]
 
-    config_file = vars.WLS_CONFIG_FILE_FLAG + " " + \
-                  vars.WLS_CONFIG_PATH + config_file_name
-    topology_file = vars.WLS_TOPOLOGY_FILE_FLAG + " " + \
-                    vars.WLS_TOPOLOGY_PATH + vars.CONTAINER_TOPOLOGY_FILE_NAME_WLS
+    cmd.append(vars.WLS_CONFIG_FILE_FLAG)
+    cmd.append(vars.WLS_CONFIG_PATH + config_file_name)
+    cmd.append(vars.WLS_TOPOLOGY_FILE_FLAG)
+    cmd.append(vars.WLS_TOPOLOGY_PATH + vars.CONTAINER_TOPOLOGY_FILE_NAME_WLS)
 
-    return config_file + " " + topology_file
+    return cmd
 
 def init(plan, network_topology, config_file):
     
