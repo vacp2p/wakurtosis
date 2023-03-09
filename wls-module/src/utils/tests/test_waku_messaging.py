@@ -1,14 +1,18 @@
+# Python Imports
 import unittest
-import random
 import json
+import random
 from unittest.mock import patch
 
+# Project Imports
 from src.utils import waku_messaging
-
-random.seed(1)
 
 
 class TestPayloads(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        random.seed(1)
 
     def create_patch(self, name):
         patcher = patch(name)
@@ -20,7 +24,7 @@ class TestPayloads(unittest.TestCase):
         test_1 = waku_messaging._poisson_interval(1)
         test_5 = waku_messaging._poisson_interval(5)
         test_10 = waku_messaging._poisson_interval(10)
-        self.assertEqual(test_1, 0.1442910641095092)
+        self.assertEqual(test_1,  0.1442910641095092)
         self.assertEqual(test_5, 0.3760312530841251)
         self.assertEqual(test_10, 0.1442968925346663)
 
@@ -74,6 +78,10 @@ class TestPayloads(unittest.TestCase):
     def test_get_next_time_to_msg_uniform(self):
         test = waku_messaging.get_next_time_to_msg('uniform', 1, 1)
         self.assertEqual(test, 1)
+
+    def test_get_next_time_to_msg_uniform_2(self):
+        test = waku_messaging.get_next_time_to_msg('uniform', 2, 10)
+        self.assertEqual(test, 0.5)
 
     def test_get_next_time_to_msg_invalid(self):
         with self.assertRaises(SystemExit) as cm:

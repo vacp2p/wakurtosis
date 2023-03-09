@@ -77,7 +77,7 @@ def get_next_time_to_msg(inter_msg_type, msg_rate, simulation_time):
         return _poisson_interval(msg_rate)
 
     if inter_msg_type == 'uniform':
-        return simulation_time / msg_rate
+        return simulation_time / (msg_rate * simulation_time)
 
     wls_logger.G_LOGGER.error(f'{inter_msg_type} is not a valid inter_msg_type. Aborting.')
     sys.exit(1)
