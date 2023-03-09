@@ -7,10 +7,10 @@ import time
 import tomllib
 
 # Project Imports
-from .utils import wls_logger
-from .utils import waku_messaging
-from .utils import payloads
-from .utils import files
+from src.utils import wls_logger
+from src.utils import waku_messaging
+from src.utils import payloads
+from src.utils import files
 
 """ Globals """
 G_DEFAULT_CONFIG_FILE = 'config.json'
