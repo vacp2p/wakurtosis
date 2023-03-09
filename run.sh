@@ -66,8 +66,10 @@ docker rm gennet-container > /dev/null 2>&1
 
 # Start monitoring Docker stats
 echo -e "\nStarting monitoring ..."
-nohup python3 ./monitor.py &
+# sudo -E nohup python3 ./monitor.py &
+sudo -E python3 ./monitor.py &
 monitor_pid=$!
+echo $monitor_pid
 
 # Create the new enclave and run the simulation
 jobs=$(cat config/${wakurtosis_config_file} | jq -r ".kurtosis.jobs")
@@ -121,8 +123,8 @@ echo -e "Analysis results in ./${enclave_name}_logs"
 # docker stop cadvisor > /dev/null 2>&1
 
 # Stop and delete the enclave
-# kurtosis enclave stop $enclave_name > /dev/null 2>&1
-# kurtosis enclave rm -f $enclave_name > /dev/null 2>&1
-# echo "Enclave $enclave_name stopped and deleted."
+kurtosis enclave stop $enclave_name > /dev/null 2>&1
+kurtosis enclave rm -f $enclave_name > /dev/null 2>&1
+echo "Enclave $enclave_name stopped and deleted."
 
 echo "Done."
