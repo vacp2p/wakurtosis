@@ -54,6 +54,7 @@ def plot_msg_distributions(messages, simulation_config):
     # for msg in messages.values():
     #     print(msg)
     #     msg_sizes_bytes.append(msg['payload_size'])
+    
     msg_sizes_bytes = [msg['payload_size'] for msg in messages.values()]
 
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(15, 15))
@@ -77,13 +78,13 @@ def plot_node_stats(msg_propagation_times, cpu_usage, memory_usage, network_usag
     ax1.axes.xaxis.set_visible(False)
 
     ax2.violinplot(cpu_usage, showmedians=True)
-    ax2.set_title('Peack CPU usage per Waku node')
+    ax2.set_title('Peak CPU usage per Waku node')
     ax2.set_ylabel('CPU Usage (%)')
     ax2.spines[['right', 'top']].set_visible(False)
     ax2.axes.xaxis.set_visible(False)
 
     ax3.violinplot(memory_usage, showmedians=True)
-    ax3.set_title('Peack memory usage per Waku node')
+    ax3.set_title('Peak memory usage per Waku node')
     ax3.set_ylabel('Memory (MBytes)')
     ax3.spines[['right', 'top']].set_visible(False)
     ax3.axes.xaxis.set_visible(False)
@@ -549,7 +550,7 @@ def main():
         node_metrics[node_id]['cpu_usage_percent'].append(log_metrics_entry['cpu_percent'])
         
         if log_metrics_entry['memory_usage'] > 0:
-            # Values are already in MB
+            # Values are already in MBytes
             node_metrics[node_id]['memory_usage_mbytes'].append(log_metrics_entry['memory_usage'])
         else:
             node_metrics[node_id]['memory_usage_mbytes'].append(0)
@@ -593,7 +594,7 @@ def main():
 
     # Generate Figures
     plot_node_stats(msg_propagation_times, max_cpu_usage, max_memory_usage, total_network_usage, max_disk_usage, simulation_summary['general'], simulation_config)
-    plot_msg_distributions(injected_msgs_dict, simulation_config)
+    # plot_msg_distributions(injected_msgs_dict, simulation_config)
 
     # Generate summary
     summary_path = '%s/%s' %(G_DEFAULT_SIMULATION_PATH, G_DEFAULT_SUMMARY_FILENAME)
