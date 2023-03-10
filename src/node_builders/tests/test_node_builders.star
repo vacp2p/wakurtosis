@@ -15,8 +15,8 @@ def test_instantiate_services(plan):
 
     for node_info in topology["nodes"].values():
         plan.assert(value="peer_id", assertion="IN", target_value=node_info.keys())
-        plan.assert (value="ip_address", assertion="IN", target_value=node_info.keys())
-        plan.assert (value="ports", assertion="IN", target_value=node_info.keys())
+        plan.assert(value="ip_address", assertion="IN", target_value=node_info.keys())
+        plan.assert(value="ports", assertion="IN", target_value=node_info.keys())
 
     node_builders.interconnect_nodes(plan, topology, 1)
     _test_node_neighbours(plan, topology)
