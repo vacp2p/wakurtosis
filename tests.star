@@ -5,6 +5,7 @@ vars = import_module("github.com/logos-co/wakurtosis/src/system_variables.star")
 args_parser_test = import_module(vars.TEST_ARGUMENTS_MODULE)
 file_helpers_test = import_module(vars.TEST_FILES_MODULE)
 waku_test = import_module(vars.TEST_WAKU_MODULE)
+wls_test = import_module(vars.TEST_WLS_MODULE)
 node_builders_test = import_module(vars.TEST_NODE_BUILDERS_MODULE)
 waku_builder_test = import_module(vars.TEST_WAKU_BUILDER_MODULE)
 gowaku_builder_test = import_module(vars.TEST_GOWAKU_BUILDER_MODULE)
@@ -12,7 +13,9 @@ nwaku_builder_test = import_module(vars.TEST_NWAKU_BUILDER_MODULE)
 
 
 
+
 def run(plan, args):
+
     args_parser_test.test_load_config_args_default(plan)
     args_parser_test.test_load_config_args_given(plan)
 
@@ -39,7 +42,7 @@ def run(plan, args):
     nwaku_builder_test.test_prepare_nwaku_service(plan)
     nwaku_builder_test.test__prepare_nwaku_cmd_in_service(plan)
 
-
-
-
-
+    wls_test.test_upload_config(plan)
+    wls_test.test_create_new_topology_information(plan)
+    wls_test.test_create_cmd(plan)
+    wls_test.test_init(plan)

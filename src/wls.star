@@ -5,15 +5,15 @@ vars = import_module("github.com/logos-co/wakurtosis/src/system_variables.star")
 files = import_module(vars.FILE_HELPERS_MODULE)
 templates = import_module(vars.TEMPLATES_MODULE)
 
-def upload_config(plan, config_file):
+def upload_config(plan, config_file, artifact_name):
     config_artifact = plan.upload_files(
         src=config_file,
-        name="config_file"
+        name=artifact_name
     )
 
     return config_artifact
 
-def create_new_topology_information(plan, network_topology):
+def create_new_topology_information(plan, network_topology, network_artifact_name):
     template = """
         {{.information}}
     """
@@ -27,7 +27,7 @@ def create_new_topology_information(plan, network_topology):
                 data=info,
             )
         },
-        name="wls_topology"
+        name=network_artifact_name
     )
 
     return artifact_id
@@ -47,15 +47,16 @@ def create_cmd(config_file):
 def init(plan, network_topology, config_file):
     
     # Generate simulation config
-    config_artifact = upload_config(plan, config_file)
+    config_artifact = upload_config(plan, config_file, vars.WLS_CONFIG_ARTIFACT_NAME)
 
     tomls_artifact = plan.upload_files(
         src = vars.NODE_CONFIG_FILE_LOCATION,
-        name = "tomls_artifact",
+        name = vars.WLS_TOMLS_ARTIFACT_NAME,
     )
 
     # Get complete network topology information
-    wls_topology = create_new_topology_information(plan, network_topology)
+    wls_topology = create_new_topology_information(plan, network_topology,
+                                                   vars.WLS_TOPOLOGY_ARTIFACT_NAME)
 
     wls_cmd = create_cmd(config_file)
 
