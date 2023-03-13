@@ -37,7 +37,7 @@ class TestPayloads(unittest.TestCase):
 
     def test__create_waku_msg(self):
         test_payload = waku_messaging._create_waku_msg('test')
-        self.assertEqual(test_payload, {'payload': '227465737422'})
+        self.assertEqual(test_payload, {'payload': 'InRlc3Qi'})
 
     def test__create_waku_rpc_data(self):
         test_data = waku_messaging._create_waku_rpc_data('test', 'test', 'test')
