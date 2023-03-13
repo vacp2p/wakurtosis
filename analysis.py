@@ -430,16 +430,22 @@ def main():
         simulation_summary['nodes'][node_id] = {'published_msgs' : len(node['published']), 'received_msgs' : len(node['received']), 'topics' : nodes_topics[node_id]}
         
     # Compute message delivery (message centric)
-    total_messages = len(injected_msgs_dict)
+    total_messages = len(msgs_dict)
     delivered_messages = 0
+    lost_messages = 0
     for msg_id, msg in msgs_dict.items():
         
-        if len(msg['received']) > 0:
+        # Carefull here, we are asuming a single topic, ie every message must be delivered to everynode. For multiple topics we will have to take into accoun the number 
+        # of nodes subscribed to each topic for each message
+        if len(msg['received'] == len(node_logs):
             delivered_messages += 1
+        else:
+            # Message hasnt been delivered to all nodes
+            lost_messages += 1  
         
         simulation_summary['messages'][msg_id] = {'published' : len(msg['published']), 'received' : len(msg['received'])}
 
-    lost_messages = total_messages - delivered_messages
+    # lost_messages = total_messages - delivered_messages
     lost_pct = 100.0 - (delivered_messages * 100 / total_messages)
 
     simulation_summary['general']['msgs_total'] = total_messages
@@ -538,7 +544,7 @@ def main():
     G_LOGGER.info('Loaded %d log metrics entries.' %len(log_metrics))
     # G_LOGGER.debug(injected_msgs_dict)
 
-    """ Parse Dockers Stats """
+    """ Parse Stats """
     node_metrics = {}
     for log_metrics_entry in log_metrics:
         
