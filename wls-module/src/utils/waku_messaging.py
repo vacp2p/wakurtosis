@@ -4,6 +4,7 @@ import json
 import requests
 import sys
 import random
+import base64
 
 # Project Imports
 from src.utils import wls_logger
@@ -26,7 +27,7 @@ def _get_waku_payload(nonce, payload):
 
 def _create_waku_msg(payload):
     waku_msg = {
-        'payload': json.dumps(payload).encode('utf-8').hex()
+        'payload':  base64.b64encode(json.dumps(payload).encode('utf-8')).decode('utf-8')
     }
 
     return waku_msg
@@ -64,7 +65,7 @@ def _send_waku_rpc(data, node_address):
 
 def send_msg_to_node(node_address, topic, payload, nonce=1):
     my_payload = _get_waku_payload(nonce, payload)
-    waku_msg = _create_waku_msg(payload)
+    waku_msg = _create_waku_msg(my_payload)
     data = _create_waku_rpc_data(topic, waku_msg, node_address)
 
     response_obj, elapsed_ms = _send_waku_rpc(data, node_address)
