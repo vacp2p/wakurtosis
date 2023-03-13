@@ -420,8 +420,8 @@ def main():
     elapsed_s = time.time() - s_time
         
     # Save messages for further analysis
-    with open('./messages.json', 'w') as f:
-        f.write(json.dumps(msgs_dict, indent=4))
+    # with open('./messages.json', 'w') as f:
+    #     f.write(json.dumps(msgs_dict, indent=4))
 
     """ We are done """
     G_LOGGER.info('Ended')
