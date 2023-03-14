@@ -334,16 +334,16 @@ def main():
     G_LOGGER.info('Loaded topic structure with %d topic(s) and %d node(s).' %(len(topics), len(nodes_topics)))
    
     """ Load Simulation Messages """
-    injected_msgs_dict = {}
-    try:
-        with open('%s/messages.json' %simulation_path, 'r') as f:
-            injected_msgs_dict = json.load(f)
-    except Exception as e:
-        G_LOGGER.error('%s: %s' % (e.__doc__, e))
-        sys.exit()
+    # injected_msgs_dict = {}
+    # try:
+    #     with open('%s/messages.json' %simulation_path, 'r') as f:
+    #         injected_msgs_dict = json.load(f)
+    # except Exception as e:
+    #     G_LOGGER.error('%s: %s' % (e.__doc__, e))
+    #     sys.exit()
 
-    G_LOGGER.info('Loaded %d messages.' %len(injected_msgs_dict))
-    # G_LOGGER.debug(injected_msgs_dict)
+    # G_LOGGER.info('Loaded %d messages.' %len(injected_msgs_dict))
+    # # G_LOGGER.debug(injected_msgs_dict)
 
     node_logs = {}
     msgs_dict = {}
@@ -437,7 +437,7 @@ def main():
         
         # Carefull here, we are asuming a single topic, ie every message must be delivered to everynode. For multiple topics we will have to take into accoun the number 
         # of nodes subscribed to each topic for each message
-        if len(msg['received'] == len(node_logs):
+        if len(msg['received']) == len(node_logs):
             delivered_messages += 1
         else:
             # Message hasnt been delivered to all nodes
