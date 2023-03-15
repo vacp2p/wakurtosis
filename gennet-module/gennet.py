@@ -48,6 +48,7 @@ class networkType(Enum):
 NW_DATA_FNAME = "network_data.json"
 EXTERNAL_NODES_PREFIX, NODE_PREFIX, SUBNET_PREFIX, CONTAINER_PREFIX = \
     "nodes", "node", "subnetwork", "containers"
+ID_STR_SEPARATOR = "-"
 
 ### I/O related fns ##############################################################
 
@@ -202,14 +203,14 @@ def generate_network(ctx):
 def postprocess_network(G):
     G = nx.Graph(G)  # prune out parallel/multi edges
     G.remove_edges_from(nx.selfloop_edges(G))  # remove the self-loops
-    mapping = {i: f"{NODE_PREFIX}_{i}" for i in range(len(G))}
+    mapping = {i: f"{NODE_PREFIX}{ID_STR_SEPARATOR}{i}" for i in range(len(G))}
     return nx.relabel_nodes(G, mapping)  # label the nodes
 
 
 def generate_subnets(G, num_subnets):
     n = len(G.nodes)
     if num_subnets == n:  # if num_subnets == size of the network
-        return {f"{NODE_PREFIX}_{i}": f"{SUBNET_PREFIX}_{i}" for i in range(n)}
+        return {f"{NODE_PREFIX}{ID_STR_SEPARATOR}{i}": f"{SUBNET_PREFIX}_{i}" for i in range(n)}
 
     lst = list(range(n))
     random.shuffle(lst)
@@ -220,7 +221,7 @@ def generate_subnets(G, num_subnets):
     for end in offsets:
         l = []
         for i in range(start, end + 1):
-            node2subnet[f"{NODE_PREFIX}_{lst[i]}"] = f"{SUBNET_PREFIX}_{subnet_id}"
+            node2subnet[f"{NODE_PREFIX}{ID_STR_SEPARATOR}{lst[i]}"] = f"{SUBNET_PREFIX}_{subnet_id}"
             #node2subnet[lst[i]] = subnet_id
         start = end
         subnet_id += 1

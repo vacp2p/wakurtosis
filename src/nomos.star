@@ -30,7 +30,7 @@ def _merge_peer_ids(peer_ids):
 
 def connect_nomos_to_peers(plan, service_name, node_id, port_id, peer_ids):
     body = _merge_peer_ids(peer_ids)
-    port_id = port_id + "_" + node_id
+    port_id = port_id + vars.ID_STR_SEPARATOR + node_id
 
     response = call_protocols.send_http_post_req(plan, service_name, port_id, vars.NOMOS_NET_CONN_URL, body) 
 
