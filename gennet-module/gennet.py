@@ -23,7 +23,7 @@ class nodeType(Enum):
     GOWAKU = "gowaku"   # waku mobile config
 
 
-nodeTypeToToml = {
+nodeTypeToTomlDefault = {
     nodeType.NWAKU: "rpc-admin = true\nkeep-alive = true\nmetrics-server = true\n",
     nodeType.GOWAKU: "rpc-admin = true\nmetrics-server = true\nrpc = true\n"
 }
@@ -159,14 +159,14 @@ def generate_nomos_tree(ctx):
     n = ctx.params["num_nodes"]
     fanout = ctx.params["fanout"]
     # nomos currently insists on binary trees
-    assert(fanout == 2)             
+    assert(fanout == 2)
     height = int(math.log(n) / math.log(fanout))
     G = nx.balanced_tree(fanout, height)
     i, diff = 0, G.number_of_nodes() - n
     leaves = [x for x in G.nodes() if G.degree(x) == 1]
     nleaves = len(leaves)
     if (nleaves - diff) % 2 != 0 :
-        diff -= 1 
+        diff -= 1
     for node in leaves :
         if i == diff:
             break
@@ -229,15 +229,22 @@ def generate_subnets(G, num_subnets):
 
 ### file format related fns ###########################################################
 # Generate per node toml configs
-def generate_toml(topics, node_type=nodeType.NWAKU):
+def generate_toml(topics, configuration, node_type=nodeType.NWAKU):
     topics = get_random_sublist(topics)
     if node_type == nodeType.GOWAKU:    # comma separated list of quoted topics
         topic_str = ", ".join(f"\"{t}\"" for t in topics)
         topic_str = f"[{topic_str}]"
     else:                               # space separated topics
-        topic_str = " ".join(topics)  
+        topic_str = " ".join(topics)
         topic_str = f"\"{topic_str}\""
-    return f"{nodeTypeToToml.get(node_type)}topics = {topic_str}\n"
+
+    if configuration is None:
+        config = nodeTypeToTomlDefault.get(node_type)
+        return f"{config}topics = {topic_str}\n"
+
+    return f"{configuration}topics = {topic_str}\n"
+
+
 
 
 # Convert a dict to pair of arrays
@@ -258,12 +265,12 @@ def generate_node_types(node_type_distribution, G):
 
 # Inverts a dictionary of lists
 def invert_dict_of_list(d):
-    inv = {} 
-    for key, val in d.items(): 
-        if val not in inv: 
-            inv[val] = [key] 
-        else: 
-            inv[val].append(key) 
+    inv = {}
+    for key, val in d.items():
+        if val not in inv:
+            inv[val] = [key]
+        else:
+            inv[val].append(key)
     return inv
 
 
@@ -292,11 +299,11 @@ def generate_and_write_files(ctx: typer, G):
     json_dump = {}
     json_dump[CONTAINER_PREFIX] = {}
     json_dump[EXTERNAL_NODES_PREFIX] = {}
-    inv = {} 
-    for key, val in node2container.items(): 
-        if val[1] not in inv: 
+    inv = {}
+    for key, val in node2container.items():
+        if val[1] not in inv:
             inv[val[1]] = [key]
-        else: 
+        else:
             inv[val[1]].append(key)
     for container, nodes in inv.items():
         json_dump[CONTAINER_PREFIX][container] = nodes
@@ -307,7 +314,8 @@ def generate_and_write_files(ctx: typer, G):
 
         # write the per node toml for the i^ith node of appropriate type
         node_type, i = node_types_enum[i], i+1
-        write_toml(ctx.params["output_dir"], node, generate_toml(topics, node_type))
+        configuration = ctx.params.get("node_config", {}).get(node_type.value)
+        write_toml(ctx.params["output_dir"], node, generate_toml(topics, configuration, node_type))
         json_dump[EXTERNAL_NODES_PREFIX][node] = {}
         json_dump[EXTERNAL_NODES_PREFIX][node]["static_nodes"] = []
         for edge in G.edges(node):
@@ -374,6 +382,7 @@ def main(ctx: typer.Context,
          num_topics: int = typer.Option(1, help="Set the number of topics"),
          fanout: int = typer.Option(3, help="Set the arity for trees & newmanwattsstrogatz"),
          node_type_distribution: str = typer.Argument("{\"nwaku\" : 100 }" ,callback=ast.literal_eval, help="Set the node type distribution"),
+         node_config: str = typer.Argument("{}" ,callback=ast.literal_eval, help="Set the node configuration"),
          network_type: networkType = typer.Option(networkType.NEWMANWATTSSTROGATZ.value, help="Set the node type"),
          num_subnets: int = typer.Option(1, callback=_num_subnets_callback, help="Set the number of subnets"),
          num_partitions: int = typer.Option(1, callback=_num_partitions_callback, help="Set the number of network partitions"),
@@ -395,7 +404,7 @@ def main(ctx: typer.Context,
     print("Setting the random seed to", prng_seed)
     random.seed(prng_seed)
     np.random.seed(prng_seed)
-   
+
     # leaving it for now should any json parsing issues pops up
     # Extract the node type distribution from config.json or use the default
     # no cli equivalent for node type distribution (NTD)
