@@ -18,7 +18,7 @@ def get_nomos_peer_id(plan, service_name, port_id):
 
 def create_node_multiaddress(node_id, node_information):
     ip = node_information[vars.IP_KEY]
-    port = node_information[vars.PORTS_KEY][vars.NOMOS_LIBP2P_PORT_ID + "_" + node_id][0]
+    port = node_information[vars.PORTS_KEY][vars.NOMOS_LIBP2P_PORT_ID + vars.ID_STR_SEPARATOR + node_id][0]
     nomos_node_id = node_information[vars.PEER_ID_KEY]
 
     return '"/ip4/' + str(ip) + '/tcp/' + str(port) + '/p2p/' + nomos_node_id + '"'
