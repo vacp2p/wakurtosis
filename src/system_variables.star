@@ -2,6 +2,9 @@
 NWAKU_IMAGE = "statusteam/nim-waku:nwaku-trace2"
 GOWAKU_IMAGE = "gowaku"
 
+# If changing this, you'll likely need to change it as well in gennet
+ID_STR_SEPARATOR = "-"
+
 RPC_PORT_ID = "rpc"
 
 NODE_CONFIG_FILE_LOCATION = "github.com/logos-co/wakurtosis/config/topology_generated/"
@@ -43,7 +46,7 @@ NOMOS_NET_CONN_URL = "/network/conn"
 # Prometheus Configuration
 PROMETHEUS_IMAGE = "prom/prometheus:latest"
 PROMETHEUS_SERVICE_NAME = "prometheus"
-PROMETHEUS_PORT_ID = "prometheus"
+PROMETHEUS_PORT_ID = "prom"
 PROMETHEUS_PORT_PROTOCOL = "TCP"
 PROMETHEUS_PORT_NUMBER = 8008
 PROMETHEUS_CONFIGURATION_PATH = "github.com/logos-co/wakurtosis/monitoring/prometheus.yml"
@@ -63,7 +66,7 @@ GRAFANA_CUSTOMIZATION_PATH = "github.com/logos-co/wakurtosis/monitoring/configur
 GRAFANA_DASHBOARD_PATH = "github.com/logos-co/wakurtosis/monitoring/configuration/dashboards/"
 
 GRAFANA_SERVICE_NAME = "grafana"
-GRAFANA_PORT_ID = "grafana_tcp"
+GRAFANA_PORT_ID = "grafana" + ID_STR_SEPARATOR + "tcp"
 GRAFANA_TCP_PORT = 3000
 
 CONTAINER_CONFIGURATION_GRAFANA = "/etc/grafana/"

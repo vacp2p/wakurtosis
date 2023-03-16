@@ -19,20 +19,18 @@ from enum import Enum
 
 # To add a new node type, add appropriate entries to the nodeType and nodeTypeSwitch
 class nodeType(Enum):
-    NWAKU = "nwaku"  # waku desktop config
-    GOWAKU = "gowaku"  # waku mobile config
-    NOMOS = "nomos"
+    NWAKU = "nwaku"     # waku desktop config
+    GOWAKU = "gowaku"   # waku mobile config
 
 
-nodeTypeToToml = {
+nodeTypeToTomlDefault = {
     nodeType.NWAKU: "rpc-admin = true\nkeep-alive = true\nmetrics-server = true\n",
     nodeType.GOWAKU: "rpc-admin = true\nmetrics-server = true\nrpc = true\n"
 }
 
 nodeTypeToDocker = {
     nodeType.NWAKU: "nim-waku",
-    nodeType.GOWAKU: "go-waku",
-    nodeType.NOMOS: "nomos"
+    nodeType.GOWAKU: "go-waku"
 }
 
 # To add a new network type, add appropriate entries to the networkType and networkTypeSwitch
@@ -43,12 +41,14 @@ class networkType(Enum):
     NEWMANWATTSSTROGATZ = "newmanwattsstrogatz"  # mesh, smallworld
     BARBELL = "barbell"  # partition
     BALANCEDTREE = "balancedtree"  # committees?
+    NOMOSTREE = "nomostree"  # balanced binary tree with even # of leaves
     STAR = "star"  # spof
 
 
 NW_DATA_FNAME = "network_data.json"
 EXTERNAL_NODES_PREFIX, NODE_PREFIX, SUBNET_PREFIX, CONTAINER_PREFIX = \
     "nodes", "node", "subnetwork", "containers"
+ID_STR_SEPARATOR = "-"
 
 ### I/O related fns ##############################################################
 
@@ -66,7 +66,7 @@ def write_toml(dirname, node_name, toml):
 
 
 # Draw the network and output the image to a file; does not account for subnets yet
-def draw(dirname, H):
+def draw_network(dirname, H):
     nx.draw(H, pos=nx.kamada_kawai_layout(H), with_labels=True)
     fname = os.path.join(dirname, NW_DATA_FNAME)
     plt.savefig(f"{os.path.splitext(fname)[0]}.png", format="png")
@@ -121,34 +121,65 @@ def get_random_sublist(topics):
 
 ### network processing related fns #################################################
 # Network Types
-def generate_config_model(n):
+
+# |G| = n
+def generate_config_model(ctx):
+    n = ctx.params["num_nodes"]
     # degrees = nx.random_powerlaw_tree_sequence(n, tries=10000)
     degrees = [random.randint(1, n) for i in range(n)]
     if (sum(degrees)) % 2 != 0:  # adjust the degree to be even
         degrees[-1] += 1
     return nx.configuration_model(degrees)  # generate the graph
 
-
-def generate_scalefree_graph(n):
+# |G| = n
+def generate_scalefree_graph(ctx):
+    n = ctx.params["num_nodes"]
     return nx.scale_free_graph(n)
 
+# |G| = n; n must be larger than k=D=3
+def generate_newmanwattsstrogatz_graph(ctx):
+    n = ctx.params["num_nodes"]
+    fanout = ctx.params["fanout"]
+    return nx.newman_watts_strogatz_graph(n, fanout, 0.5)
 
-# n must be larger than k=D=3
-def generate_newmanwattsstrogatz_graph(n):
-    return nx.newman_watts_strogatz_graph(n, 3, 0.5)
-
-
-def generate_barbell_graph(n):
+# |G| = n (if odd); n+1 (if even)
+def generate_barbell_graph(ctx):
+    n = ctx.params["num_nodes"]
     return nx.barbell_graph(int(n / 2), 1)
 
-
-def generate_balanced_tree(n, fanout=3):
+# |G| > fanout^{\floor{log_n} + 1}
+def generate_balanced_tree(ctx):
+    n = ctx.params["num_nodes"]
+    fanout = ctx.params["fanout"]
     height = int(math.log(n) / math.log(fanout))
     return nx.balanced_tree(fanout, height)
 
+# nomostree is a balanced binary tree with even number of leaves
+# |G| = n (if odd); n+1 (if even)
+def generate_nomos_tree(ctx):
+    n = ctx.params["num_nodes"]
+    fanout = ctx.params["fanout"]
+    # nomos currently insists on binary trees
+    assert(fanout == 2)
+    height = int(math.log(n) / math.log(fanout))
+    G = nx.balanced_tree(fanout, height)
+    i, diff = 0, G.number_of_nodes() - n
+    leaves = [x for x in G.nodes() if G.degree(x) == 1]
+    nleaves = len(leaves)
+    if (nleaves - diff) % 2 != 0 :
+        diff -= 1
+    for node in leaves :
+        if i == diff:
+            break
+        G.remove_node(node)
+        i += 1
+    G = nx.convert_node_labels_to_integers(G)
+    return G
 
-def generate_star_graph(n):
-    return nx.star_graph(n)
+# |G| = n
+def generate_star_graph(ctx):
+    n = ctx.params["num_nodes"]
+    return nx.star_graph(n-1)
 
 
 networkTypeSwitch = {
@@ -157,27 +188,29 @@ networkTypeSwitch = {
     networkType.NEWMANWATTSSTROGATZ: generate_newmanwattsstrogatz_graph,
     networkType.BARBELL: generate_barbell_graph,
     networkType.BALANCEDTREE: generate_balanced_tree,
+    networkType.NOMOSTREE: generate_nomos_tree,
     networkType.STAR: generate_star_graph
 }
 
 
 # Generate the network from nw type
-def generate_network(n, network_type):
-    return postprocess_network(networkTypeSwitch.get(network_type)(n))
+def generate_network(ctx):
+    network_type = networkType(ctx.params["network_type"])
+    return postprocess_network(networkTypeSwitch.get(network_type)(ctx))
 
 
 # Label the generated network with prefix
 def postprocess_network(G):
     G = nx.Graph(G)  # prune out parallel/multi edges
     G.remove_edges_from(nx.selfloop_edges(G))  # remove the self-loops
-    mapping = {i: f"{NODE_PREFIX}_{i}" for i in range(len(G))}
+    mapping = {i: f"{NODE_PREFIX}{ID_STR_SEPARATOR}{i}" for i in range(len(G))}
     return nx.relabel_nodes(G, mapping)  # label the nodes
 
 
 def generate_subnets(G, num_subnets):
     n = len(G.nodes)
     if num_subnets == n:  # if num_subnets == size of the network
-        return {f"{NODE_PREFIX}_{i}": f"{SUBNET_PREFIX}_{i}" for i in range(n)}
+        return {f"{NODE_PREFIX}{ID_STR_SEPARATOR}{i}": f"{SUBNET_PREFIX}_{i}" for i in range(n)}
 
     lst = list(range(n))
     random.shuffle(lst)
@@ -188,7 +221,7 @@ def generate_subnets(G, num_subnets):
     for end in offsets:
         l = []
         for i in range(start, end + 1):
-            node2subnet[f"{NODE_PREFIX}_{lst[i]}"] = f"{SUBNET_PREFIX}_{subnet_id}"
+            node2subnet[f"{NODE_PREFIX}{ID_STR_SEPARATOR}{lst[i]}"] = f"{SUBNET_PREFIX}_{subnet_id}"
             #node2subnet[lst[i]] = subnet_id
         start = end
         subnet_id += 1
@@ -197,15 +230,22 @@ def generate_subnets(G, num_subnets):
 
 ### file format related fns ###########################################################
 # Generate per node toml configs
-def generate_toml(topics, node_type=nodeType.NWAKU):
+def generate_toml(topics, configuration, node_type=nodeType.NWAKU):
     topics = get_random_sublist(topics)
     if node_type == nodeType.GOWAKU:    # comma separated list of quoted topics
         topic_str = ", ".join(f"\"{t}\"" for t in topics)
         topic_str = f"[{topic_str}]"
     else:                               # space separated topics
-        topic_str = " ".join(topics)  
+        topic_str = " ".join(topics)
         topic_str = f"\"{topic_str}\""
-    return f"{nodeTypeToToml.get(node_type)}topics = {topic_str}\n"
+
+    if configuration is None:
+        config = nodeTypeToTomlDefault.get(node_type)
+        return f"{config}topics = {topic_str}\n"
+
+    return f"{configuration}topics = {topic_str}\n"
+
+
 
 
 # Convert a dict to pair of arrays
@@ -226,12 +266,12 @@ def generate_node_types(node_type_distribution, G):
 
 # Inverts a dictionary of lists
 def invert_dict_of_list(d):
-    inv = {} 
-    for key, val in d.items(): 
-        if val not in inv: 
-            inv[val] = [key] 
-        else: 
-            inv[val].append(key) 
+    inv = {}
+    for key, val in d.items():
+        if val not in inv:
+            inv[val] = [key]
+        else:
+            inv[val].append(key)
     return inv
 
 
@@ -260,11 +300,11 @@ def generate_and_write_files(ctx: typer, G):
     json_dump = {}
     json_dump[CONTAINER_PREFIX] = {}
     json_dump[EXTERNAL_NODES_PREFIX] = {}
-    inv = {} 
-    for key, val in node2container.items(): 
-        if val[1] not in inv: 
+    inv = {}
+    for key, val in node2container.items():
+        if val[1] not in inv:
             inv[val[1]] = [key]
-        else: 
+        else:
             inv[val[1]].append(key)
     for container, nodes in inv.items():
         json_dump[CONTAINER_PREFIX][container] = nodes
@@ -275,7 +315,8 @@ def generate_and_write_files(ctx: typer, G):
 
         # write the per node toml for the i^ith node of appropriate type
         node_type, i = node_types_enum[i], i+1
-        write_toml(ctx.params["output_dir"], node, generate_toml(topics, node_type))
+        configuration = ctx.params.get("node_config", {}).get(node_type.value)
+        write_toml(ctx.params["output_dir"], node, generate_toml(topics, configuration, node_type))
         json_dump[EXTERNAL_NODES_PREFIX][node] = {}
         json_dump[EXTERNAL_NODES_PREFIX][node]["static_nodes"] = []
         for edge in G.edges(node):
@@ -333,17 +374,20 @@ def _num_subnets_callback(ctx: typer, Context, num_subnets: int):
 
 
 def main(ctx: typer.Context,
-         benchmark: bool = False,
-         container_size: int = 1,   # TODO: reduce container packer memory consumption
-         output_dir: str = "network_data",
-         prng_seed: int = 3,
-         num_nodes: int = 4,
-         num_topics: int = 1,
-         node_type_distribution: str = typer.Argument("{\"nwaku\" : 100 }" ,callback=ast.literal_eval),
-         network_type: networkType = networkType.NEWMANWATTSSTROGATZ.value,
-         num_subnets: int = typer.Option(1, callback=_num_subnets_callback),
-         num_partitions: int = typer.Option(1, callback=_num_partitions_callback),
-         config_file: str = typer.Option("", callback=conf_callback, is_eager=True)):
+         benchmark: bool = typer.Option(False, help="Measure CPU/Mem usage of Gennet"),
+         draw: bool = typer.Option(False, help="Draw the generated network"),
+         container_size: int =  typer.Option(1, help="Set the number of nodes per container"),   # TODO: reduce container packer memory consumption
+         output_dir: str = typer.Option("network_data", help="Set the output directory for Gennet generated files"),
+         prng_seed: int = typer.Option(41, help="Set the random seed"),
+         num_nodes: int = typer.Option(4, help="Set the number of nodes"),
+         num_topics: int = typer.Option(1, help="Set the number of topics"),
+         fanout: int = typer.Option(3, help="Set the arity for trees & newmanwattsstrogatz"),
+         node_type_distribution: str = typer.Argument("{\"nwaku\" : 100 }" ,callback=ast.literal_eval, help="Set the node type distribution"),
+         node_config: str = typer.Argument("{}" ,callback=ast.literal_eval, help="Set the node configuration"),
+         network_type: networkType = typer.Option(networkType.NEWMANWATTSSTROGATZ.value, help="Set the node type"),
+         num_subnets: int = typer.Option(1, callback=_num_subnets_callback, help="Set the number of subnets"),
+         num_partitions: int = typer.Option(1, callback=_num_partitions_callback, help="Set the number of network partitions"),
+         config_file: str = typer.Option("", callback=conf_callback, is_eager=True, help="Set the input config file (JSON)")):
 
     # Benchmarking: record start time and start tracing mallocs
     if benchmark :
@@ -361,7 +405,7 @@ def main(ctx: typer.Context,
     print("Setting the random seed to", prng_seed)
     random.seed(prng_seed)
     np.random.seed(prng_seed)
-   
+
     # leaving it for now should any json parsing issues pops up
     # Extract the node type distribution from config.json or use the default
     # no cli equivalent for node type distribution (NTD)
@@ -372,18 +416,20 @@ def main(ctx: typer.Context,
 
 
     # Generate the network
-    G = generate_network(num_nodes, networkType(network_type))
+    # G = generate_network(num_nodes, networkType(network_type), tree_arity)
+    G = generate_network(ctx)
 
-    # Do not complain if folder exists already
+    # Do not complain if the folder already exists
     os.makedirs(output_dir, exist_ok=True)
 
     # Generate file format specific data structs and write the files
     generate_and_write_files(ctx, G)
-    #generate_and_write_files(output_dir, num_topics, num_subnets, node_type_distribution, G)
-    #draw(G, outpur_dir)
+    if draw :
+        draw_network(output_dir, G)
+
     end = time.time()
     time_took = end - start
-    print(f"For {num_nodes} nodes, network generation took {time_took} secs.\nThe generated network is under ./{output_dir}")
+    print(f"For {G.number_of_nodes()}/{num_nodes} nodes, network generation took {time_took} secs.\nThe generated network is under ./{output_dir}")
 
     # Benchmarking. Record finish time and stop the malloc tracing
     if benchmark :

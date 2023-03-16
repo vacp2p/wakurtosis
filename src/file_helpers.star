@@ -26,7 +26,7 @@ def generate_template_node_targets(services, port_id, key_value):
         service_info = services[vars.GENNET_NODES_KEY][service_name]
 
         service_ip = service_info[vars.IP_KEY]
-        service_port_number = str(service_info[vars.PORTS_KEY][port_id+"_"+service_name][0])
+        service_port_number = str(service_info[vars.PORTS_KEY][port_id + vars.ID_STR_SEPARATOR + service_name][0])
         targets_data.append('"' + service_ip + ":" + service_port_number + '"')
 
     data_as_string = ",".join(targets_data)

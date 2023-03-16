@@ -33,15 +33,15 @@ def _prepare_nomos_cmd_in_service(nomos_names, config_files):
 def _prepare_nomos_ports_in_service(node_names):
     prepared_ports = {}
     for i in range(len(node_names)):
-        prepared_ports[vars.RPC_PORT_ID + "_" + node_names[i]] = \
+        prepared_ports[vars.RPC_PORT_ID + vars.ID_STR_SEPARATOR + node_names[i]] = \
             PortSpec(number=vars.NOMOS_RPC_PORT_NUMBER + i,
                      transport_protocol=vars.NOMOS_RPC_PORT_PROTOCOL)
 
-        prepared_ports[vars.PROMETHEUS_PORT_ID + "_" + node_names[i]] = \
+        prepared_ports[vars.PROMETHEUS_PORT_ID + vars.ID_STR_SEPARATOR + node_names[i]] = \
             PortSpec(number=vars.PROMETHEUS_PORT_NUMBER + i,
                 transport_protocol=vars.PROMETHEUS_PORT_PROTOCOL)
 
-        prepared_ports[vars.NOMOS_LIBP2P_PORT_ID + "_" + node_names[i]] = \
+        prepared_ports[vars.NOMOS_LIBP2P_PORT_ID + vars.ID_STR_SEPARATOR + node_names[i]] = \
             PortSpec(number=vars.NOMOS_LIBP2P_PORT + i,
                 transport_protocol=vars.NOMOS_LIBP2P_PORT_PROTOCOL)
 
@@ -58,9 +58,9 @@ def _prepare_nomos_config_files_in_service(node_names, artifact_ids):
 
 
 def add_nomos_ports_info_to_topology(network_topology, all_services_information, node_info, node_id):
-    nomos_rpc_port_id = vars.RPC_PORT_ID + "_" + node_id
-    libp2p_port_id = vars.NOMOS_LIBP2P_PORT_ID + "_" + node_id
-    prometheus_port_id = vars.PROMETHEUS_PORT_ID + "_" + node_id
+    nomos_rpc_port_id = vars.RPC_PORT_ID + vars.ID_STR_SEPARATOR + node_id
+    libp2p_port_id = vars.NOMOS_LIBP2P_PORT_ID + vars.ID_STR_SEPARATOR + node_id
+    prometheus_port_id = vars.PROMETHEUS_PORT_ID + vars.ID_STR_SEPARATOR + node_id
 
     network_topology[vars.GENNET_NODES_KEY][node_id][vars.PORTS_KEY] = {}
     _add_nomos_port(network_topology, all_services_information, node_id, node_info, nomos_rpc_port_id)

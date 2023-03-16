@@ -9,13 +9,17 @@
     "interconnection_batch": 10
   },
   "gennet": {
-    "num_nodes": 10,
+    "num_nodes": 3,
+    "fanout": 3,
     "num_topics": 1,
     "num_partitions": 1,
     "num_subnets": 1,
-    "container_size": "3",
-    "node_type_distribution": { "nwaku":100, "gowaku":0, "nomos":0 },
-    "node_type": "desktop",
+    "container_size": "1",
+    "node_type_distribution": { "nwaku":100, "gowaku":0 },
+    "node_config": {
+      "nwaku": "rpc-admin = true\nkeep-alive = true\nmetrics-server = true\ndiscv5-discovery = true\n",
+      "gowaku": "rpc-admin = true\nmetrics-server = true\nrpc = true\n"
+    },
     "network_type": "newmanwattsstrogatz",
     "output_dir": "network_data",
     "benchmark": "False"

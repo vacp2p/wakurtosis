@@ -74,7 +74,7 @@ def interconnect_nodes(plan, topology_information, interconnection_batch):
 
 def _add_service_info_to_topology(plan, all_services_information, network_topology):
     for node_id, node_info in network_topology[vars.GENNET_NODES_KEY].items():
-        node_rpc_port_id = vars.RPC_PORT_ID + "_" + node_id
+        node_rpc_port_id = vars.RPC_PORT_ID + vars.ID_STR_SEPARATOR + node_id
 
         image = network_topology[vars.GENNET_NODES_KEY][node_id][vars.GENNET_IMAGE_KEY]
         peer_id_getter = dispatchers.service_info_dispatcher[image]
