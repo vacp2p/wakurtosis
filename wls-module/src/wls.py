@@ -102,7 +102,7 @@ def _select_emitter_with_topic(random_emitters):
     # Pick an emitter at random from the emitters list
     random_emitter, random_emitter_info = random.choice(list(random_emitters.items()))
     emitter_address = f"http://{random_emitter_info['ip_address']}:" \
-                      f"{random_emitter_info['ports']['rpc_' + random_emitter][0]}/"
+                      f"{random_emitter_info['ports']['rpc-' + random_emitter][0]}/"
     emitter_topics = random_emitter_info["topics"]
     # Pick a topic at random from the topics supported by the emitter
     emitter_topic = random.choice(emitter_topics)
