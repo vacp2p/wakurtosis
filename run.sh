@@ -93,11 +93,11 @@ echo "Output of kurtosis run command written in kurtosisrun_log.txt"
 ### Wait for WLS to finish
 
 # Get the container prefix/uffix for the WLS service
-enclave_prefix="$(kurtosis --cli-log-level $loglevel  enclave inspect --full-uuids $enclave_name | grep UUID: | awk '{print $2}')"
-cid_suffix="$(kurtosis --cli-log-level $loglevel  enclave inspect --full-uuids $enclave_name | grep $wls_service_name | cut -f 1 -d ' ')"
+service_name="$(kurtosis --cli-log-level $loglevel  enclave inspect $enclave_name | grep $wls_service_name | awk '{print $2}')"
+service_uuid="$(kurtosis --cli-log-level $loglevel  enclave inspect --full-uuids $enclave_name | grep $wls_service_name | awk '{print $1}')"
 
 # Construct the fully qualified container name that kurtosis has created
-cid="$enclave_prefix--user-service--$cid_suffix"
+cid="$service_name--$service_uuid"
 
 # Wait for the container to halt; this will block
 echo -e "Waiting for simulation to finish ..."
