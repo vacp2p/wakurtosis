@@ -8,6 +8,8 @@ Description: Wakurtosis load simulator
 import sys, logging, yaml, json, time, random, os, argparse, tomllib, glob, hashlib
 import requests
 import rtnorm
+import asyncio
+import aiohttp
 # from pathlib import Path
 # import numpy as np
 # import pandas as pd
@@ -112,7 +114,7 @@ def get_last_waku_msgs(node_address, topic):
     
     return response_obj, elapsed_ms
 
-def send_waku_msg(node_address, topic, payload, nonce=1):
+async def send_waku_msg(node_address, topic, payload, payload_size, nonce=1):
 
     # waku_msg = {
     #     'nonce' : nonce,
@@ -141,15 +143,15 @@ def send_waku_msg(node_address, topic, payload, nonce=1):
 
     json_data = json.dumps(data)
     
-    response = requests.post(node_address, data=json_data, headers={'content-type': 'application/json'})
-
-    elapsed_ms =(time.time() - s_time) * 1000
-
-    response_obj = response.json()
-
-    G_LOGGER.debug('Response from %s: %s [%.4f ms.]' %(node_address, response_obj, elapsed_ms))
+    # response = requests.post(node_address, data=json_data, headers={'content-type': 'application/json'})
     
-    return response_obj, elapsed_ms, json.dumps(waku_msg), my_payload['ts']
+    async with aiohttp.ClientSession() as session:
+        async with session.post(node_address, data=json_data, headers={'content-type': 'application/json'}) as response:
+            elapsed_ms =(time.time() - s_time) * 1000
+            
+            G_LOGGER.debug('Response from %s: %s [%.4f ms.]' %(node_address, response.status, elapsed_ms))
+    
+            return response.status, elapsed_ms, json.dumps(waku_msg), my_payload['ts'], node_address, topic, payload, payload_size, nonce
 
 # Generate a random interval using a Poisson distribution
 def poisson_interval(rate):
@@ -214,7 +216,7 @@ def parse_targets(enclave_dump_path, waku_port=8545):
 def get_next_time_to_msg(inter_msg_type, msg_rate, simulation_time):
     
     if inter_msg_type == 'poisson':
-        return poisson_interval(msg_rate) 
+        return poisson_interval(msg_rate)
     
     if inter_msg_type == 'uniform':
         return simulation_time / (msg_rate * simulation_time)
@@ -261,7 +263,72 @@ def get_all_messages_from_node_from_topic(node_address, topic):
     
     return msg_cnt
 
-def main(): 
+async def simulate(config, emitters, emitters_indices, emitters_topics):
+    
+    G_LOGGER.info('Starting a simulation of %d seconds ...' %config['general']['simulation_time'])
+
+    s_time = time.time()
+    
+    last_msg_time = 0
+    next_time_to_msg = 0
+    msgs_dict = {}
+    tasks = []
+    nonce = 0
+
+    while True:
+        
+        # Check end condition
+        elapsed_s = time.time() - s_time
+        if  elapsed_s >= config['general']['simulation_time']:
+            G_LOGGER.info('Simulation ended. Sent %d messages in %ds.' %(len(msgs_dict), elapsed_s))
+            break
+
+        # Send message
+        # BUG: There is a constant discrepancy. The average number of messages sent by time interval is slightly less than expected
+        msg_elapsed = time.time() - last_msg_time
+        # if msg_elapsed <= next_time_to_msg:
+        # continue
+
+        G_LOGGER.debug('Time Δ: %.6f ms.' %((msg_elapsed - next_time_to_msg) * 1000.0))
+        
+        # Pick an emitter at random from the emitters list
+        emitter_idx = random.choice(emitters_indices)
+        
+        node_address = 'http://%s/' %emitters[emitter_idx]
+
+        emitter_topics = emitters_topics[emitter_idx]
+
+        # Pick a topic at random from the topics supported by the emitter
+        emitter_topic = random.choice(emitter_topics)
+
+        G_LOGGER.info('Injecting message of topic %s to network through Waku node %s ...' %(emitter_topic, node_address))
+        
+        # Build the payload
+        payload, payload_size = make_payload_dist(dist_type=config['general']['dist_type'].lower(), min_size=config['general']['min_packet_size'], max_size=config['general']['max_packet_size'])
+        
+        # Inject the message
+        # response, elapsed_injection, waku_msg, ts = asyncio.create_task(send_waku_msg(node_address, topic=emitter_topic, payload=payload, nonce=len(msgs_dict)))
+
+        task = asyncio.create_task(send_waku_msg(node_address, topic=emitter_topic, payload=payload, payload_size=payload_size, nonce=nonce))
+        tasks.append(task)
+
+        nonce += 1
+
+        # Compute the time to next message
+        next_time_to_msg = get_next_time_to_msg(config['general']['inter_msg_type'], config['general']['msg_rate'], config['general']['simulation_time']) 
+        G_LOGGER.debug('Next message will happen in %d ms.' %(next_time_to_msg * 1000.0))
+        
+        last_msg_time = time.time()
+
+        await asyncio.sleep(next_time_to_msg)
+
+    elapsed_s = time.time() - s_time
+
+    # Gather results from tasks
+    results = await asyncio.gather(*tasks)
+    return results
+    
+async def main(): 
 
     global G_LOGGER
     
@@ -362,70 +429,30 @@ def main():
     emitters_indices = random.sample(range(len(targets)), num_emitters)
     emitters = [targets[i] for i in emitters_indices]
     emitters_topics = [topics[i] for i in emitters_indices]
-    #  emitters = random.sample(targets, num_emitters)
     G_LOGGER.info('Selected %d emitters out of %d total nodes' %(len(emitters), len(targets)))
 
     """ Start simulation """
-    s_time = time.time()
-    last_msg_time = 0
-    next_time_to_msg = 0
+    results = await simulate(config, emitters, emitters_indices, emitters_topics)
+
+    """ Process results and build messages dictionary """
     msgs_dict = {}
-
-    G_LOGGER.info('Starting a simulation of %d seconds ...' %config['general']['simulation_time'])
-
-    while True:
+    for result in results:
         
-        # Check end condition
-        elapsed_s = time.time() - s_time
-        if  elapsed_s >= config['general']['simulation_time']:
-            G_LOGGER.info('Simulation ended. Sent %d messages in %ds.' %(len(msgs_dict), elapsed_s))
-            break
-
-        # Send message
-        # BUG: There is a constant discrepancy. The average number of messages sent by time interval is slightly less than expected
-        msg_elapsed = time.time() - last_msg_time
-        if msg_elapsed <= next_time_to_msg:
+        response_status, injection_time, waku_msg, ts, node_address, topic, payload, payload_size, nonce = result
+        
+        msg_hash = hashlib.sha256(waku_msg.encode('utf-8')).hexdigest()
+        if msg_hash in msgs_dict:
+            G_LOGGER.error('Hash collision. %s already exists in dictionary' %msg_hash)
             continue
-
-        G_LOGGER.debug('Time Δ: %.6f ms.' %((msg_elapsed - next_time_to_msg) * 1000.0))
         
-        # Pick an emitter at random from the emitters list
-        emitter_idx = random.choice(emitters_indices)
-        
-        node_address = 'http://%s/' %emitters[emitter_idx]
-
-        emitter_topics = emitters_topics[emitter_idx]
-
-        # Pick a topic at random from the topics supported by the emitter
-        emitter_topic = random.choice(emitter_topics)
-
-        G_LOGGER.info('Injecting message of topic %s to network through Waku node %s ...' %(emitter_topic, node_address))
-        
-        payload, size = make_payload_dist(dist_type=config['general']['dist_type'].lower(), min_size=config['general']['min_packet_size'], max_size=config['general']['max_packet_size'])
-        response, elapsed, waku_msg, ts = send_waku_msg(node_address, topic=emitter_topic, payload=payload, nonce=len(msgs_dict))
-
-        if response['result']:
-            msg_hash = hashlib.sha256(waku_msg.encode('utf-8')).hexdigest()
-            if msg_hash in msgs_dict:
-                G_LOGGER.error('Hash collision. %s already exists in dictionary' %msg_hash)
-                continue
-            msgs_dict[msg_hash] = {'ts' : ts, 'injection_point' : node_address, 'nonce' : len(msgs_dict), 'topic' : emitter_topic, 'payload' : payload, 'payload_size' : size}
-        
-        # Compute the time to next message
-        next_time_to_msg = get_next_time_to_msg(config['general']['inter_msg_type'], config['general']['msg_rate'], config['general']['simulation_time']) 
-        G_LOGGER.debug('Next message will happen in %d ms.' %(next_time_to_msg * 1000.0))
-        
-        last_msg_time = time.time()
+        msgs_dict[msg_hash] = {'statsus' : response_status, 'ts' : ts, 'injection_point' : node_address, 'injection_time' : injection_time, 'nonce' : nonce, 'topic' : topic, 'payload' : payload, 'payload_size' : payload_size}
     
-    elapsed_s = time.time() - s_time
-        
-    # Save messages for further analysis
-    # with open('./messages.json', 'w') as f:
-    #     f.write(json.dumps(msgs_dict, indent=4))
+    """ Save messages for further analysis """
+    with open('./messages.json', 'w') as f:
+        f.write(json.dumps(msgs_dict, indent=4))
 
     """ We are done """
     G_LOGGER.info('Ended')
     
 if __name__ == "__main__":
-    
-    main()
+    asyncio.run(main())
