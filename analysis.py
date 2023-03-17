@@ -197,8 +197,8 @@ def fetch_cadvisor_stats_from_container(container_id, start_ts, end_ts):
 
     return {'cpu_usage' : cpu_usage, 'memory_usage' : memory_usage}
 
-def main(): 
 
+def main():
     global G_LOGGER
     
     """ Init Logging """
@@ -217,7 +217,7 @@ def main():
 
     """ Parse command line args """
     parser = argparse.ArgumentParser()
-    parser.add_argument("-sp", "--simulation_path", help="Simulation results path", action="store_true", default=G_DEFAULT_SIMULATION_PATH)
+    parser.add_argument("-sp", "--simulation_path", help="Simulation results path", default=G_DEFAULT_SIMULATION_PATH)
     args = parser.parse_args()
 
     simulation_path = args.simulation_path
@@ -349,7 +349,8 @@ def main():
             # Skip self
             if received_data['node_id'] == node_id:
                 continue
-            # NOTE: We are getting some negative latencies meaning that the message appears to be received before it was sent ... I assume this must be because those are the nodes that got the message injected in the first place
+            # NOTE: We are getting some negative latencies meaning that the message appears to be received before it was sent ...
+            # I assume this must be because those are the nodes that got the message injected in the first place
             #  TLDR: Should be safe to ignore all the negative latencies
             latency = int(received_data['ts']) - published_ts
             node_id = msg_data['published'][0]['node_id']
@@ -382,7 +383,7 @@ def main():
     
     """ We are done """
     G_LOGGER.info('Ended')
-    
+
+
 if __name__ == "__main__":
-    
     main()
