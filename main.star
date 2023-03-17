@@ -17,7 +17,6 @@ def run(plan, args):
     config = json.decode(config_json)
 
     kurtosis_config = config[vars.KURTOSIS_KEY]
-    wls_config = config[vars.WLS_KEY]
     interconnection_batch = kurtosis_config[vars.INTERCONNECTION_BATCH_KEY]
 
     # Load network topology
@@ -35,4 +34,4 @@ def run(plan, args):
     nodes.interconnect_nodes(plan, network_topology, interconnection_batch)
 
     # Setup WLS & Start the Simulation
-    wls_service = wls.init(plan, network_topology, wls_config)
+    wls_service = wls.init(plan, network_topology, config_file)

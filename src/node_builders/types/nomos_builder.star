@@ -57,7 +57,7 @@ def _prepare_nomos_config_files_in_service(node_names, artifact_ids):
     return prepared_files
 
 
-def _add_nomos_ports_info_to_topology(network_topology, all_services_information, node_info, node_id):
+def add_nomos_ports_info_to_topology(network_topology, all_services_information, node_info, node_id):
     nomos_rpc_port_id = vars.RPC_PORT_ID + vars.ID_STR_SEPARATOR + node_id
     libp2p_port_id = vars.NOMOS_LIBP2P_PORT_ID + vars.ID_STR_SEPARATOR + node_id
     prometheus_port_id = vars.PROMETHEUS_PORT_ID + vars.ID_STR_SEPARATOR + node_id

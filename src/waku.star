@@ -49,11 +49,12 @@ def make_service_wait(plan, service_name, time):
     plan.exec(exec_recipe)
 
 
-def get_waku_peers(plan, waku_service_name):
+def get_waku_peers(plan, waku_service_container, node_name):
     extract = {"peers": '.result | length'}
+    port_name = vars.RPC_PORT_ID + vars.ID_STR_SEPARATOR + node_name
 
-    response = call_protocols.send_json_rpc(plan, waku_service_name, vars.RPC_PORT_ID,
-                             vars.GET_PEERS_METHOD, "", extract)
+    response = call_protocols.send_json_rpc(plan, waku_service_container, port_name,
+                                            vars.GET_PEERS_METHOD, "", extract)
 
     plan.assert(value=response["code"], assertion="==", target_value=200)
 

@@ -25,7 +25,8 @@
     "benchmark": "False"
   },
   "wls": {
-    "simulation_time": 6,
+    "debug_level": "DEBUG",
+    "simulation_time": 60,
     "message_rate": 10,
     "min_packet_size": 2,
     "max_packet_size": 1024,

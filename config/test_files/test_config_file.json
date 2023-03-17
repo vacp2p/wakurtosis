@@ -1,0 +1,14 @@
+{
+  "general":{
+    "prng_seed" : 67
+  },
+  "kurtosis": {
+    "enclave_name": "wakurtosis",
+  },
+  "gennet": {
+    "num_nodes": 5
+  },
+  "wls": {
+    "simulation_time": 60
+  }
+}

@@ -5,68 +5,70 @@ vars = import_module("github.com/logos-co/wakurtosis/src/system_variables.star")
 files = import_module(vars.FILE_HELPERS_MODULE)
 templates = import_module(vars.TEMPLATES_MODULE)
 
-def create_config(plan, wls_config):
-    
-    # Traffic simulation parameters
-    wls_yml_template = templates.get_wls_template()
-
-    artifact_id = plan.render_templates(
-        config={
-            vars.CONTAINER_WLS_CONFIGURATION_FILE_NAME: struct(
-                template=wls_yml_template,
-                data=wls_config,
-            )
-        },
-        name="wls_config"
+def upload_config(plan, config_file, artifact_name):
+    config_artifact = plan.upload_files(
+        src=config_file,
+        name=artifact_name
     )
-    
-    return artifact_id
 
-def create_targets(plan, services):
-    
-    # Get private ip and ports of all nodes
-    template_data = files.generate_template_node_targets(services, vars.RPC_PORT_ID, "targets")
+    return config_artifact
 
-    # Template
+def create_new_topology_information(plan, network_topology, network_artifact_name):
     template = """
-        {{.targets}}
+        {{.information}}
     """
+    info = {}
+    info["information"] = json.encode(network_topology)
 
     artifact_id = plan.render_templates(
         config={
-            vars.CONTAINER_TARGETS_FILE_NAME_WLS: struct(
+            vars.CONTAINER_TOPOLOGY_FILE_NAME_WLS: struct(
                 template=template,
-                data=template_data,
+                data=info,
             )
         },
-        name="wls_targets"
+        name=network_artifact_name
     )
 
     return artifact_id
 
-def init(plan, services, wls_config):
+
+def create_cmd(config_file):
+    cmd = []
+    config_file_name = config_file.split("/")[-1]
+
+    cmd.append(vars.WLS_CONFIG_FILE_FLAG)
+    cmd.append(vars.WLS_CONFIG_PATH + config_file_name)
+    cmd.append(vars.WLS_TOPOLOGY_FILE_FLAG)
+    cmd.append(vars.WLS_TOPOLOGY_PATH + vars.CONTAINER_TOPOLOGY_FILE_NAME_WLS)
+
+    return cmd
+
+def init(plan, network_topology, config_file):
     
     # Generate simulation config
-    wls_config = create_config(plan, wls_config)
+    config_artifact = upload_config(plan, config_file, vars.WLS_CONFIG_ARTIFACT_NAME)
 
     tomls_artifact = plan.upload_files(
         src = vars.NODE_CONFIG_FILE_LOCATION,
-        name = "tomls_artifact",
+        name = vars.WLS_TOMLS_ARTIFACT_NAME,
     )
 
-    # Create targets.json
-    wls_targets = create_targets(plan, services)
+    # Get complete network topology information
+    wls_topology = create_new_topology_information(plan, network_topology,
+                                                   vars.WLS_TOPOLOGY_ARTIFACT_NAME)
 
+    wls_cmd = create_cmd(config_file)
 
     add_service_config = ServiceConfig(
         image=vars.WLS_IMAGE,
         ports={},
         files={
-            vars.WLS_CONFIG_PATH: wls_config,
-            vars.WLS_TARGETS_PATH: wls_targets,
-            vars.WLS_TOMLS_PATH: tomls_artifact
+            vars.WLS_CONFIG_PATH: config_artifact,
+            vars.WLS_TOMLS_PATH: tomls_artifact,
+            vars.WLS_TOPOLOGY_PATH: wls_topology
         },
-        cmd=vars.WLS_CMD
+        cmd=wls_cmd
     )
     wls_service = plan.add_service(
         service_name=vars.WLS_SERVICE_NAME,
@@ -74,4 +76,3 @@ def init(plan, services, wls_config):
     )
 
     return wls_service
-

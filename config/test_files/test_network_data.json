@@ -1,18 +1,58 @@
 {
-  "nwaku_0": {
-    "static_nodes": [
-      "nwaku_1"
+  "containers": {
+    "container_0": [
+      "nwaku_0",
+      "nwaku_2"
     ],
-    "subnetwork": "subnetwork_0",
-    "image": "nim-waku",
-    "configuration": "nwaku_0.toml"
+    "container_1": [
+      "nwaku_1",
+      "nwaku_3"
+    ]
   },
-  "nwaku_1": {
-    "static_nodes": [
-      "nwaku_0"
-    ],
-    "subnetwork": "subnetwork_0",
-    "image": "nim-waku",
-    "configuration": "nwaku_1.toml"
+  "nodes": {
+    "nwaku_0": {
+      "static_nodes": [
+        "nwaku_1"
+      ],
+      "subnetwork": "subnetwork_0",
+      "image": "nim-waku",
+      "node_config": "nwaku_0.toml",
+      "node_log": "node_0.log",
+      "port_shift": 0,
+      "container_id": "container_0"
+    },
+    "nwaku_1": {
+      "static_nodes": [
+        "nwaku_0"
+      ],
+      "subnetwork": "subnetwork_0",
+      "image": "nim-waku",
+      "node_config": "nwaku_1.toml",
+      "node_log": "node_1.log",
+      "port_shift": 0,
+      "container_id": "container_1"
+    },
+    "nwaku_2": {
+      "static_nodes": [
+        "nwaku_3"
+      ],
+      "subnetwork": "subnetwork_0",
+      "image": "nim-waku",
+      "node_config": "nwaku_2.toml",
+      "node_log": "node_1.log",
+      "port_shift": 1,
+      "container_id": "container_0"
+    },
+    "nwaku_3": {
+      "static_nodes": [
+        "nwaku_2"
+      ],
+      "subnetwork": "subnetwork_0",
+      "image": "nim-waku",
+      "node_config": "nwaku_3.toml",
+      "node_log": "node_3.log",
+      "port_shift": 1,
+      "container_id": "container_1"
+    }
   }
 }

@@ -1,5 +1,5 @@
-# General Configuration
-NWAKU_IMAGE = "statusteam/nim-waku:019f357d"
+# Waku Configuration
+NWAKU_IMAGE = "statusteam/nim-waku:nwaku-trace2"
 GOWAKU_IMAGE = "gowaku"
 
 # If changing this, you'll likely need to change it as well in gennet
@@ -8,6 +8,7 @@ ID_STR_SEPARATOR = "-"
 RPC_PORT_ID = "rpc"
 
 NODE_CONFIG_FILE_LOCATION = "github.com/logos-co/wakurtosis/config/topology_generated/"
+CONFIG_FILE_LOCATION = "github.com/logos-co/wakurtosis/config/"
 CONTAINER_NODE_CONFIG_FILE_LOCATION = "/node/configuration_file/"
 GENERAL_ENTRYPOINT = ["/bin/sh", "-c"]
 CONFIG_FILE_STARLARK_PARAMETER = "config_file"
@@ -26,7 +27,7 @@ WAKU_LIBP2P_PORT = 60000
 
 WAKUNODE_CONFIGURATION_FILE_FLAG = "--config-file="
 WAKUNODE_PORT_SHIFT_FLAG = "--ports-shift="
-NWAKU_ENTRYPOINT = "/usr/bin/wakunode --rpc-address=0.0.0.0 --metrics-server-address=0.0.0.0"
+NWAKU_ENTRYPOINT = "/usr/bin/wakunode --rpc-address=0.0.0.0 --metrics-server-address=0.0.0.0 --log-level=TRACE"
 GOWAKU_ENTRYPOINT = "/usr/bin/waku --rpc-address=0.0.0.0 --metrics-server-address=0.0.0.0"
 NOMOS_ENTRYPOINT = "/usr/bin/nomos-node"
 NOMOS_PORT_SHIFT_FLAG = "--ports-shift="
@@ -76,6 +77,7 @@ CONTAINER_DATASOURCES_FILE_NAME_GRAFANA = "datasources.yaml"
 
 # Gennet topology Keys
 GENNET_NODES_KEY = "nodes"
+GENNET_PORT_SHIFT_KEY = "port_shift"
 GENNET_ALL_CONTAINERS_KEY = "containers"
 GENNET_IMAGE_KEY = "image"
 GENNET_CONFIG_KEY = "node_config"
@@ -92,13 +94,19 @@ PORTS_KEY = "ports"
 # WLS Configuration
 WLS_IMAGE = "wls:0.0.1"
 WLS_SERVICE_NAME = "wls"
-WLS_CONFIG_PATH = "/wls/config"
-WLS_TARGETS_PATH = "/wls/targets"
-WLS_TOMLS_PATH = "/wls/tomls"
-WLS_CMD = ["python3", "wls.py"]
+WLS_CONFIG_PATH = "/wls/config/"
+WLS_TARGETS_PATH = "/wls/targets/"
+WLS_TOMLS_PATH = "/wls/tomls/"
+WLS_TOPOLOGY_PATH = "/wls/network_topology/"
+WLS_CONFIG_FILE_FLAG = "--config_file"
+WLS_TOPOLOGY_FILE_FLAG = "--topology_file"
+WLS_CONFIG_ARTIFACT_NAME = "config_file"
+WLS_TOPOLOGY_ARTIFACT_NAME = "wls_topology"
+WLS_TOMLS_ARTIFACT_NAME = "tomls_artifact"
 
-CONTAINER_WLS_CONFIGURATION_FILE_NAME = "wls.yml"
-CONTAINER_TARGETS_FILE_NAME_WLS = "targets.json"
+
+CONTAINER_WLS_CONFIGURATION_FILE_NAME = "config.json"
+CONTAINER_TOPOLOGY_FILE_NAME_WLS = "network_data.json"
 
 # Waku RPC methods
 POST_RELAY_MESSAGE_METHOD = "post_waku_v2_relay_v1_message"
@@ -109,6 +117,7 @@ GET_PEERS_METHOD = "get_waku_v2_admin_v1_peers"
 # Import locations
 WAKU_MODULE = "github.com/logos-co/wakurtosis/src/waku.star"
 NODE_BUILDERS_MODULE = "github.com/logos-co/wakurtosis/src/node_builders/node_builders.star"
+DISPATCHERS_MODULE = "github.com/logos-co/wakurtosis/src/node_builders/dispatchers.star"
 WAKU_BUILDER_MODULE = "github.com/logos-co/wakurtosis/src/node_builders/types/waku_builder.star"
 NWAKU_BUILDER_MODULE = "github.com/logos-co/wakurtosis/src/node_builders/types/nwaku_builder.star"
 GOWAKU_BUILDER_MODULE = "github.com/logos-co/wakurtosis/src/node_builders/types/gowaku_builder.star"
@@ -122,10 +131,15 @@ WLS_MODULE = "github.com/logos-co/wakurtosis/src/wls.star"
 CALL_PROTOCOLS = "github.com/logos-co/wakurtosis/src/call_protocols.star"
 NOMOS_MODULE = "github.com/logos-co/wakurtosis/src/nomos.star"
 
+
 TEST_ARGUMENTS_MODULE = "github.com/logos-co/wakurtosis/src/tests/test_arguments_parser.star"
 TEST_FILES_MODULE = "github.com/logos-co/wakurtosis/src/tests/test_file_helpers.star"
-TEST_NODE_BUILDERS_MODULE = "github.com/logos-co/wakurtosis/src/tests/test_node_builders.star"
 TEST_WAKU_MODULE = "github.com/logos-co/wakurtosis/src/tests/test_waku_methods.star"
+TEST_WLS_MODULE = "github.com/logos-co/wakurtosis/src/tests/test_wls.star"
+TEST_NODE_BUILDERS_MODULE = "github.com/logos-co/wakurtosis/src/node_builders/tests/test_node_builders.star"
+TEST_WAKU_BUILDER_MODULE = "github.com/logos-co/wakurtosis/src/node_builders/types/tests/test_waku_builder.star"
+TEST_GOWAKU_BUILDER_MODULE = "github.com/logos-co/wakurtosis/src/node_builders/types/tests/test_gowaku_builder.star"
+TEST_NWAKU_BUILDER_MODULE = "github.com/logos-co/wakurtosis/src/node_builders/types/tests/test_nwaku_builder.star"
 
 # Default main starlark arguments
 TOPOLOGIES_LOCATION = "github.com/logos-co/wakurtosis/config/topology_generated/"

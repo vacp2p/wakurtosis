@@ -20,23 +20,22 @@ def test_get_toml_configuration_artifact_same_config_false(plan):
 
 
 def test_generate_template_node_targets_single(plan):
-    service_struct = struct(ip_address="1.1.1.1", ports={"http": PortSpec(number=80)})
-    services_example={"test1":{"service_info": service_struct}}
+    network_topology={"nodes": {"test1":{"ip_address": "1.1.1.1",
+                                         "ports": { "rpc_test1": (80, 'tcp')}}}}
 
-    template_data = files.generate_template_node_targets(services_example, "http")
+    template_data = files.generate_template_node_targets(network_topology, "rpc", "targets")
 
     plan.assert(value=template_data["targets"], assertion="==", target_value='["1.1.1.1:80"]')
 
 
 def test_generate_template_node_targets_multiple(plan):
-    service_struct_1 = struct(ip_address="1.1.1.1", ports={"http": PortSpec(number=80)})
-    service_struct_2 = struct(ip_address="2.2.2.2", ports={"http": PortSpec(number=88)})
-    services_example={"test1":{"service_info": service_struct_1},
-                      "test2":{"service_info": service_struct_2}}
+    network_topology={"nodes": {"test1":{"ip_address": "1.1.1.1", "ports": { "rpc_test1": (80, 'tcp')}},
+                                "test2":{"ip_address": "2.2.2.2", "ports": { "rpc_test2": (10, 'tcp')}}}}
 
-    template_data = files.generate_template_node_targets(services_example, "http")
+    template_data = files.generate_template_node_targets(network_topology, "rpc", "targets")
 
-    plan.assert(value=template_data["targets"], assertion="==",target_value='["1.1.1.1:80","2.2.2.2:88"]')
+    plan.assert(value=template_data["targets"], assertion="==",
+                target_value='["1.1.1.1:80","2.2.2.2:10"]')
 
 def test_generate_template_prometheus_url(plan):
     prometheus_service_struct = struct(ip_address="1.2.3.4",
