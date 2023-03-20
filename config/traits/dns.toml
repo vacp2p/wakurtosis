@@ -1,0 +1,13 @@
+# --dns-addrs               Enable resolution of `dnsaddr`, `dns4` or `dns6`
+#                               multiaddrs [=true].
+# --dns-addrs-name-server   DNS name server IPs to query for DNS multiaddrs
+#                               resolution. Argument may be repeated.
+#                               [=@[ValidIpAddress.init("1.1.1.1"),
+#                               ValidIpAddress.init("1.0.0.1")]].
+# --dns4-domain-name        The domain name resolving to the node's public
+#                               IPv4 address.
+
+
+dns-addrs=true
+dns-addrs-name-server=
+dns4-domain-name=

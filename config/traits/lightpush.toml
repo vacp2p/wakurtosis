@@ -1,0 +1,6 @@
+#--lightpush               Enable lightpush protocol: true|false [=false].
+#--lightpushnode           Peer multiaddr to request lightpush of published
+#                               messages..
+
+lightpush=false
+lightpushnode=

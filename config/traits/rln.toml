@@ -1,0 +1,39 @@
+# --rln-relay               Enable spam protection through rln-relay:
+#                               true|false [=false].
+# --rln-relay-cred-path     The path for peristing rln-relay credential.
+# --rln-relay-membership-index  (experimental) the index of node in the rln-relay
+#                               group: a value between 0-99 inclusive [=0].
+# --rln-relay-pubsub-topic  the pubsub topic for which rln-relay gets enabled
+#                               [=/waku/2/default-waku/proto].
+# --rln-relay-content-topic  the pubsub topic for which rln-relay gets enabled
+#                               [=/toy-chat/2/luzhou/proto].
+# --rln-relay-dynamic       Enable  waku-rln-relay with on-chain dynamic
+#                               group management: true|false [=false].
+# --rln-relay-id-key        Rln relay identity secret key as a Hex string.
+# --rln-relay-id-commitment-key  Rln relay identity commitment key as a Hex
+#                               string.
+# --rln-relay-eth-account-address  Account address for the Ethereum testnet Goerli.
+# --rln-relay-eth-account-private-key  Account private key for the Ethereum testnet
+#                               Goerli.
+# --rln-relay-eth-client-address  WebSocket address of an Ethereum testnet client
+#                               e.g., ws://localhost:8540/
+#                               [=ws://localhost:8540/].
+# --rln-relay-eth-contract-address  Address of membership contract on an Ethereum
+#                               testnet.
+# --rln-relay-cred-password  Password for encrypting RLN credentials.
+
+
+
+rln-relay=false
+rln-relay-cred-path=
+rln-relay-membership-index=
+rln-relay-pubsub-topic="/waku/2/default-waku/proto"
+rln-relay-content-topic="/toy-chat/2/luzhou/proto"
+rln-relay-dynamic=false
+rln-relay-id-key=
+rln-relay-id-commitment-key=
+rln-relay-eth-account-address=
+rln-relay-eth-account-private-key=
+rln-relay-eth-client-address="ws://localhost:8540/"
+rln-relay-eth-contract-address=
+rln-relay-cred-password=

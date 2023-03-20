@@ -1,0 +1,8 @@
+# --filter                  Enable filter protocol: true|false [=false].
+# --filternode              Peer multiaddr to request content filtering of
+#                               messages..
+# --filter-timeout          Timeout for filter node in seconds. [=14400].
+
+filter=false
+filternode=
+filter-timeout=14400
