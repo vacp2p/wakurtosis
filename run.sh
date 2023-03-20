@@ -65,9 +65,8 @@ fi
 docker rm gennet-container > /dev/null 2>&1
 
 # Start monitoring Docker stats
-echo -e "\nStarting monitoring ..."
-# sudo -E nohup python3 ./monitor.py &
-sudo -E python3 ./monitor.py &
+# echo -e "\nStarting monitoring ..."
+sudo -E python3 ./async_monitor.py &
 monitor_pid=$!
 echo $monitor_pid
 
@@ -108,8 +107,8 @@ kurtosis enclave dump ${enclave_name} ${enclave_name}_logs > /dev/null 2>&1
 echo -e "Simulation ended with code $status_code Results in ./${enclave_name}_logs"
 
 # Copy simulation results
-# docker cp "$cid:/wsl/summary.json" "./${enclave_name}_logs" > /dev/null 2>&1
-# docker cp "$cid:/wsl/messages.json" "./${enclave_name}_logs"
+echo -e "Copying messages ..."
+docker cp "$cid:/wsl/messages.json" "./${enclave_name}_logs"
 
 # Wait for metrics to finish
 echo -e "Waiting monitoring to finish ..."
@@ -123,8 +122,8 @@ echo -e "Analysis results in ./${enclave_name}_logs"
 # docker stop cadvisor > /dev/null 2>&1
 
 # Stop and delete the enclave
-# kurtosis enclave stop $enclave_name > /dev/null 2>&1
-# kurtosis enclave rm -f $enclave_name > /dev/null 2>&1
-# echo "Enclave $enclave_name stopped and deleted."
+kurtosis enclave stop $enclave_name > /dev/null 2>&1
+kurtosis enclave rm -f $enclave_name > /dev/null 2>&1
+echo "Enclave $enclave_name stopped and deleted."
 
 echo "Done."
