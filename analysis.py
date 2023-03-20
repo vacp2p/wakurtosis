@@ -48,6 +48,39 @@ class CustomFormatter(logging.Formatter):
         formatter = logging.Formatter(log_fmt, '%d-%m-%Y %H:%M:%S')
         return formatter.format(record)
 
+def extract_node_id(s: str) -> str:
+    pattern = r"node_(\d+)\.toml"
+    match = re.search(pattern, s)
+    if match:
+        return f"node_{match.group(1)}"
+    else:
+        return None
+
+def load_metrics(metrics_file_path: str):
+    
+    metrics_dict = {}
+    
+    try:
+        with open(metrics_file_path, 'r') as file:
+            
+            for line in file:
+                
+                sample_object = json.loads(line)
+                node_id = extract_node_id(sample_object['process_binary'])
+                
+                if node_id in metrics_dict:
+                    metrics_dict[node_id]['samples'].append(sample_object)
+                else:
+                    metrics_dict[node_id] = {'samples' : [sample_object]}
+
+    except Exception as e:
+        G_LOGGER.error('%s: %s' % (e.__doc__, e))
+        sys.exit()
+
+    G_LOGGER.info('Loaded %d samples.' %len(metrics_dict))
+
+    return metrics_dict
+
 def plot_msg_distributions(messages, simulation_config):
 
     # msg_sizes_bytes = []
@@ -67,9 +100,9 @@ def plot_msg_distributions(messages, simulation_config):
 
     G_LOGGER.info('Messages distribution figure saved in %s' %figure_path)
 
-def plot_node_stats(msg_propagation_times, cpu_usage, memory_usage, network_usage, disk_usage, simulation_summary, simulation_config):
+def plot_stats(msg_propagation_times, cpu_usage, memory_usage, network_usage, disk_usage, injection_times, simulation_summary, simulation_config):
 
-    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 15))
+    fig, ((ax1, ax2, ax3), (ax4, ax5, ax6)) = plt.subplots(2, 3, figsize=(15, 15))
     
     ax1.violinplot(msg_propagation_times, showmedians=True)
     ax1.set_title('Message propagation times')
@@ -96,6 +129,21 @@ def plot_node_stats(msg_propagation_times, cpu_usage, memory_usage, network_usag
     ax4.spines[['right', 'top']].set_visible(False)
     ax4.set_xticks([1, 2])
     ax4.set_xticklabels(['Received (Rx)', 'Sent (Tx)'])
+
+    # ax5.violinplot([network_usage['rx_mbytes'], network_usage['tx_mbytes']], showmedians=True)
+    ax5.violinplot(injection_times, showmedians=True)
+    
+    ax5.set_title('Injection times per message')
+    ax5.set_ylabel('Milliseconds (ms)')
+    ax5.spines[['right', 'top']].set_visible(False)
+    ax5.axes.xaxis.set_visible(False)
+
+    ax6.violinplot([disk_usage['disk_read_mbytes'], disk_usage['disk_write_mbytes']], showmedians=True)
+    ax6.set_title('Peak disk usage per Waku node')
+    ax6.set_ylabel('Disk IO (MBytes)')
+    ax6.spines[['right', 'top']].set_visible(False)
+    ax6.set_xticks([1, 2])
+    ax6.set_xticklabels(['Read', 'Write'])
     
     fig.suptitle('Wakurtosis Simulation Analysis \n(%d nodes, %d topic(s), Rate: %d msg/s, Time: %.2f s.)' %(simulation_summary['num_nodes'], \
     simulation_summary['num_topics'], simulation_config['wsl']['message_rate'], simulation_summary['simulation_time_ms'] / 1000.0), fontsize=20)
@@ -106,7 +154,6 @@ def plot_node_stats(msg_propagation_times, cpu_usage, memory_usage, network_usag
     plt.savefig(figure_path, format="pdf", bbox_inches="tight")
 
     G_LOGGER.info('Nodes analysis figure saved in %s' %figure_path)
-
 
 def fetch_performance_from_docker(container_id):
     
@@ -334,16 +381,21 @@ def main():
     G_LOGGER.info('Loaded topic structure with %d topic(s) and %d node(s).' %(len(topics), len(nodes_topics)))
    
     """ Load Simulation Messages """
-    # injected_msgs_dict = {}
-    # try:
-    #     with open('%s/messages.json' %simulation_path, 'r') as f:
-    #         injected_msgs_dict = json.load(f)
-    # except Exception as e:
-    #     G_LOGGER.error('%s: %s' % (e.__doc__, e))
-    #     sys.exit()
+    injected_msgs_dict = {}
+    try:
+        with open('%s/messages.json' %simulation_path, 'r') as f:
+            injected_msgs_dict = json.load(f)
+    except Exception as e:
+        G_LOGGER.error('%s: %s' % (e.__doc__, e))
+        sys.exit()
 
-    # G_LOGGER.info('Loaded %d messages.' %len(injected_msgs_dict))
-    # # G_LOGGER.debug(injected_msgs_dict)
+    G_LOGGER.info('Loaded %d messages.' %len(injected_msgs_dict))
+
+    # Gather injection times and message sizes
+    injection_times = [msg['injection_time'] for msg in injected_msgs_dict.values()]
+    injection_sizes = [(msg['injection_time'], msg['payload_size']) for msg in injected_msgs_dict.values()]
+
+    # print(injection_times)
 
     node_logs = {}
     msgs_dict = {}
@@ -501,105 +553,31 @@ def main():
         else:
             simulation_summary['messages'][msg_id]['avg_propagation_ms'] = None
 
-    # Fetch Hardware metrics from Node containers 
-    cpu_usage = []
-    memory_usage = []
-    network_usage = {'rx_mbytes' : [], 'tx_mbytes' : []}
-    # pbar = tqdm(node_logs.items())
-    # for node in pbar:
-    #     pbar.set_description('Fetching hardware stats from container %s' %node[1]['container_id'])
-
-    #     fetch_performance_from_docker(node[1]['container_id'])
-
-    #     # fetch_prometheus_stats_from_container(node[1]['container_id'], simulation_start_ts, simulation_end_ts)
-
-    #     # container_stats = fetch_cadvisor_stats_from_container(node[1]['container_id'], simulation_start_ts, simulation_end_ts)
-        
-    #     # # NOTE: Here we could also chose a different statistic such as mean or average instead of max
-    #     # max_cpu_usage = max(container_stats['cpu_usage'])
-    #     # cpu_usage.append(max_cpu_usage)
-    #     # simulation_summary['nodes'][node[0]]['max_cpu_usage_cycles'] = max_cpu_usage
-        
-    #     # max_memory_usage = max(container_stats['memory_usage'])
-    #     # memory_usage.append(max_memory_usage)
-    #     # simulation_summary['nodes'][node[0]]['max_memory_usage_mbytes'] = max_memory_usage
-        
-    #     # rx_mbytes = sum(container_stats['network_usage']['rx_mbytes'])
-    #     # network_usage['rx_mbytes'].append(rx_mbytes)
-    #     # simulation_summary['nodes'][node[0]]['max_rx_mbytes'] = rx_mbytes
-        
-    #     # tx_mbytes = sum(container_stats['network_usage']['tx_mbytes'])
-    #     # network_usage['tx_mbytes'].append(tx_mbytes)
-    #     # simulation_summary['nodes'][node[0]]['max_tx_mbytes'] = tx_mbytes
-
-    """ Load Dockers Stats """
-    log_metrics = {}
-    try:
-        with open('%s/%s' %(simulation_path,G_DEFAULT_METRICS_FILENAME), 'r') as f:
-            log_metrics = json.load(f)
-    except Exception as e:
-        G_LOGGER.error('%s: %s' % (e.__doc__, e))
-        sys.exit()
-
-    G_LOGGER.info('Loaded %d log metrics entries.' %len(log_metrics))
-    # G_LOGGER.debug(injected_msgs_dict)
-
-    """ Parse Stats """
-    node_metrics = {}
-    for log_metrics_entry in log_metrics:
-        
-        node_id = log_metrics_entry['node']
-        
-        if node_id not in node_metrics:
-            node_metrics[node_id] = {'cpu_usage_percent' : [], 'memory_usage_mbytes' : [], 'network_usage' : {'rx_mbytes' : [], 'tx_mbytes' : []}, 'disk_usage' : {'disk_read_mbytes' : [], 'disk_write_mbytes' : []}}
-        
-        node_metrics[node_id]['cpu_usage_percent'].append(log_metrics_entry['cpu_percent'])
-        
-        if log_metrics_entry['memory_usage'] > 0:
-            # Values are already in MBytes
-            node_metrics[node_id]['memory_usage_mbytes'].append(log_metrics_entry['memory_usage'])
-        else:
-            node_metrics[node_id]['memory_usage_mbytes'].append(0)
-        
-        if log_metrics_entry['network_rx_bytes'] > 0:
-            node_metrics[node_id]['network_usage']['rx_mbytes'].append(log_metrics_entry['network_rx_bytes'] / 1024 / 1024)
-        else:
-            node_metrics[node_id]['network_usage']['rx_mbytes'].append(0)
-        
-        if log_metrics_entry['network_tx_bytes'] > 0:
-            node_metrics[node_id]['network_usage']['tx_mbytes'].append(log_metrics_entry['network_tx_bytes'] / 1024 / 1024)
-        else:
-            node_metrics[node_id]['network_usage']['tx_mbytes'].append(0)
-
-        if log_metrics_entry['disk_read_bytes'] > 0:
-            node_metrics[node_id]['disk_usage']['disk_read_mbytes'].append(log_metrics_entry['disk_read_bytes'] / 1024 / 1024)
-        else:
-            node_metrics[node_id]['disk_usage']['disk_read_mbytes'].append(0)
-
-        if log_metrics_entry['disk_write_bytes'] > 0:
-            node_metrics[node_id]['disk_usage']['disk_write_mbytes'].append(log_metrics_entry['disk_write_bytes'] / 1024 / 1024)
-        else:
-            node_metrics[node_id]['disk_usage']['disk_write_mbytes'].append(0)
-
-    # Aggregate metric per node
+    """ Load Stats """
+    node_metrics = load_metrics('./%s' %(G_DEFAULT_METRICS_FILENAME))
+   
+    """ Compute Metrics """
     max_cpu_usage = []
     max_memory_usage = []
     total_network_usage = {'rx_mbytes' : [], 'tx_mbytes' : []}
     max_disk_usage = {'disk_read_mbytes' : [], 'disk_write_mbytes' : []}
+    
+    for node_id, node_obj in node_metrics.items():
 
-    for node_id, node_data in node_metrics.items():
+        # Peak values
+        max_cpu_usage.append(max(obj['cpu_percentage'] for obj in node_obj['samples']))
+        max_memory_usage.append(max(obj['memory_usage_mbytes'] for obj in node_obj['samples']))
         
-        max_cpu_usage.append(max(node_data['cpu_usage_percent']))
-        max_memory_usage.append(max(node_data['memory_usage_mbytes']))
-        
-        total_network_usage['rx_mbytes'].append(sum(node_data['network_usage']['rx_mbytes']))
-        total_network_usage['tx_mbytes'].append(sum(node_data['network_usage']['tx_mbytes']))
+        # This accumulated 
+        total_network_usage['rx_mbytes'].append(sum(obj['network_io_mbytes']['rx'] for obj in node_obj['samples']))
+        total_network_usage['tx_mbytes'].append(sum(obj['network_io_mbytes']['tx'] for obj in node_obj['samples']))
 
-        max_disk_usage['disk_read_mbytes'].append(max(node_data['disk_usage']['disk_read_mbytes']))
-        max_disk_usage['disk_write_mbytes'].append(max(node_data['disk_usage']['disk_write_mbytes']))
+        # Peak values
+        max_disk_usage['disk_read_mbytes'].append(max(obj['disk_io_mbytes']['read'] for obj in node_obj['samples']))
+        max_disk_usage['disk_write_mbytes'].append(max(obj['disk_io_mbytes']['write'] for obj in node_obj['samples']))
 
     # Generate Figures
-    plot_node_stats(msg_propagation_times, max_cpu_usage, max_memory_usage, total_network_usage, max_disk_usage, simulation_summary['general'], simulation_config)
+    plot_stats(msg_propagation_times, max_cpu_usage, max_memory_usage, total_network_usage, max_disk_usage, injection_times, simulation_summary['general'], simulation_config)
     # plot_msg_distributions(injected_msgs_dict, simulation_config)
 
     # Generate summary
