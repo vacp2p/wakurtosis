@@ -13,9 +13,9 @@
 #                               boot..
 
 store=false
-storenode=
-store-message-retention-policy=
-store-message-db-url=
+#storenode=
+#store-message-retention-policy=
+#store-message-db-url=
 store-message-db-vacuum=false
 store-message-db-migration=true
-store-resume-peer=
+#store-resume-peer=

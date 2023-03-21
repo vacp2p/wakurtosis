@@ -3,5 +3,5 @@
 # --dns-discovery-name-server  DNS name server IPs to query. Argument may be repeated.
 
 dns-discovery=false
-dns-discovery-url=
-dns-discover-name-server=
+#dns-discovery-url=
+#dns-discover-name-server=

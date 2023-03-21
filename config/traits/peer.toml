@@ -1,5 +1,5 @@
 # --peer-store-capacity     Maximum stored peers in the peerstore..
 # --peer-persistence        Enable peer persistence. [=false].
 
-peer-store-capacity=
+#peer-store-capacity=
 peer-persistence=false

@@ -25,15 +25,15 @@
 
 
 rln-relay=false
-rln-relay-cred-path=
-rln-relay-membership-index=
+#rln-relay-cred-path=
+#rln-relay-membership-index=
 rln-relay-pubsub-topic="/waku/2/default-waku/proto"
 rln-relay-content-topic="/toy-chat/2/luzhou/proto"
 rln-relay-dynamic=false
-rln-relay-id-key=
-rln-relay-id-commitment-key=
-rln-relay-eth-account-address=
-rln-relay-eth-account-private-key=
+#rln-relay-id-key=
+#rln-relay-id-commitment-key=
+#rln-relay-eth-account-address=
+#rln-relay-eth-account-private-key=
 rln-relay-eth-client-address="ws://localhost:8540/"
-rln-relay-eth-contract-address=
-rln-relay-cred-password=
+#rln-relay-eth-contract-address=
+#rln-relay-cred-password=

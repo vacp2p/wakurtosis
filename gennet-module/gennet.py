@@ -10,7 +10,7 @@ import json, ast
 
 import time, tracemalloc
 import string
-import typer
+import typer, tomli
 
 from enum import Enum, EnumMeta
 
@@ -52,16 +52,10 @@ class Trait(BaseEnum):
 
 # Enums & Consts
 
-# To add a new node type, add appropriate entries to the nodeType and nodeTypeSwitch
+# To add a new node type, add appropriate entries to the nodeType and nodeTypeToDocker
 class nodeType(Enum):
     NWAKU = "nwaku"     # waku desktop config
     GOWAKU = "gowaku"   # waku mobile config
-
-
-nodeTypeToTomlDefault = {
-    nodeType.NWAKU: "rpc-admin = true\nkeep-alive = true\nmetrics-server = true\n",
-    nodeType.GOWAKU: "rpc-admin = true\nmetrics-server = true\nrpc = true\n"
-}
 
 nodeTypeToDocker = {
     nodeType.NWAKU: "nim-waku",
@@ -265,8 +259,8 @@ def generate_subnets(G, num_subnets):
 
 ### file format related fns ###########################################################
 # Generate per node toml configs
-def generate_toml(topics, configuration, node_type=nodeType.NWAKU):
-    topics = get_random_sublist(topics)
+def generate_toml(topics, traits_list):
+    topics, node_type, tomls = get_random_sublist(topics), traits_list[0], ""
     if node_type == nodeType.GOWAKU:    # comma separated list of quoted topics
         topic_str = ", ".join(f"\"{t}\"" for t in topics)
         topic_str = f"[{topic_str}]"
@@ -274,13 +268,13 @@ def generate_toml(topics, configuration, node_type=nodeType.NWAKU):
         topic_str = " ".join(topics)
         topic_str = f"\"{topic_str}\""
 
-    if configuration is None:
-        config = nodeTypeToTomlDefault.get(node_type)
-        return f"{config}topics = {topic_str}\n"
-
-    return f"{configuration}topics = {topic_str}\n"
-
-
+    for trait in traits_list[1:] :
+        with open(f"traits/{trait}.toml", 'rb') as f:
+            toml = ""
+            for key, value in tomli.load(f).items():
+                toml += f"{key} = {str(value)}\n"
+        tomls += toml
+    return f"{tomls}topics = {topic_str}\n"
 
 
 # Convert a dict to pair of arrays
@@ -302,38 +296,36 @@ def sum_fails(lst, sum_expected=100):
 def traits_to_nodeType(s):
     return nodeType(s.split(':')[0])
 
-def validate_traits_distribution(traits_distribution):
-    traits, traits_percentages = dict_to_arrays(traits_distribution)
-    if range_fails(traits_percentages): 
+def validate_traits_distribution(traits_distribution, num_nodes):
+    traits, traits_freq = dict_to_arrays(traits_distribution)
+    if range_fails(traits_freq, max=num_nodes): 
+        raise ValueError(f"{traits_distribution} : invalid node count (>{num_nodes} or <0)")
+    if sum_fails(traits_freq, sum_expected=num_nodes) :
         raise ValueError(
-                f"--node-type-distribution {traits_distribution} : invalid entries (> 100 or < 0)")
-    if sum_fails(traits_percentages) :
-        raise ValueError(
-                f"--node-type-distribution {traits_distribution} : percentages do not sum to 100")
+                f"{traits_distribution} : total node count does not sum to {num_nodes}")
     for s in traits:
         traits_list = s.split(":")
         for  t in traits_list :
             if t not in Trait :
                 raise ValueError(
-                    f"--node-type-distribution {traits_distribution}: unknown trait {t} in {s}")
+                    f"{traits_distribution}: unknown trait {t} in {s}")
 
 
 # Sanity check and extract the traits distribution
 def extract_traits_distribution(traits_distribution):
     traits, traits_percentages = dict_to_arrays(traits_distribution)
-   # if range_fails(traits_percentages) or sum_fails(traits_percentages) :
-   #     raise ValueError(f"--node-type-distribution {traits_distribution} is invalid")
     return traits, traits_percentages
 
 
 # Generate a list of nodeType enums that respects the node type distribution
-def generate_node_types(node_type_distribution, G):
+def generate_traits_distribution(node_type_distribution, G):
     num_nodes = G.number_of_nodes()
-    nodes, node_percentages = dict_to_arrays(node_type_distribution)
-    node_types_str = random.choices(nodes, weights=node_percentages, k=num_nodes)
-    node_types_enum = [print(s.split(':')[0]) for s in node_types_str]
-    node_types_enum = [traits_to_nodeType(s) for s in node_types_str]
-    return node_types_enum
+    nodes, node_freq = dict_to_arrays(node_type_distribution)
+    traits_distribution = []
+    for i, n in enumerate(nodes):
+       traits_distribution +=  [nodes[i]] * node_freq[i]
+    random.shuffle(traits_distribution)
+    return traits_distribution
 
 # Inverts a dictionary of lists (of lists/tuples) 
 def invert_dict_of_list(d, idx=0):
@@ -371,7 +363,7 @@ def pack_nodes(container_size, node2subnet, G):
 def generate_and_write_files(ctx: typer, G):
     topics = generate_topics(ctx.params["num_topics"])
     node2subnet = generate_subnets(G, ctx.params["num_subnets"])
-    node_types_enum = generate_node_types(ctx.params["node_type_distribution"], G)
+    traits_distribution = generate_traits_distribution(ctx.params["node_type_distribution"], G)
     node2container = pack_nodes(ctx.params["container_size"], node2subnet, G)
     container2nodes = invert_dict_of_list(node2container, 1)
 
@@ -386,9 +378,10 @@ def generate_and_write_files(ctx: typer, G):
         # package container_size nodes per container
 
         # write the per node toml for the i^ith node of appropriate type
-        node_type, i = node_types_enum[i], i+1
-        configuration = ctx.params.get("node_config", {}).get(node_type.value)
-        write_toml(ctx.params["output_dir"], node, generate_toml(topics, configuration, node_type))
+        traits_list, i = traits_distribution[i].split(":"),  i+1
+        node_type = traits_list[0]
+        #configuration = ctx.params.get("node_config", {}).get(node_type.value)
+        write_toml(ctx.params["output_dir"], node, generate_toml(topics, traits_list))
         json_dump[EXTERNAL_NODES_PREFIX][node] = {}
         json_dump[EXTERNAL_NODES_PREFIX][node]["static_nodes"] = []
         for edge in G.edges(node):
@@ -444,13 +437,12 @@ def _num_subnets_callback(ctx: typer, Context, num_subnets: int):
             f"num_subnets must be <= num_nodes: num_subnets={num_subnets}, num_nodes={1}")
     return num_subnets
 
-
 def main(ctx: typer.Context,
          benchmark: bool = typer.Option(False, help="Measure CPU/Mem usage of Gennet"),
          draw: bool = typer.Option(False, help="Draw the generated network"),
          container_size: int =  typer.Option(1, help="Set the number of nodes per container"),   # TODO: reduce container packer memory consumption
          output_dir: str = typer.Option("network_data", help="Set the output directory for Gennet generated files"),
-         prng_seed: int = typer.Option(41, help="Set the random seed"),
+         prng_seed: int = typer.Option(1, help="Set the random seed"),
          num_nodes: int = typer.Option(4, help="Set the number of nodes"),
          num_topics: int = typer.Option(1, help="Set the number of topics"),
          fanout: int = typer.Option(3, help="Set the arity for trees & newmanwattsstrogatz"),
@@ -478,16 +470,8 @@ def main(ctx: typer.Context,
     random.seed(prng_seed)
     np.random.seed(prng_seed)
 
-    # leaving it for now should any json parsing issues pops up
-    # Extract the node type distribution from config.json or use the default
-    # no cli equivalent for node type distribution (NTD)
-    # if "gennet" in conf  and "node_type_distribution" in conf ["gennet"]:
-    #     node_type_distribution = conf["gennet"]["node_type_distribution"]
-    # else:
-    #    node_type_distribution = { "nwaku" : 100 }  # default NTD is all nwaku
-
-    # sanity check node type distribution
-    validate_traits_distribution(node_type_distribution)
+    # validate node type distribution
+    validate_traits_distribution(node_type_distribution, num_nodes)
 
     # Generate the network
     # G = generate_network(num_nodes, networkType(network_type), tree_arity)

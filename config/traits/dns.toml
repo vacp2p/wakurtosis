@@ -9,5 +9,5 @@
 
 
 dns-addrs=true
-dns-addrs-name-server=
-dns4-domain-name=
+#dns-addrs-name-server=
+#dns4-domain-name=

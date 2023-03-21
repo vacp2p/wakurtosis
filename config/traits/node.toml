@@ -29,9 +29,9 @@
 #                               may be repeated..
 
 agent-string="nwaku"
-nodekey=
+#nodekey=
 
-config-file=
+#config-file=
 log-level=logging.LogLevel.INFO
 log-format=logging.LogFormat.TEXT
 listen-address=
@@ -44,8 +44,8 @@ max-connections=50
 
 ports-shift=0
 nat=any
-ext-multiaddr=
-staticnode=
+#ext-multiaddr=
+#staticnode=
 
 
 # --topics                  Default topics to subscribe to (space separated

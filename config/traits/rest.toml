@@ -11,8 +11,8 @@
 #                               true|false [=false].
 
 rest=false
-rest-address=
-rest-port=
-rest-relay-cache-capacity=
+#rest-address=
+#rest-port=
+#rest-relay-cache-capacity=
 #rest-admin=
-rest-private=
+#rest-private=

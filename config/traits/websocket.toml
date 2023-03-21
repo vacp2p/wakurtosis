@@ -6,7 +6,7 @@
 #                               '/path/to/cert.txt' .
 
 websocket-support=false
-websocket-port=
-websocket-secure-support=
-websocket-secure-key-path=
-websocket-secure-cert-path=
+websocket-port=8000
+#websocket-secure-support=
+#websocket-secure-key-path=
+#websocket-secure-cert-path=

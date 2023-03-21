@@ -4,5 +4,5 @@
 # --filter-timeout          Timeout for filter node in seconds. [=14400].
 
 filter=false
-filternode=
+#filternode=
 filter-timeout=14400
