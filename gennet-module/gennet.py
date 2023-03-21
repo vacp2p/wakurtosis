@@ -73,6 +73,7 @@ NW_DATA_FNAME = "network_data.json"
 EXTERNAL_NODES_PREFIX, NODE_PREFIX, SUBNET_PREFIX, CONTAINER_PREFIX = \
     "nodes", "node", "subnetwork", "containers"
 ID_STR_SEPARATOR = "-"
+TRAITS_DIR="traits"
 
 ### I/O related fns ##############################################################
 
@@ -270,7 +271,7 @@ def generate_toml(topics, traits_list):
         topic_str = f"\"{topic_str}\""
 
     for trait in traits_list[1:] :
-        with open(f"traits/{trait}.toml", 'rb') as f:
+        with open(f"{TRAITS_DIR}/{trait}.toml", 'rb') as f:
             toml = ""
             for key, value in tomli.load(f).items():
                 toml += f"{key} = {str(value)}\n"
