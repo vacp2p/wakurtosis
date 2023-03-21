@@ -255,12 +255,28 @@ def dict_to_arrays(dic):
         vals.append(dic[k])
     return keys, vals
 
+# Check for range failures in a list
+def range_fails(lst, min=0, max=100):
+    return any(x < min or x > max for x in lst)
+
+# Check for sum failures in a list
+def sum_fails(lst, sum_expected=100):
+    return not sum(lst) == sum_expected
+
+# Sanity check and extract the traits distribution
+def extract_trait_distribution(traits_distribution):
+    traits, traits_percentages = dict_to_arrays(traits_distribution)
+    if range_fails(traits_percentages) or sum_fails(traits_percentages) :
+        raise ValueError(
+                f"--node-type-distribution {traits_distribution} is invalid")
+    return traits, traits_percentages
+
 
 # Generate a list of nodeType enums that respects the node type distribution
 def generate_node_types(node_type_distribution, G):
     num_nodes = G.number_of_nodes()
-    nodes, node_probs = dict_to_arrays(node_type_distribution)
-    node_types_str = random.choices(nodes, weights=node_probs, k=num_nodes)
+    nodes, node_percentages = extract_trait_distribution(node_type_distribution)
+    node_types_str = random.choices(nodes, weights=node_percentages, k=num_nodes)
     node_types_enum = [nodeType(s) for s in node_types_str]
     return node_types_enum
 
