@@ -22,7 +22,7 @@ config/network_topology_auto/
 config/config.json
 gennet-module/topology/
 gennet-module/network_data/
-gennet-module/traits/
+gennet-module/traits
 kurtosis_log.txt
 config/network_topology/
 config/topology_generated/
