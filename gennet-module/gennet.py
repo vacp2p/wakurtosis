@@ -300,14 +300,14 @@ def sum_fails(lst, sum_expected=100):
 def traits_to_nodeType(s):
     return nodeType(s.split(':')[0])
 
-
+# Validate the traits distribution (stick to percentages: num nodes may vary post generation)
 def validate_traits_distribution(traits_distribution, num_nodes):
     traits, traits_freq = dict_to_arrays(traits_distribution)
-    if range_fails(traits_freq, max=num_nodes): 
-        raise ValueError(f"{traits_distribution} : invalid node count (>{num_nodes} or <0)")
-    if sum_fails(traits_freq, sum_expected=num_nodes) :
+    if range_fails(traits_freq, max=100):
+        raise ValueError(f"{traits_distribution} : invalid percentage (>{100} or <0)")
+    if sum_fails(traits_freq, sum_expected=100) :
         raise ValueError(
-                f"{traits_distribution} : total node count does not sum to {num_nodes}")
+                f"{traits_distribution} : percentages do not sum to {100}")
     for s in traits:
         traits_list = s.split(":")
         for  t in traits_list :
@@ -324,10 +324,10 @@ def extract_traits_distribution(traits_distribution):
 # Generate a list of nodeType enums that respects the node type distribution
 def generate_traits_distribution(node_type_distribution, G):
     num_nodes = G.number_of_nodes()
-    nodes, node_freq = dict_to_arrays(node_type_distribution)
+    nodes, node_percentage = dict_to_arrays(node_type_distribution)
     traits_distribution = []
     for i, n in enumerate(nodes):
-       traits_distribution +=  [nodes[i]] * node_freq[i]
+       traits_distribution +=  [nodes[i]] * math.ceil(node_percentage[i] * num_nodes/100)
     random.shuffle(traits_distribution)
     return traits_distribution
 
@@ -383,7 +383,7 @@ def generate_and_write_files(ctx: typer, G):
     for node in G.nodes:
         # write the per node toml for the i^ith node of appropriate type
         traits_list, i = traits_distribution[i].split(":"),  i+1
-        node_type = traits_list[0]
+        node_type = nodeType(traits_list[0])
         write_toml(ctx.params["output_dir"], node, generate_toml(topics, traits_list))
         json_dump[EXTERNAL_NODES_PREFIX][node] = {}
         json_dump[EXTERNAL_NODES_PREFIX][node]["static_nodes"] = []
@@ -461,7 +461,7 @@ def main(ctx: typer.Context,
         tracemalloc.start()
     start = time.time()
 
-    # re-read the conf file to set node_type_distribution -- no cli equivalent
+    # re-read the conf file to set node_type_distribution
     conf = {}
     if config_file != "" :
         with open(config_file, 'r') as f:  # Load config file
