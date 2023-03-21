@@ -14,7 +14,7 @@ import typer, tomli
 
 from enum import Enum, EnumMeta
 
-
+# Enums & Consts
 
 class MetaEnum(EnumMeta):
     def __contains__(cls, item):
@@ -24,10 +24,8 @@ class MetaEnum(EnumMeta):
             return False
         return True    
 
-
 class BaseEnum(Enum, metaclass=MetaEnum):
     pass
-
 
 class Trait(BaseEnum):
     NWAKU = 	"nwaku"
@@ -48,9 +46,6 @@ class Trait(BaseEnum):
     STORE = 	"store"
     SWAP = 	"swap"
     WEBSOCKET = 	"websocket"
-
-
-# Enums & Consts
 
 # To add a new node type, add appropriate entries to the nodeType and nodeTypeToDocker
 class nodeType(Enum):
@@ -160,10 +155,12 @@ def generate_config_model(ctx):
         degrees[-1] += 1
     return nx.configuration_model(degrees)  # generate the graph
 
+
 # |G| = n
 def generate_scalefree_graph(ctx):
     n = ctx.params["num_nodes"]
     return nx.scale_free_graph(n)
+
 
 # |G| = n; n must be larger than k=D=3
 def generate_newmanwattsstrogatz_graph(ctx):
@@ -171,10 +168,12 @@ def generate_newmanwattsstrogatz_graph(ctx):
     fanout = ctx.params["fanout"]
     return nx.newman_watts_strogatz_graph(n, fanout, 0.5)
 
+
 # |G| = n (if odd); n+1 (if even)
 def generate_barbell_graph(ctx):
     n = ctx.params["num_nodes"]
     return nx.barbell_graph(int(n / 2), 1)
+
 
 # |G| > fanout^{\floor{log_n} + 1}
 def generate_balanced_tree(ctx):
@@ -182,6 +181,7 @@ def generate_balanced_tree(ctx):
     fanout = ctx.params["fanout"]
     height = int(math.log(n) / math.log(fanout))
     return nx.balanced_tree(fanout, height)
+
 
 # nomostree is a balanced binary tree with even number of leaves
 # |G| = n (if odd); n+1 (if even)
@@ -204,6 +204,7 @@ def generate_nomos_tree(ctx):
         i += 1
     G = nx.convert_node_labels_to_integers(G)
     return G
+
 
 # |G| = n
 def generate_star_graph(ctx):
@@ -284,17 +285,21 @@ def dict_to_arrays(dic):
         vals.append(dic[k])
     return keys, vals
 
+
 # Check for range failures in a list
 def range_fails(lst, min=0, max=100):
     return any(x < min or x > max for x in lst)
+
 
 # Check for sum failures in a list
 def sum_fails(lst, sum_expected=100):
     return not sum(lst) == sum_expected
 
+
 # Construct the nodeType from the trait
 def traits_to_nodeType(s):
     return nodeType(s.split(':')[0])
+
 
 def validate_traits_distribution(traits_distribution, num_nodes):
     traits, traits_freq = dict_to_arrays(traits_distribution)
@@ -311,10 +316,9 @@ def validate_traits_distribution(traits_distribution, num_nodes):
                     f"{traits_distribution}: unknown trait {t} in {s}")
 
 
-# Sanity check and extract the traits distribution
+# Extract the traits distribution
 def extract_traits_distribution(traits_distribution):
-    traits, traits_percentages = dict_to_arrays(traits_distribution)
-    return traits, traits_percentages
+    return dict_to_arrays(traits_distribution)
 
 
 # Generate a list of nodeType enums that respects the node type distribution
@@ -326,6 +330,7 @@ def generate_traits_distribution(node_type_distribution, G):
        traits_distribution +=  [nodes[i]] * node_freq[i]
     random.shuffle(traits_distribution)
     return traits_distribution
+
 
 # Inverts a dictionary of lists (of lists/tuples) 
 def invert_dict_of_list(d, idx=0):
@@ -344,6 +349,7 @@ def invert_dict_of_list(d, idx=0):
     return inv
 
 
+# TODO: reduce container packer memory consumption
 # Packs the nodes into container in a subnet aware manner : optimal
 # Number of containers = 
 #   $$ O(\sum_{i=0}^{num_subnets} log_{container_size}(#Nodes_{numsubnets}) + num_subnets)
@@ -375,12 +381,9 @@ def generate_and_write_files(ctx: typer, G):
 
     i = 0
     for node in G.nodes:
-        # package container_size nodes per container
-
         # write the per node toml for the i^ith node of appropriate type
         traits_list, i = traits_distribution[i].split(":"),  i+1
         node_type = traits_list[0]
-        #configuration = ctx.params.get("node_config", {}).get(node_type.value)
         write_toml(ctx.params["output_dir"], node, generate_toml(topics, traits_list))
         json_dump[EXTERNAL_NODES_PREFIX][node] = {}
         json_dump[EXTERNAL_NODES_PREFIX][node]["static_nodes"] = []
@@ -407,12 +410,12 @@ def _config_file_callback(ctx: typer.Context, param: typer.CallbackParam, cfile:
             with open(cfile, 'r') as f:  # Load config file
                 conf = json.load(f)
                 if "gennet" not in conf:
-                    print(f"Gennet configuration not found in {cfile}. Skipping topology generation.")
+                    print(
+                        f"Gennet configuration not found in {cfile}. Skipping topology generation.")
                     sys.exit(0)
                 if "general" in conf and "prng_seed" in conf["general"]:
                     conf["gennet"]["prng_seed"] = conf["general"]["prng_seed"]
-                # TODO : type-check and sanity-check the config.json
-                #print(conf)
+                # TODO : type-check and sanity-check the values in config.json
             ctx.default_map.update(conf["gennet"])  # Merge config and default_map
         except Exception as ex:
             raise typer.BadParameter(str(ex))
@@ -440,7 +443,7 @@ def _num_subnets_callback(ctx: typer, Context, num_subnets: int):
 def main(ctx: typer.Context,
          benchmark: bool = typer.Option(False, help="Measure CPU/Mem usage of Gennet"),
          draw: bool = typer.Option(False, help="Draw the generated network"),
-         container_size: int =  typer.Option(1, help="Set the number of nodes per container"),   # TODO: reduce container packer memory consumption
+         container_size: int =  typer.Option(1, help="Set the number of nodes per container"),
          output_dir: str = typer.Option("network_data", help="Set the output directory for Gennet generated files"),
          prng_seed: int = typer.Option(1, help="Set the random seed"),
          num_nodes: int = typer.Option(4, help="Set the number of nodes"),
