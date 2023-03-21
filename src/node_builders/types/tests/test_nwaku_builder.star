@@ -22,13 +22,13 @@ def test_prepare_nwaku_service(plan):
         assertion="==", target_value=vars.NWAKU_IMAGE)
 
     for node in ["test1", "test2"]:
-        plan.assert(value=str(test_dict["id_1"].ports[vars.RPC_PORT_ID+"_"+node].number),
+        plan.assert(value=str(test_dict["id_1"].ports[vars.RPC_PORT_ID+vars.ID_STR_SEPARATOR+node].number),
             assertion="==", target_value = str(vars.WAKU_RPC_PORT_NUMBER +
                                                topology["nodes"][node][vars.GENNET_PORT_SHIFT_KEY]))
-        plan.assert(value=str(test_dict["id_1"].ports[vars.PROMETHEUS_PORT_ID+"_"+node].number),
+        plan.assert(value=str(test_dict["id_1"].ports[vars.PROMETHEUS_PORT_ID+vars.ID_STR_SEPARATOR+node].number),
             assertion="==", target_value=str(vars.PROMETHEUS_PORT_NUMBER +
                                              topology["nodes"][node][vars.GENNET_PORT_SHIFT_KEY]))
-        plan.assert(value=str(test_dict["id_1"].ports[vars.WAKU_LIBP2P_PORT_ID+"_"+node].number),
+        plan.assert(value=str(test_dict["id_1"].ports[vars.WAKU_LIBP2P_PORT_ID+vars.ID_STR_SEPARATOR+node].number),
                 assertion="==", target_value=str(vars.WAKU_LIBP2P_PORT +
                                                  topology["nodes"][node][vars.GENNET_PORT_SHIFT_KEY]))
 
