@@ -12,7 +12,42 @@ import time, tracemalloc
 import string
 import typer
 
-from enum import Enum
+from enum import Enum, EnumMeta
+
+
+
+class MetaEnum(EnumMeta):
+    def __contains__(cls, item):
+        try:
+            cls(item)
+        except ValueError:
+            return False
+        return True    
+
+
+class BaseEnum(Enum, metaclass=MetaEnum):
+    pass
+
+
+class Trait(BaseEnum):
+    NWAKU = 	"nwaku"
+    GOWAKU = 	"gowaku"
+    DISCV5 = 	"discv5"
+    DNSDISC = 	"dnsdisc"
+    DNS = 	"dns"
+    FLTER = 	"flter"
+    LIGHTPUSH = 	"lightpush"
+    METRICS = 	"metrics"
+    NODE = 	"node"
+    PEER = 	"peer"
+    PEERXCHNG = 	"peerxchng"
+    RELAY = 	"relay"
+    REST = 	"rest"
+    RLN = 	"rln"
+    RPC = 	"rpc"
+    STORE = 	"store"
+    SWAP = 	"swap"
+    WEBSOCKET = 	"websocket"
 
 
 # Enums & Consts
@@ -263,21 +298,41 @@ def range_fails(lst, min=0, max=100):
 def sum_fails(lst, sum_expected=100):
     return not sum(lst) == sum_expected
 
-# Sanity check and extract the traits distribution
-def extract_trait_distribution(traits_distribution):
+# Construct the nodeType from the trait
+def traits_to_nodeType(s):
+    return nodeType(s.split(':')[0])
+
+def validate_traits_distribution(traits_distribution):
     traits, traits_percentages = dict_to_arrays(traits_distribution)
-    if range_fails(traits_percentages) or sum_fails(traits_percentages) :
+    if range_fails(traits_percentages): 
         raise ValueError(
-                f"--node-type-distribution {traits_distribution} is invalid")
+                f"--node-type-distribution {traits_distribution} : invalid entries (> 100 or < 0)")
+    if sum_fails(traits_percentages) :
+        raise ValueError(
+                f"--node-type-distribution {traits_distribution} : percentages do not sum to 100")
+    for s in traits:
+        traits_list = s.split(":")
+        for  t in traits_list :
+            if t not in Trait :
+                raise ValueError(
+                    f"--node-type-distribution {traits_distribution}: unknown trait {t} in {s}")
+
+
+# Sanity check and extract the traits distribution
+def extract_traits_distribution(traits_distribution):
+    traits, traits_percentages = dict_to_arrays(traits_distribution)
+   # if range_fails(traits_percentages) or sum_fails(traits_percentages) :
+   #     raise ValueError(f"--node-type-distribution {traits_distribution} is invalid")
     return traits, traits_percentages
 
 
 # Generate a list of nodeType enums that respects the node type distribution
 def generate_node_types(node_type_distribution, G):
     num_nodes = G.number_of_nodes()
-    nodes, node_percentages = extract_trait_distribution(node_type_distribution)
+    nodes, node_percentages = dict_to_arrays(node_type_distribution)
     node_types_str = random.choices(nodes, weights=node_percentages, k=num_nodes)
-    node_types_enum = [nodeType(s) for s in node_types_str]
+    node_types_enum = [print(s.split(':')[0]) for s in node_types_str]
+    node_types_enum = [traits_to_nodeType(s) for s in node_types_str]
     return node_types_enum
 
 # Inverts a dictionary of lists (of lists/tuples) 
@@ -351,7 +406,7 @@ def generate_and_write_files(ctx: typer, G):
 
 
 # sanity check : valid json with "gennet" config
-def conf_callback(ctx: typer.Context, param: typer.CallbackParam, cfile: str):
+def _config_file_callback(ctx: typer.Context, param: typer.CallbackParam, cfile: str):
     if cfile:
         typer.echo(f"Loading config file: {cfile.split('/')[-1]}")
         ctx.default_map = ctx.default_map or {}  # Init the default map
@@ -404,7 +459,7 @@ def main(ctx: typer.Context,
          network_type: networkType = typer.Option(networkType.NEWMANWATTSSTROGATZ.value, help="Set the node type"),
          num_subnets: int = typer.Option(1, callback=_num_subnets_callback, help="Set the number of subnets"),
          num_partitions: int = typer.Option(1, callback=_num_partitions_callback, help="Set the number of network partitions"),
-         config_file: str = typer.Option("", callback=conf_callback, is_eager=True, help="Set the input config file (JSON)")):
+         config_file: str = typer.Option("", callback=_config_file_callback, is_eager=True, help="Set the input config file (JSON)")):
 
     # Benchmarking: record start time and start tracing mallocs
     if benchmark :
@@ -431,6 +486,8 @@ def main(ctx: typer.Context,
     # else:
     #    node_type_distribution = { "nwaku" : 100 }  # default NTD is all nwaku
 
+    # sanity check node type distribution
+    validate_traits_distribution(node_type_distribution)
 
     # Generate the network
     # G = generate_network(num_nodes, networkType(network_type), tree_arity)
