@@ -264,7 +264,7 @@ def generate_node_types(node_type_distribution, G):
     node_types_enum = [nodeType(s) for s in node_types_str]
     return node_types_enum
 
-# Inverts a dictionary of lists
+# Inverts a dictionary of lists (of lists/tuples) 
 def invert_dict_of_list(d, idx=0):
     inv = {}
     for key, val in d.items():
@@ -285,10 +285,10 @@ def invert_dict_of_list(d, idx=0):
 # Number of containers = 
 #   $$ O(\sum_{i=0}^{num_subnets} log_{container_size}(#Nodes_{numsubnets}) + num_subnets)
 def pack_nodes(container_size, node2subnet, G):
-    subnet2node = invert_dict_of_list(node2subnet)
+    subnet2nodes = invert_dict_of_list(node2subnet)
     port_shift, cid, node2container = 0, 0, {}
-    for subnet in subnet2node:
-        for node in subnet2node[subnet]:
+    for subnet in subnet2nodes:
+        for node in subnet2nodes[subnet]:
             if port_shift >= container_size :
                 port_shift, cid = 0, cid+1
             node2container[node] = (port_shift, f"{CONTAINER_PREFIX}_{cid}")
@@ -302,12 +302,12 @@ def generate_and_write_files(ctx: typer, G):
     node2subnet = generate_subnets(G, ctx.params["num_subnets"])
     node_types_enum = generate_node_types(ctx.params["node_type_distribution"], G)
     node2container = pack_nodes(ctx.params["container_size"], node2subnet, G)
-    inv = invert_dict_of_list(node2container, 1)
+    container2nodes = invert_dict_of_list(node2container, 1)
 
     json_dump = {}
     json_dump[CONTAINER_PREFIX] = {}
     json_dump[EXTERNAL_NODES_PREFIX] = {}
-    for container, nodes in inv.items():
+    for container, nodes in container2nodes.items():
         json_dump[CONTAINER_PREFIX][container] = nodes
 
     i = 0
