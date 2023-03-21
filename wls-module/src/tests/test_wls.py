@@ -173,11 +173,11 @@ class TestWLS(unittest.TestCase):
         self.assertFalse(next_message)
 
     def test__select_emitter_and_topic(self):
-        emitters = {"test1": {"ip_address": 1, "ports": {"rpc_test1": (2, "asd")},
+        emitters = {"test1": {"ip_address": 1, "ports": {"rpc-test1": (2, "asd")},
                               "topics": ["test1a", "test1b"]},
-                    "test2": {"ip_address": 5, "ports": {"rpc_test2": (6, "tcp")},
+                    "test2": {"ip_address": 5, "ports": {"rpc-test2": (6, "tcp")},
                               "topics": ["test2a", "test2b"]},
-                    "test3": {"ip_address": 10, "ports": {"rpc_test3": (11, "tcp")},
+                    "test3": {"ip_address": 10, "ports": {"rpc-test3": (11, "tcp")},
                               "topics": ["test3a", "test3b"]}}
 
         emitter_address, topic = wls._select_emitter_with_topic(emitters)

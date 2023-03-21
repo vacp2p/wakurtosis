@@ -21,7 +21,7 @@ def test_get_toml_configuration_artifact_same_config_false(plan):
 
 def test_generate_template_node_targets_single(plan):
     network_topology={"nodes": {"test1":{"ip_address": "1.1.1.1",
-                                         "ports": { "rpc_test1": (80, 'tcp')}}}}
+                                         "ports": { "rpc-test1": (80, 'tcp')}}}}
 
     template_data = files.generate_template_node_targets(network_topology, "rpc", "targets")
 
@@ -29,8 +29,8 @@ def test_generate_template_node_targets_single(plan):
 
 
 def test_generate_template_node_targets_multiple(plan):
-    network_topology={"nodes": {"test1":{"ip_address": "1.1.1.1", "ports": { "rpc_test1": (80, 'tcp')}},
-                                "test2":{"ip_address": "2.2.2.2", "ports": { "rpc_test2": (10, 'tcp')}}}}
+    network_topology={"nodes": {"test1":{"ip_address": "1.1.1.1", "ports": { "rpc-test1": (80, 'tcp')}},
+                                "test2":{"ip_address": "2.2.2.2", "ports": { "rpc-test2": (10, 'tcp')}}}}
 
     template_data = files.generate_template_node_targets(network_topology, "rpc", "targets")
 
