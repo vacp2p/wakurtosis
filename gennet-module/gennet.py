@@ -251,7 +251,6 @@ def generate_subnets(G, num_subnets):
 
     start, subnet_id, node2subnet = 0, 0, {}
     for end in offsets :
-        l = []
         for i in range(start, end + 1) :
             node2subnet[f"{NODE_PREFIX}{ID_STR_SEPARATOR}{lst[i]}"] = f"{SUBNET_PREFIX}_{subnet_id}"
             #node2subnet[lst[i]] = subnet_id
@@ -303,7 +302,7 @@ def traits_to_nodeType(s):
     return nodeType(s.split(':')[0])
 
 # Validate the traits distribution (stick to percentages: num nodes may vary post generation)
-def validate_traits_distribution(traits_distribution, num_nodes):
+def validate_traits_distribution(traits_distribution):
     traits, traits_freq = dict_to_arrays(traits_distribution)
     if range_fails(traits_freq, max=100) :
         raise ValueError(f"{traits_distribution} : invalid percentage (>{100} or <0)")
@@ -312,7 +311,7 @@ def validate_traits_distribution(traits_distribution, num_nodes):
                 f"{traits_distribution} : percentages do not sum to {100}")
     for s in traits :
         traits_list = s.split(":")
-        for  t in traits_list :
+        for t in traits_list :
             if t not in Trait and not os.path.exists(f"{TRAITS_DIR}/{t}.toml") :
                 raise ValueError(f"{traits_distribution} : unknown trait {t} in {s}")
 
@@ -345,7 +344,7 @@ def invert_dict_of_list(d, idx=0):
 # Packs the nodes into container in a subnet aware manner : optimal
 # Number of containers = 
 #   $$ O(\sum_{i=0}^{num_subnets} log_{container_size}(#Nodes_{numsubnets}) + num_subnets)
-def pack_nodes(container_size, node2subnet, G):
+def pack_nodes(container_size, node2subnet):
     subnet2nodes = invert_dict_of_list(node2subnet)
     port_shift, cid, node2container = 0, 0, {}
     for subnet in subnet2nodes :
@@ -362,7 +361,7 @@ def generate_and_write_files(ctx: typer, G):
     topics = generate_topics(ctx.params["num_topics"])
     node2subnet = generate_subnets(G, ctx.params["num_subnets"])
     traits_distribution = generate_traits_distribution(ctx.params["node_type_distribution"], G)
-    node2container = pack_nodes(ctx.params["container_size"], node2subnet, G)
+    node2container = pack_nodes(ctx.params["container_size"], node2subnet)
     container2nodes = invert_dict_of_list(node2container, 1)
 
     json_dump = {}
@@ -453,20 +452,13 @@ def main(ctx: typer.Context,
         tracemalloc.start()
     start = time.time()
 
-    # re-read the conf file to set node_type_distribution
-    conf = {}
-    if config_file != "" :
-        with open(config_file, 'r') as f :  # Load config file
-            conf = json.load(f)
-        #print(conf)
-
     # set the random seed : networkx uses numpy.random as well
     print("Setting the random seed to", prng_seed)
     random.seed(prng_seed)
     np.random.seed(prng_seed)
 
     # validate node type distribution
-    validate_traits_distribution(node_type_distribution, num_nodes)
+    validate_traits_distribution(node_type_distribution)
 
     # Generate the network
     # G = generate_network(num_nodes, networkType(network_type), tree_arity)
@@ -477,6 +469,8 @@ def main(ctx: typer.Context,
 
     # Generate file format specific data structs and write the files
     generate_and_write_files(ctx, G)
+
+    # Draw the graph if need be
     if draw :
         draw_network(output_dir, G)
 
