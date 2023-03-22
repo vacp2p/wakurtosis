@@ -7,6 +7,7 @@ import numpy as np
 import random, math
 import sys, os
 import json, ast
+from collections import defaultdict
 
 import time, tracemalloc
 import string
@@ -312,10 +313,8 @@ def validate_traits_distribution(traits_distribution, num_nodes):
     for s in traits :
         traits_list = s.split(":")
         for  t in traits_list :
-            print(f"{TRAITS_DIR}/{t}.toml")
             if t not in Trait and not os.path.exists(f"{TRAITS_DIR}/{t}.toml") :
-                raise ValueError(
-                    f"{traits_distribution} : unknown trait {t} in {s}")
+                raise ValueError(f"{traits_distribution} : unknown trait {t} in {s}")
 
 
 # Extract the traits distribution
@@ -336,18 +335,9 @@ def generate_traits_distribution(node_type_distribution, G):
 
 # Inverts a dictionary of lists (of lists/tuples) 
 def invert_dict_of_list(d, idx=0):
-    inv = {}
-    for key, val in d.items() :
-        if idx == 0 :
-            if val not in inv :
-                inv[val] = [key]
-            else :
-                inv[val].append(key)
-        else :
-            if val[1] not in inv :
-                inv[val[1]] = [key]
-            else :
-                inv[val[1]].append(key)
+    inv = defaultdict(list)
+    for key, val in d.items():
+        inv[val[idx]].append(key)
     return inv
 
 
