@@ -153,7 +153,7 @@ def generate_config_model(ctx):
     n = ctx.params["num_nodes"]
     # degrees = nx.random_powerlaw_tree_sequence(n, tries=10000)
     degrees = [random.randint(1, n) for i in range(n)]
-    if (sum(degrees)) % 2 != 0 :  # adjust the degree to be even
+    if (sum(degrees)) % 2 != 0:  # adjust the degree to be even
         degrees[-1] += 1
     return nx.configuration_model(degrees)  # generate the graph
 
@@ -197,10 +197,10 @@ def generate_nomos_tree(ctx):
     i, diff = 0, G.number_of_nodes() - n
     leaves = [x for x in G.nodes() if G.degree(x) == 1]
     nleaves = len(leaves)
-    if (nleaves - diff) % 2 != 0 :
+    if (nleaves - diff) % 2 != 0:
         diff -= 1
-    for node in leaves :
-        if i == diff :
+    for node in leaves:
+        if i == diff:
             break
         G.remove_node(node)
         i += 1
@@ -241,7 +241,7 @@ def postprocess_network(G):
 
 def generate_subnets(G, num_subnets):
     n = len(G.nodes)
-    if num_subnets == n :  # if num_subnets == size of the network
+    if num_subnets == n:  # if num_subnets == size of the network
         return {f"{NODE_PREFIX}{ID_STR_SEPARATOR}{i}" : f"{SUBNET_PREFIX}_{i}" for i in range(n)}
 
     # Permute the node indices; this makes sure that the nodes are assigned randomly to subnets
@@ -253,36 +253,38 @@ def generate_subnets(G, num_subnets):
     offsets = sorted(random.sample(range(0, n), num_subnets - 1))
     offsets.append(n - 1)   # we have num_subnets offsets
 
+    print(offsets, lst)
+
     start, subnet_id, node2subnet = 0, 0, {}
-    for end in offsets :
+    for end in offsets:
         # Build a node2subnet map as follows
         # From the permuted lst, pick nodes whose indices are in the closed interval [start, end].
         # Remember, these are *sorted* offsets in the range of 0..n and without replacement; so 
         # they will all index correctly.
         # Finally, assign all these node to the current subnet.
-        for i in range(start, end + 1) : 
+        for i in range(start, end + 1): 
             node2subnet[f"{NODE_PREFIX}{ID_STR_SEPARATOR}{lst[i]}"] = f"{SUBNET_PREFIX}_{subnet_id}"
             #node2subnet[lst[i]] = subnet_id
-        start = end     # roll overthe start to the end of the last offset
+        start = end     # roll over the start to the end of the last offset
         subnet_id += 1  # increment the subnet_id 
     return node2subnet
 
 
 ### file format related fns ###########################################################
 # Generate per node toml configs
-def generate_toml(topics, traits_list) :
+def generate_toml(topics, traits_list):
     topics, node_type, tomls = get_random_sublist(topics), traits_list[0], ""
-    if node_type == nodeType.GOWAKU :    # comma separated list of quoted topics
+    if node_type == nodeType.GOWAKU:    # comma separated list of quoted topics
         topic_str = ", ".join(f"\"{t}\"" for t in topics)
         topic_str = f"[{topic_str}]"
-    else :                               # space separated topics
+    else:                               # space separated topics
         topic_str = " ".join(topics)
         topic_str = f"\"{topic_str}\""
 
-    for trait in traits_list[1:] :  # skip the first trait as it is docker/node selector.
-        with open(f"{TRAITS_DIR}/{trait}.toml", 'rb') as f :
+    for trait in traits_list[1:]:  # skip the first trait as it is docker/node selector.
+        with open(f"{TRAITS_DIR}/{trait}.toml", 'rb') as f:
             toml = ""
-            for key, value in tomli.load(f).items() :
+            for key, value in tomli.load(f).items():
                 toml += f"{key} = {str(value)}\n"
         tomls += toml
     return f"{tomls}topics = {topic_str}\n"
@@ -291,7 +293,7 @@ def generate_toml(topics, traits_list) :
 # Convert a dict to pair of arrays
 def dict_to_arrays(dic):
     keys, vals = list(dic.keys()), []
-    for k in keys :
+    for k in keys:
         vals.append(dic[k])
     return keys, vals
 
@@ -313,15 +315,15 @@ def traits_to_nodeType(s):
 # Validate the traits distribution (stick to percentages: num nodes may vary post generation)
 def validate_traits_distribution(traits_distribution):
     traits, traits_freq = dict_to_arrays(traits_distribution)
-    if range_fails(traits_freq, max=100) :
+    if range_fails(traits_freq, max=100):
         raise ValueError(f"{traits_distribution} : invalid percentage (>{100} or <0)")
-    if sum_fails(traits_freq, sum_expected=100) :
+    if sum_fails(traits_freq, sum_expected=100):
         raise ValueError(
                 f"{traits_distribution} : percentages do not sum to {100}")
-    for s in traits :
+    for s in traits:
         traits_list = s.split(":")
-        for t in traits_list :
-            if t not in Trait and not os.path.exists(f"{TRAITS_DIR}/{t}.toml") :
+        for t in traits_list:
+            if t not in Trait and not os.path.exists(f"{TRAITS_DIR}/{t}.toml"):
                 raise ValueError(f"{traits_distribution} : unknown trait {t} in {s}")
 
 
@@ -335,7 +337,7 @@ def generate_traits_distribution(node_type_distribution, G):
     num_nodes = G.number_of_nodes()
     nodes, node_percentage = dict_to_arrays(node_type_distribution)
     traits_distribution = []
-    for i, n in enumerate(nodes) :
+    for i, n in enumerate(nodes):
        traits_distribution +=  [nodes[i]] * math.ceil(node_percentage[i] * num_nodes/100)
     random.shuffle(traits_distribution)
     return traits_distribution
@@ -356,9 +358,9 @@ def invert_dict_of_list(d, idx=0):
 def pack_nodes(container_size, node2subnet):
     subnet2nodes = invert_dict_of_list(node2subnet)
     port_shift, cid, node2container = 0, 0, {}
-    for subnet in subnet2nodes :
-        for node in subnet2nodes[subnet] :
-            if port_shift >= container_size :
+    for subnet in subnet2nodes:
+        for node in subnet2nodes[subnet]:
+            if port_shift >= container_size:
                 port_shift, cid = 0, cid+1
             node2container[node] = (port_shift, f"{CONTAINER_PREFIX}_{cid}")
             port_shift += 1
@@ -376,18 +378,18 @@ def generate_and_write_files(ctx: typer, G):
     json_dump = {}
     json_dump[CONTAINER_PREFIX] = {}
     json_dump[EXTERNAL_NODES_PREFIX] = {}
-    for container, nodes in container2nodes.items() :
+    for container, nodes in container2nodes.items():
         json_dump[CONTAINER_PREFIX][container] = nodes
 
     i = 0
-    for node in G.nodes :
+    for node in G.nodes:
         # write the per node toml for the i^ith node of appropriate type
         traits_list, i = traits_distribution[i].split(":"),  i+1
         node_type = nodeType(traits_list[0])
         write_toml(ctx.params["output_dir"], node, generate_toml(topics, traits_list))
         json_dump[EXTERNAL_NODES_PREFIX][node] = {}
         json_dump[EXTERNAL_NODES_PREFIX][node]["static_nodes"] = []
-        for edge in G.edges(node) :
+        for edge in G.edges(node):
             json_dump[EXTERNAL_NODES_PREFIX][node]["static_nodes"].append(edge[1])
         json_dump[EXTERNAL_NODES_PREFIX][node][SUBNET_PREFIX] = node2subnet[node]
         json_dump[EXTERNAL_NODES_PREFIX][node]["image"] = nodeTypeToDocker.get(node_type)
@@ -403,28 +405,28 @@ def generate_and_write_files(ctx: typer, G):
 
 # sanity check : valid json with "gennet" config
 def _config_file_callback(ctx: typer.Context, param: typer.CallbackParam, cfile: str):
-    if cfile :
+    if cfile:
         typer.echo(f"Loading config file: {cfile.split('/')[-1]}")
         ctx.default_map = ctx.default_map or {}  # Init the default map
-        try :
-            with open(cfile, 'r') as f :  # Load config file
+        try:
+            with open(cfile, 'r') as f:  # Load config file
                 conf = json.load(f)
-                if "gennet" not in conf :
+                if "gennet" not in conf:
                     print(
                         f"Gennet configuration not found in {cfile}. Skipping topology generation.")
                     sys.exit(0)
-                if "general" in conf and "prng_seed" in conf["general"] :
+                if "general" in conf and "prng_seed" in conf["general"]:
                     conf["gennet"]["prng_seed"] = conf["general"]["prng_seed"]
                 # TODO : type-check and sanity-check the values in config.json
             ctx.default_map.update(conf["gennet"])  # Merge config and default_map
-        except Exception as ex :
+        except Exception as ex:
             raise typer.BadParameter(str(ex))
     return cfile
 
 
 # sanity check : num_partitions == 1
 def _num_partitions_callback(num_partitions: int):
-    if num_partitions > 1 :
+    if num_partitions > 1:
         raise ValueError(
             f"--num-partitions {num_partitions}, Sorry, we do not yet support partitions")
     return num_partitions
@@ -433,9 +435,9 @@ def _num_partitions_callback(num_partitions: int):
 # sanity check :  num_subnets < num_nodes
 def _num_subnets_callback(ctx: typer, Context, num_subnets: int):
     num_nodes = ctx.params["num_nodes"]
-    if num_subnets == -1 :
+    if num_subnets == -1:
         num_subnets = num_nodes
-    if num_subnets > num_nodes :
+    if num_subnets > num_nodes:
         raise ValueError(
             f"num_subnets must be <= num_nodes : num_subnets={num_subnets}, num_nodes={1}")
     return num_subnets
@@ -457,7 +459,7 @@ def main(ctx: typer.Context,
          config_file: str = typer.Option("", callback=_config_file_callback, is_eager=True, help="Set the input config file (JSON)")):
 
     # Benchmarking: record start time and start tracing mallocs
-    if benchmark :
+    if benchmark:
         tracemalloc.start()
     start = time.time()
 
@@ -480,7 +482,7 @@ def main(ctx: typer.Context,
     generate_and_write_files(ctx, G)
 
     # Draw the graph if need be
-    if draw :
+    if draw:
         draw_network(output_dir, G)
 
     end = time.time()
@@ -488,11 +490,11 @@ def main(ctx: typer.Context,
     print(f"For {G.number_of_nodes()}/{num_nodes} nodes, network generation took {time_took} secs.\nThe generated network is under ./{output_dir}")
 
     # Benchmarking. Record finish time and stop the malloc tracing
-    if benchmark :
+    if benchmark:
         mem_curr, mem_max = tracemalloc.get_traced_memory()
         tracemalloc.stop()
         print(f"STATS: For {num_nodes} nodes, time took is {time_took} secs, peak memory usage is {mem_max/(1024*1024)} MBs\n")
 
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
     typer.run(main)
