@@ -244,18 +244,27 @@ def generate_subnets(G, num_subnets):
     if num_subnets == n :  # if num_subnets == size of the network
         return {f"{NODE_PREFIX}{ID_STR_SEPARATOR}{i}" : f"{SUBNET_PREFIX}_{i}" for i in range(n)}
 
+    # Permute the node indices; this makes sure that the nodes are assigned randomly to subnets
     lst = list(range(n))
     random.shuffle(lst)
+
+    # Select (without replacement) a num_subnets - 1 of offsets; make sure final offset is n-1.
+    # Each offset demarcates a subnet boundary
     offsets = sorted(random.sample(range(0, n), num_subnets - 1))
-    offsets.append(n - 1)
+    offsets.append(n - 1)   # we have num_subnets offsets
 
     start, subnet_id, node2subnet = 0, 0, {}
     for end in offsets :
-        for i in range(start, end + 1) :
+        # Build a node2subnet map as follows
+        # From the permuted lst, pick nodes whose indices are in the closed interval [start, end].
+        # Remember, these are *sorted* offsets in the range of 0..n and without replacement; so 
+        # they will all index correctly.
+        # Finally, assign all these node to the current subnet.
+        for i in range(start, end + 1) : 
             node2subnet[f"{NODE_PREFIX}{ID_STR_SEPARATOR}{lst[i]}"] = f"{SUBNET_PREFIX}_{subnet_id}"
             #node2subnet[lst[i]] = subnet_id
-        start = end
-        subnet_id += 1
+        start = end     # roll overthe start to the end of the last offset
+        subnet_id += 1  # increment the subnet_id 
     return node2subnet
 
 
@@ -270,7 +279,7 @@ def generate_toml(topics, traits_list) :
         topic_str = " ".join(topics)
         topic_str = f"\"{topic_str}\""
 
-    for trait in traits_list[1:] :
+    for trait in traits_list[1:] :  # skip the first trait as it is docker/node selector.
         with open(f"{TRAITS_DIR}/{trait}.toml", 'rb') as f :
             toml = ""
             for key, value in tomli.load(f).items() :
