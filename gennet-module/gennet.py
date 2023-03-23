@@ -35,21 +35,21 @@ class Trait(BaseEnum):
     DNSDISC = 	"dnsdisc"
     DNS = 	"dns"
     FLTER = 	"flter"
-    LIGHTPUSH = 	"lightpush"
+    LIGHTPUSH = "lightpush"
     METRICS = 	"metrics"
     NODE = 	"node"
     PEER = 	"peer"
-    PEERXCHNG = 	"peerxchng"
+    PEERXCHNG = "peerxchng"
     RELAY = 	"relay"
     REST = 	"rest"
     RLN = 	"rln"
     RPC = 	"rpc"
     STORE = 	"store"
     SWAP = 	"swap"
-    WEBSOCKET = 	"websocket"
+    WEBSOCKET = "websocket"
 
 # To add a new node type, add appropriate entries to the nodeType and nodeTypeToDocker
-class nodeType(Enum):
+class nodeType(BaseEnum):
     NWAKU = "nwaku"     # waku desktop config
     GOWAKU = "gowaku"   # waku mobile config
 
@@ -320,7 +320,9 @@ def validate_traits_distribution(traits_dir, traits_distribution):
         raise ValueError(f"{traits_dir} : trait directory does not exist!")
     for s in traits:
         traits_list = s.split(":")
-        for t in traits_list:
+        if traits_list[0] not in nodeType:
+            raise ValueError(f"{traits_distribution} : unknown node type {traits_list[0]} in {s}")
+        for t in traits_list[1:]:
             if t not in Trait and not os.path.exists(f"{traits_dir}/{t}.toml"):
                 raise ValueError(f"{traits_distribution} : unknown trait {t} in {s}")
 
@@ -432,6 +434,7 @@ def _num_subnets_callback(ctx: typer, Context, num_subnets: int):
         raise ValueError(
             f"num_subnets must be <= num_nodes : num_subnets={num_subnets}, num_nodes={1}")
     return num_subnets
+
 
 def main(ctx: typer.Context,
          benchmark: bool = typer.Option(False, help="Measure CPU/Mem usage of Gennet"),
