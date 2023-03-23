@@ -74,7 +74,7 @@ NW_DATA_FNAME = "network_data.json"
 EXTERNAL_NODES_PREFIX, NODE_PREFIX, SUBNET_PREFIX, CONTAINER_PREFIX = \
     "nodes", "node", "subnetwork", "containers"
 ID_STR_SEPARATOR = "-"
-TRAITS_DIR="traits"
+DEFAULT_TRAITS_DIR="../config/traits"
 
 ### I/O related fns ##############################################################
 
@@ -253,8 +253,6 @@ def generate_subnets(G, num_subnets):
     offsets = sorted(random.sample(range(0, n), num_subnets - 1))
     offsets.append(n - 1)   # we have num_subnets offsets
 
-    print(offsets, lst)
-
     start, subnet_id, node2subnet = 0, 0, {}
     for end in offsets:
         # Build a node2subnet map as follows
@@ -272,7 +270,7 @@ def generate_subnets(G, num_subnets):
 
 ### file format related fns ###########################################################
 # Generate per node toml configs
-def generate_toml(topics, traits_list):
+def generate_toml(traits_dir, topics, traits_list):
     topics, node_type, tomls = get_random_sublist(topics), traits_list[0], ""
     if node_type == nodeType.GOWAKU:    # comma separated list of quoted topics
         topic_str = ", ".join(f"\"{t}\"" for t in topics)
@@ -281,8 +279,8 @@ def generate_toml(topics, traits_list):
         topic_str = " ".join(topics)
         topic_str = f"\"{topic_str}\""
 
-    for trait in traits_list[1:]:  # skip the first trait as it is docker/node selector.
-        with open(f"{TRAITS_DIR}/{trait}.toml", 'rb') as f:
+    for trait in traits_list[1:]:       # skip the first trait as it is docker/node selector.
+        with open(f"{traits_dir}/{trait}.toml", 'rb') as f:
             toml = ""
             for key, value in tomli.load(f).items():
                 toml += f"{key} = {str(value)}\n"
@@ -292,9 +290,7 @@ def generate_toml(topics, traits_list):
 
 # Convert a dict to pair of arrays
 def dict_to_arrays(dic):
-    keys, vals = list(dic.keys()), []
-    for k in keys:
-        vals.append(dic[k])
+    keys, vals = zip(*dic.items())
     return keys, vals
 
 
@@ -312,24 +308,21 @@ def sum_fails(lst, sum_expected=100):
 def traits_to_nodeType(s):
     return nodeType(s.split(':')[0])
 
+
 # Validate the traits distribution (stick to percentages: num nodes may vary post generation)
-def validate_traits_distribution(traits_distribution):
+def validate_traits_distribution(traits_dir, traits_distribution):
     traits, traits_freq = dict_to_arrays(traits_distribution)
     if range_fails(traits_freq, max=100):
         raise ValueError(f"{traits_distribution} : invalid percentage (>{100} or <0)")
     if sum_fails(traits_freq, sum_expected=100):
-        raise ValueError(
-                f"{traits_distribution} : percentages do not sum to {100}")
+        raise ValueError(f"{traits_distribution} : percentages do not sum to {100}")
+    if not os.path.exists(traits_dir):
+        raise ValueError(f"{traits_dir} : trait directory does not exist!")
     for s in traits:
         traits_list = s.split(":")
         for t in traits_list:
-            if t not in Trait and not os.path.exists(f"{TRAITS_DIR}/{t}.toml"):
+            if t not in Trait and not os.path.exists(f"{traits_dir}/{t}.toml"):
                 raise ValueError(f"{traits_distribution} : unknown trait {t} in {s}")
-
-
-# Extract the traits distribution
-def extract_traits_distribution(traits_distribution):
-    return dict_to_arrays(traits_distribution)
 
 
 # Generate a list of nodeType enums that respects the node type distribution
@@ -375,18 +368,16 @@ def generate_and_write_files(ctx: typer, G):
     node2container = pack_nodes(ctx.params["container_size"], node2subnet)
     container2nodes = invert_dict_of_list(node2container, 1)
 
-    json_dump = {}
-    json_dump[CONTAINER_PREFIX] = {}
-    json_dump[EXTERNAL_NODES_PREFIX] = {}
+    json_dump, json_dump[CONTAINER_PREFIX], json_dump[EXTERNAL_NODES_PREFIX] = {}, {}, {}
     for container, nodes in container2nodes.items():
         json_dump[CONTAINER_PREFIX][container] = nodes
 
-    i = 0
+    i, traits_dir = 0,  ctx.params["traits_dir"] 
     for node in G.nodes:
         # write the per node toml for the i^ith node of appropriate type
         traits_list, i = traits_distribution[i].split(":"),  i+1
         node_type = nodeType(traits_list[0])
-        write_toml(ctx.params["output_dir"], node, generate_toml(topics, traits_list))
+        write_toml(ctx.params["output_dir"], node, generate_toml(traits_dir, topics, traits_list))
         json_dump[EXTERNAL_NODES_PREFIX][node] = {}
         json_dump[EXTERNAL_NODES_PREFIX][node]["static_nodes"] = []
         for edge in G.edges(node):
@@ -406,7 +397,7 @@ def generate_and_write_files(ctx: typer, G):
 # sanity check : valid json with "gennet" config
 def _config_file_callback(ctx: typer.Context, param: typer.CallbackParam, cfile: str):
     if cfile:
-        typer.echo(f"Loading config file: {cfile.split('/')[-1]}")
+        typer.echo(f"Loading config file: {os.path.basename(cfile)}")
         ctx.default_map = ctx.default_map or {}  # Init the default map
         try:
             with open(cfile, 'r') as f:  # Load config file
@@ -464,12 +455,17 @@ def main(ctx: typer.Context,
     start = time.time()
 
     # set the random seed : networkx uses numpy.random as well
-    print("Setting the random seed to", prng_seed)
+    print("Setting the random seed to ", prng_seed)
     random.seed(prng_seed)
     np.random.seed(prng_seed)
 
+    if ctx.params["config_file"] == "":
+        ctx.params["traits_dir"] = DEFAULT_TRAITS_DIR
+    else:
+        ctx.params["traits_dir"] = os.path.dirname(ctx.params["config_file"]) + f"/traits"
+
     # validate node type distribution
-    validate_traits_distribution(node_type_distribution)
+    validate_traits_distribution(ctx.params["traits_dir"], node_type_distribution)
 
     # Generate the network
     # G = generate_network(num_nodes, networkType(network_type), tree_arity)
