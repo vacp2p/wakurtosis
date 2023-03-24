@@ -9,7 +9,8 @@ CGROUP="/sys/fs/cgroup/"
 
 class MetricsCollector:
     def __init__(self):
-        self.docker_ps = "docker ps  --filter \"ancestor=statusteam/nim-waku\"  --filter \"ancestor=gowaku\" "
+        self.docker_ps = "docker ps --no-trunc --filter \"ancestor=statusteam/nim-waku\"  --filter \"ancestor=gowaku\" --format \"{{.ID}}#{{.Names}}#{{.Image}}#{{.Command}}#{{.State}}#{{.Status}}#{{.Ports}}\" "
+        self.dockers = []
 
         self.docker_stats = "docker stats --no-trunc --format  \"{{.Container}} / {{.Name}} / {{.ID}} / {{.CPUPerc}} / {{.MemUsage}} / {{.MemPerc}} / {{.NetIO}} / {{.BlockIO}} / {{.PIDs}}\" "
         self.docker_stats_pid = 0
@@ -41,14 +42,17 @@ class MetricsCollector:
     def launch_sysfs_monitor(self, fname):
         while True:
             time.sleep(self.sample_rate)
-            break
+            #break
         print(fname)
 
     def get_docker_info(self, fname):
         cmd = f"exec {self.docker_ps} > {fname}"
         log.info("docker data cmd : " +  cmd)
         subprocess.run(cmd, shell=True)
-
+        with open(fname, "r") as f:
+            self.dockers = [line.split("#")[0] for line in f]
+        log.info("dockers : " + str(self.dockers))
+ 
     def spin_up(self, docker_fname, sysfs_fname):
         log.info("Starting the docker monitor...")
         self.docker_thread = threading.Thread(
@@ -79,7 +83,7 @@ def main(ctx: typer.Context):
     metrics.spin_up("docker-stats.out", "docker-sysfs-stats.out")
 
     # get sim time info from config.json? or  ioctl/select from WLS? 
-    time.sleep(180)
+    time.sleep(10)
 
     # x.join()
 
