@@ -8,7 +8,7 @@ import typer
 
 CGROUP="/sys/fs/cgroup/"
 OPREFIX="docker"
-OSUFFIX="out"
+OEXT="out"
 sample_rate = 10
 
 class MetricsCollector:
@@ -40,11 +40,11 @@ class MetricsCollector:
         self.block_writes = -1
 
     def build_and_exec(self, cmd, fname):
-        cmdline = f"exec {cmd} > {OPREFIX}-{fname}-{OSUFFIX}"
+        cmdline = f"exec {cmd} > {OPREFIX}-{fname}.{OEXT}"
         subprocess.run(cmdline, shell=True)
 
     def launch_docker_monitor(self, stats_fname):
-        cmd = f"exec {self.docker_stats} > {OPREFIX}-{stats_fname}-{OSUFFIX}"
+        cmd = f"exec {self.docker_stats} > {OPREFIX}-{stats_fname}.{OEXT}"
         log.info("docker monitor cmd : " +  cmd)
         process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, preexec_fn=os.setsid)
         self.docker_stats_pid = process.pid
@@ -92,8 +92,8 @@ class MetricsCollector:
         self.build_and_exec("cat /proc/cpuinfo", cpuinfo_fname)
         self.build_and_exec("cat /proc/meminfo", meminfo_fname)
 
-        self.ps_fname = f"{OPREFIX}-{ps_fname}-{OSUFFIX}"
-        self.inspect_fname = f"{OPREFIX}-{inspect_fname}-{OSUFFIX}"
+        self.ps_fname = f"{OPREFIX}-{ps_fname}.{OEXT}"
+        self.inspect_fname = f"{OPREFIX}-{inspect_fname}.{OEXT}"
 
         with open(self.ps_fname, "r") as f:
             for line in f:
