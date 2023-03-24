@@ -2,6 +2,8 @@ import logging as log
 
 import os, sys, threading, subprocess, signal
 
+from collections import defaultdict
+
 from procfs import Proc
 import sched, time
 import typer
@@ -10,9 +12,24 @@ CGROUP="/sys/fs/cgroup/"
 OPREFIX="docker"
 OEXT="out"
 
-def read_file(f):
+# TODO: return only relevant bits for CPU
+def get_cpu_metrics(f):
     f.seek(0)
     return f.read()
+
+
+def get_mem_metrics(f, lst):
+    f.seek(0)
+    rbuff = f.readlines()
+    res = ''.join([rbuff[i].replace("\t", " ").replace("\n", ", ").replace(":", " ") for i in lst])
+    return res
+
+
+def get_blk_metrics(f, lst):
+    f.seek(0)
+    rbuff = f.readlines()
+    res = ''.join([rbuff[i].replace("\n", ", ") for i in lst])
+    return res
 
 
 def signal_handler(sig, frame):
@@ -40,7 +57,7 @@ class MetricsCollector:
         self.procfs_scheduler = sched.scheduler(time.time, time.sleep)
         self.procfs_sample_interval = 1
 
-        self.pid2procfds = {} #defaultdict(dict)
+        self.pid2procfds = defaultdict(dict)
         # self.container_id = -1 self.container_name = -1 self.cpu_usage = -1 
         # self.mem_usage_abs = -1 self.mem_usage_perc = -1 self.net_sends = -1
         # self.net_recvs = -1 self.block_reads = -1 self.block_writes = -1
@@ -62,37 +79,36 @@ class MetricsCollector:
 
     def populate_file_handles(self):
         # pid to file handles
+        self.pid2procfds[0]["cpu"] =  open(f"/proc/stat")
         for pid in self.docker_pids:
-            self.pid2procfds[pid] = {}
-            self.pid2procfds[pid]["cpu"] =  open(f"/proc/{pid}/stat") 
+            #self.pid2procfds[pid] = {}
+            self.pid2procfds[pid]["cpu"] =  open(f"/proc/{pid}/stat")
             self.pid2procfds[pid]["mem"] =  open(f"/proc/{pid}/status") #grep ^VmPeak VmRSS /proc/*/status 
             self.pid2procfds[pid]["blk"] =  open(f"/sys/fs/cgroup/blkio/docker/{self.pid2docker(pid)}/blkio.throttle.io_service_bytes")
         self.procfs_fd = open(f"{OPREFIX}-{self.procfs_fname}.{OEXT}", "w")
             #pid2procfds[pid]["net"] =  open(f"/proc/{pid}/") 
-    
+
     def procfs_collector(self, cnt):
         log.info("collecting " + str(cnt))
-        # TODO: process after read_data to include only relevant bits
+        stat = " ".join(get_cpu_metrics(self.pid2procfds[0]["cpu"]).splitlines())
         for pid in self.docker_pids:
-            cpu = read_file(self.pid2procfds[pid]["cpu"]).replace("\n", " ")
-            mem = read_file(self.pid2procfds[pid]["mem"]).replace("\n", " ")
-            blk = read_file(self.pid2procfds[pid]["blk"]).replace("\n", " ")
-            out = f"SAMPLE_{cnt} {time.time()} {cpu} {mem} {blk}\n" 
+            cpu = get_cpu_metrics(self.pid2procfds[pid]["cpu"]).strip() + " , "
+            mem = get_mem_metrics(self.pid2procfds[pid]["mem"], [16, 17, 21]) #VmPeak, VmSize, VmRSS
+            blk = get_blk_metrics(self.pid2procfds[pid]["blk"], [0, 1]) # Read, Write
+            out = f"SAMPLE_{cnt} {time.time()} {mem} {blk} {cpu} {''.join(stat)}\n"
             #print(str(out))
             self.procfs_fd.write(str(out))
-        self.procfs_scheduler.enter(self.procfs_sample_interval, 1, 
+        self.procfs_scheduler.enter(self.procfs_sample_interval, 1,
                      self.procfs_collector, (cnt+1, ))
 
     def launch_procfs_monitor(self, procfs_fname):
+        self.procfs_fname = procfs_fname
         proc = Proc()
         wakus = proc.processes.cmdline('(nim-waku|gowaku)')
-        self.procfs_fname = procfs_fname
         log.info("wakus pids: " + str(wakus))
         self.populate_file_handles()
         log.info("files handles populated")
-        self.procfs_scheduler = sched.scheduler(time.time, 
-                            time.sleep)
-        self.procfs_scheduler.enter(self.procfs_sample_interval, 1, 
+        self.procfs_scheduler.enter(self.procfs_sample_interval, 1,
                      self.procfs_collector, (0, ))
         self.procfs_scheduler.run()
 
@@ -135,7 +151,7 @@ class MetricsCollector:
         self.procfs_thread.start()
 
     def clean_up(self):
-        os.kill(self.docker_stats_pid, signal.SIGTERM)  
+        os.kill(self.docker_stats_pid, signal.SIGTERM)
         log.info(f"docker monitor stopped : {self.docker_stats_pid}, {self.docker_stats_fname}")
 
     def launch_sysfs_monitor(self, sysfs_fname):
@@ -161,7 +177,7 @@ def main(ctx: typer.Context):
 
     log.info("Collecting info on the system and containers...")
     metrics.build_info("ps", "inspect", "cpuinfo", "meminfo")
-    
+
     log.info("Starting the Measurement Threads")
     metrics.spin_up("stats", "sysfs", "procfs")
 
