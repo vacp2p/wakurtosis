@@ -79,7 +79,7 @@ def main(ctx: typer.Context):
     metrics.spin_up("docker-stats.out", "docker-sysfs-stats.out")
 
     # get sim time info from config.json? or  ioctl/select from WLS? 
-    time.sleep(10)
+    time.sleep(180)
 
     # x.join()
 
