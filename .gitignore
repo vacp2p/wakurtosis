@@ -36,3 +36,4 @@ docker-inspect.out
 docker-cpuinfo.out
 docker-meminfo.out
 docker-stats.out
+docker-procfs.out
