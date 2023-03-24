@@ -56,11 +56,11 @@ class MetricsCollector:
     def spin_up(self, docker_fname, sysfs_fname):
         log.info("Starting the docker monitor...")
         self.docker_thread = threading.Thread(
-                target=self.launch_docker_monitor, args=("docker-stats.out",), daemon=True)
+                target=self.launch_docker_monitor, args=(docker_fname,), daemon=True)
         self.docker_thread.start()
         log.info("Starting the sysfs monitor...")
         self.sysfs_thread = threading.Thread(
-                target=self.launch_sysfs_monitor, args=("sysfs.out",), daemon=True)
+                target=self.launch_sysfs_monitor, args=(sysfs_fname,), daemon=True)
         self.sysfs_thread.start()
 
     def clean_up(self):
@@ -80,7 +80,7 @@ def main(ctx: typer.Context):
     metrics.get_docker_info("docker-ps.out")
     
     log.info("Starting the Measurement Threads")
-    metrics.spin_up("docker-stats.out", "docker-sysfs-stats.out")
+    metrics.spin_up("docker-stats.out", "docker-sysfs.out")
 
     # get sim time info from config.json? or  ioctl/select from WLS? 
     time.sleep(10)
