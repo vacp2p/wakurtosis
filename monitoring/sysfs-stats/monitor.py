@@ -3,13 +3,21 @@ import logging as log
 import os, sys, threading, subprocess, signal
 
 from procfs import Proc
-import time
+import sched, time
 import typer
 
 CGROUP="/sys/fs/cgroup/"
 OPREFIX="docker"
 OEXT="out"
-sample_rate = 10
+
+def read_file(f):
+    f.seek(0)
+    return f.read()
+
+
+def signal_handler(sig, frame):
+    sys.exit(0)
+
 
 class MetricsCollector:
     def __init__(self):
@@ -27,17 +35,15 @@ class MetricsCollector:
         self.docker_stats_pid = 0
         self.docker_stats_fname = 0
 
+        self.procfs_fname = ""
+        self.procfs_fd = ""
+        self.procfs_scheduler = sched.scheduler(time.time, time.sleep)
+        self.procfs_sample_interval = 1
 
         self.pid2procfds = {} #defaultdict(dict)
-        self.container_id = -1
-        self.container_name = -1
-        self.cpu_usage = -1
-        self.mem_usage_abs = -1
-        self.mem_usage_perc = -1
-        self.net_sends = -1
-        self.net_recvs = -1
-        self.block_reads = -1
-        self.block_writes = -1
+        # self.container_id = -1 self.container_name = -1 self.cpu_usage = -1 
+        # self.mem_usage_abs = -1 self.mem_usage_perc = -1 self.net_sends = -1
+        # self.net_recvs = -1 self.block_reads = -1 self.block_writes = -1
 
     def build_and_exec(self, cmd, fname):
         cmdline = f"exec {cmd} > {OPREFIX}-{fname}.{OEXT}"
@@ -51,17 +57,6 @@ class MetricsCollector:
         self.docker_stats_fname = stats_fname
         log.info(f"docker monitor started : {self.docker_stats_pid}, {self.docker_stats_fname}")
 
-    def launch_sysfs_monitor(self, sysfs_fname):
-        #paths = [f"CGROUP+
-        while True:
-            time.sleep(sample_rate)
-            log.info("collecting")
-            for docker in self.dockers:
-                 print(f"/sys/fs/cgroup/cpu/docker/{docker}/cpuacct.usage_all")
-                 print(f"/sys/fs/cgroup/memory/docker/{docker}/memory.max_usage_in_byte")
-            #break
-        print(sysfs_fname)
-
     def pid2docker(self, pid):
         return self.docker_name2id[self.docker_pid2name[pid]]
 
@@ -71,19 +66,35 @@ class MetricsCollector:
             self.pid2procfds[pid] = {}
             self.pid2procfds[pid]["cpu"] =  open(f"/proc/{pid}/stat") 
             self.pid2procfds[pid]["mem"] =  open(f"/proc/{pid}/status") #grep ^VmPeak VmRSS /proc/*/status 
-            self.pid2procfds[pid]["blk"] =  open(f"/sys/fs/cgroup/blkio/docker/{self.pid2docker(pid)}/blkio.throttle.io_service_bytes") 
+            self.pid2procfds[pid]["blk"] =  open(f"/sys/fs/cgroup/blkio/docker/{self.pid2docker(pid)}/blkio.throttle.io_service_bytes")
+        self.procfs_fd = open(f"{OPREFIX}-{self.procfs_fname}.{OEXT}", "w")
             #pid2procfds[pid]["net"] =  open(f"/proc/{pid}/") 
+    
+    def procfs_collector(self, cnt):
+        log.info("collecting " + str(cnt))
+        # TODO: process after read_data to include only relevant bits
+        for pid in self.docker_pids:
+            cpu = read_file(self.pid2procfds[pid]["cpu"]).replace("\n", " ")
+            mem = read_file(self.pid2procfds[pid]["mem"]).replace("\n", " ")
+            blk = read_file(self.pid2procfds[pid]["blk"]).replace("\n", " ")
+            out = f"SAMPLE_{cnt} {time.time()} {cpu} {mem} {blk}\n" 
+            #print(str(out))
+            self.procfs_fd.write(str(out))
+        self.procfs_scheduler.enter(self.procfs_sample_interval, 1, 
+                     self.procfs_collector, (cnt+1, ))
 
     def launch_procfs_monitor(self, procfs_fname):
         proc = Proc()
         wakus = proc.processes.cmdline('(nim-waku|gowaku)')
+        self.procfs_fname = procfs_fname
         log.info("wakus pids: " + str(wakus))
         self.populate_file_handles()
-        for pid in self.docker_pids:
-            cpu = read_data(self.pid2procfds[pid]["cpu"]).splitlines()
-            mem = read_data(self.pid2procfds[pid]["mem"]).splitlines()
-            blk = read_data(self.pid2procfds[pid]["blk"]).splitlines()
-            #print(cpu, mem, blk)
+        log.info("files handles populated")
+        self.procfs_scheduler = sched.scheduler(time.time, 
+                            time.sleep)
+        self.procfs_scheduler.enter(self.procfs_sample_interval, 1, 
+                     self.procfs_collector, (0, ))
+        self.procfs_scheduler.run()
 
 
     def build_info(self, ps_fname, inspect_fname, cpuinfo_fname, meminfo_fname):
@@ -114,9 +125,9 @@ class MetricsCollector:
         self.docker_thread = threading.Thread(
                 target=self.launch_docker_monitor, args=(docker_fname,), daemon=True)
         self.docker_thread.start()
-        log.info("Starting the sysfs monitor...")
-        self.sysfs_thread = threading.Thread(
-                target=self.launch_sysfs_monitor, args=(sysfs_fname,), daemon=True)
+        #log.info("Starting the sysfs monitor...")
+        #self.sysfs_thread = threading.Thread(
+        #        target=self.launch_sysfs_monitor, args=(sysfs_fname,), daemon=True)
         #self.sysfs_thread.start()
         log.info("Starting the procfs monitor...")
         self.procfs_thread = threading.Thread(
@@ -127,15 +138,16 @@ class MetricsCollector:
         os.kill(self.docker_stats_pid, signal.SIGTERM)  
         log.info(f"docker monitor stopped : {self.docker_stats_pid}, {self.docker_stats_fname}")
 
-
-
-def read_data(f):
-    f.seek(0)
-    return f.read()
-
-
-def signal_handler(sig, frame):
-    sys.exit(0)
+    def launch_sysfs_monitor(self, sysfs_fname):
+        #paths = [f"CGROUP+
+        while True:
+            time.sleep(self.procfs_sample_interval)
+            log.info("collecting")
+            for docker in self.dockers:
+                 print(f"/sys/fs/cgroup/cpu/docker/{docker}/cpuacct.usage_all")
+                 print(f"/sys/fs/cgroup/memory/docker/{docker}/memory.max_usage_in_byte")
+            #break
+        print(sysfs_fname)
 
 
 def main(ctx: typer.Context):
@@ -153,10 +165,9 @@ def main(ctx: typer.Context):
     log.info("Starting the Measurement Threads")
     metrics.spin_up("stats", "sysfs", "procfs")
 
-    # get sim time info from config.json? or  ioctl/select from WLS?
-    #while True:
-    time.sleep(sample_rate)
-    log.info("collecting")
+    # get sim time info from config.json? or  ioctl/select from WLS? or docker wait?
+    time.sleep(metrics.procfs_sample_interval * 5)
+    metrics.procfs_fd.close()
 
     # x.join()
 
