@@ -25,6 +25,13 @@ def get_mem_metrics(f, lst):
     return res
 
 
+def get_net_metrics(f, lst):
+    f.seek(0)
+    rbuff = f.readlines()
+    res =  ''.join([line.replace("\t", " ").replace("\n", " ") for line in rbuff if "eth" in line])
+    return res
+
+
 def get_blk_metrics(f, lst):
     f.seek(0)
     rbuff = f.readlines()
@@ -85,8 +92,19 @@ class MetricsCollector:
             self.pid2procfds[pid]["cpu"] =  open(f"/proc/{pid}/stat")
             self.pid2procfds[pid]["mem"] =  open(f"/proc/{pid}/status") #grep ^VmPeak VmRSS /proc/*/status 
             self.pid2procfds[pid]["blk"] =  open(f"/sys/fs/cgroup/blkio/docker/{self.pid2docker(pid)}/blkio.throttle.io_service_bytes")
+            self.pid2procfds[pid]["net"] =  open(f"/proc/{pid}/net/dev")
+            #self.pid2procfds[pid]["blk"] =  open(f"/proc/{pid}/io") # per-procses, but needs SUDO
         self.procfs_fd = open(f"{OPREFIX}-{self.procfs_fname}.{OEXT}", "w")
             #pid2procfds[pid]["net"] =  open(f"/proc/{pid}/") 
+
+    def teardown_file_handles(self):
+        self.pid2procfds[0]["cpu"].close()
+        for pid in self.docker_pids:
+            self.pid2procfds[pid]["cpu"].close()
+            self.pid2procfds[pid]["mem"].close()
+            self.pid2procfds[pid]["net"].close()
+            self.pid2procfds[pid]["blk"].close()
+        self.procfs_fd.close()
 
     def procfs_collector(self, cnt):
         log.info("collecting " + str(cnt))
@@ -94,8 +112,11 @@ class MetricsCollector:
         for pid in self.docker_pids:
             cpu = get_cpu_metrics(self.pid2procfds[pid]["cpu"]).strip() + " , "
             mem = get_mem_metrics(self.pid2procfds[pid]["mem"], [16, 17, 21]) #VmPeak, VmSize, VmRSS
+            net = get_net_metrics(self.pid2procfds[pid]["net"], [0, 1]) # Read, Write
             blk = get_blk_metrics(self.pid2procfds[pid]["blk"], [0, 1]) # Read, Write
-            out = f"SAMPLE_{cnt} {time.time()} {mem} {blk} {cpu} {''.join(stat)}\n"
+            #blk = get_blk_metrics(self.pid2procfds[pid]["blk"], [4, 5]) # Read, Write
+            out = f"SAMPLE_{cnt} {time.time()} {mem} {net} {blk} # {cpu} {''.join(stat)}\n"
+            #out = f"SAMPLE_{cnt} {time.time()} {mem}# {net}# {blk} {''.join(stat)}\n"
             #print(str(out))
             self.procfs_fd.write(str(out))
         self.procfs_scheduler.enter(self.procfs_sample_interval, 1,
@@ -122,6 +143,8 @@ class MetricsCollector:
         self.ps_fname = f"{OPREFIX}-{ps_fname}.{OEXT}"
         self.inspect_fname = f"{OPREFIX}-{inspect_fname}.{OEXT}"
 
+        # multinode containers 
+        # ps -ef | grep -E 'wakunode|waku' |grep -v docker | grep -v grep | awk '{print $2}'
         with open(self.ps_fname, "r") as f:
             for line in f:
                 la = line.split("#")
@@ -151,18 +174,17 @@ class MetricsCollector:
         self.procfs_thread.start()
 
     def clean_up(self):
+        self.teardown_file_handles()
         os.kill(self.docker_stats_pid, signal.SIGTERM)
         log.info(f"docker monitor stopped : {self.docker_stats_pid}, {self.docker_stats_fname}")
 
     def launch_sysfs_monitor(self, sysfs_fname):
-        #paths = [f"CGROUP+
         while True:
             time.sleep(self.procfs_sample_interval)
             log.info("collecting")
             for docker in self.dockers:
                  print(f"/sys/fs/cgroup/cpu/docker/{docker}/cpuacct.usage_all")
                  print(f"/sys/fs/cgroup/memory/docker/{docker}/memory.max_usage_in_byte")
-            #break
         print(sysfs_fname)
 
 
@@ -183,7 +205,6 @@ def main(ctx: typer.Context):
 
     # get sim time info from config.json? or  ioctl/select from WLS? or docker wait?
     time.sleep(metrics.procfs_sample_interval * 5)
-    metrics.procfs_fd.close()
 
     # x.join()
 
