@@ -2,7 +2,6 @@
 
 def send_json_rpc(plan, service_name, port_id, method, params, extract={}):
     recipe = PostHttpRequestRecipe(
-        service_name=service_name,
         port_id=port_id,
         endpoint="",
         content_type="application/json",
@@ -13,14 +12,14 @@ def send_json_rpc(plan, service_name, port_id, method, params, extract={}):
     response = plan.wait(recipe=recipe,
                     field="code",
                     assertion="==",
-                    target_value=200)
+                    target_value=200,
+                    service_name=service_name)
 
     return response
 
 
 def send_http_get_req(plan, service_name, port_id, endpoint, extract={}):
     recipe = GetHttpRequestRecipe(
-        service_name=service_name,
         port_id=port_id,
         endpoint=endpoint,
         extract=extract
@@ -29,14 +28,14 @@ def send_http_get_req(plan, service_name, port_id, endpoint, extract={}):
     response = plan.wait(recipe=recipe,
                     field="code",
                     assertion="==",
-                    target_value=200)
+                    target_value=200,
+                    service_name=service_name)
 
     return response
 
 
 def send_http_post_req(plan, service_name, port_id, endpoint, body, extract={}):
     recipe = PostHttpRequestRecipe(
-        service_name=service_name,
         port_id=port_id,
         endpoint=endpoint,
         content_type="application/json",
@@ -47,6 +46,7 @@ def send_http_post_req(plan, service_name, port_id, endpoint, body, extract={}):
     response = plan.wait(recipe=recipe,
                     field="code",
                     assertion="==",
-                    target_value=200)
+                    target_value=200,
+                    service_name=service_name)
 
     return response
