@@ -74,37 +74,35 @@ def plot_figure(msg_propagation_times, cpu_usage, memory_usage):
 
     G_LOGGER.info('Figure saved in %s' %figure_path)
 
-# def fetch_cadvisor_stats_from_container(container_id, start_ts, end_ts, prometheus_port=52118):
 
-#     url='http://localhost:%d' %52118
-    
-#     try:
-#         G_LOGGER.debug('Connecting to Prometheus server in %s' %url)
-#         prometheus = PrometheusConnect(url, disable_ssl=True, container_label="container_label_com_docker_container_id=%s" %container_id)
-#         print(prometheus)
-#     except Exception as e:
-#         G_LOGGER.error('%s: %s' % (e.__doc__, e))
-#         return None
-    
-#     metrics = prometheus.get_label_values("__name__")
-#     print(metrics)
+def fetch_cadvisor_stats_from_container_2(container_id, start_ts, end_ts, prometheus_port=52118):
+    url='http://localhost:%d' %52118
 
-#     try:
-#         # query = '100 - (avg by(instance) (irate(container_cpu_usage_seconds_total{container_label_com_docker_container_id="<%s>"}[5m])) * 100)' %container_id
-#         # query = "container_file_descriptors{process_cpu_seconds_total=\"<%s>\"}" %container_id
-#         # result = prometheus.query(query)
-#         query = 'process_cpu_seconds_total'
-#         result = prometheus.custom_query(query)
-#         G_LOGGER.debug('Querying: %s' %query)
-#     except Exception as e:
-#         G_LOGGER.error('%s: %s' % (e.__doc__, e))
-#         return None
+    try:
+        G_LOGGER.debug('Connecting to Prometheus server in %s' %url)
+        prometheus = PrometheusConnect(url, disable_ssl=True,
+                                       container_label="container_label_com_docker_container_id=%s" %container_id)
+        print(prometheus)
+    except Exception as e:
+        G_LOGGER.error('%s: %s' % (e.__doc__, e))
+        return None
 
-    
+    metrics = prometheus.get_label_values("__name__")
+    print(metrics)
+    try:
+        # query = '100 - (avg by(instance) (irate(container_cpu_usage_seconds_total{container_label_com_docker_container_id="<%s>"}[5m])) * 100)' %container_id
+        # query = "container_file_descriptors{process_cpu_seconds_total=\"<%s>\"}" %container_id
+        # result = prometheus.query(query)
+        query = 'process_cpu_seconds_total'
+        result = prometheus.custom_query(query)
+        G_LOGGER.debug('Querying: %s' %query)
+    except Exception as e:
+        G_LOGGER.error('%s: %s' % (e.__doc__, e))
+        return None
 
-#     print('--->', result)
+    print('--->', result)
+    return {'cpu_usage' : 0, 'memory_usage' : 0, 'bandwidth_in' : 0, 'bandwidth_out' : 0}
 
-#     return {'cpu_usage' : 0, 'memory_usage' : 0, 'bandwidth_in' : 0, 'bandwidth_out' : 0}
 
 def fetch_cadvisor_summary_from_container(container_id):
     
