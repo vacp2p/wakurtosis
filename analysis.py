@@ -434,6 +434,7 @@ def compute_message_delivery(msgs_dict, injected_msgs_dict):
 
 
 def main():
+    _innit_logger()
     simulation_path = _parse_args()
         
     """ Load Topics Structure """
