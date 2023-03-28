@@ -98,13 +98,15 @@ class MetricsCollector:
             self.pid2procfds[pid]["cpu"] =  open(f'/proc/{pid}/stat')
             self.pid2procfds[pid]["mem"] =  open(f'/proc/{pid}/status')
             self.pid2procfds[pid]["net"] =  open(f'/proc/{pid}/net/dev')
-            #if self.csize == 1:
-             #   self.pid2procfds[pid]["blk"] =  open((f'/sys/fs/cgroup/blkio/docker'
-             #                                         f'/{self.docker_pid2id[pid]}/'
-             #                                         f'blkio.throttle.io_service_bytes'
-             #                                       ))
-            #else:
-             #   self.pid2procfds[pid]["blk"] =  open(f'/proc/{pid}/io') # need SUDO
+            blk = ((f'/sys/fs/cgroup/blkio/docker'
+                    f'/{self.docker_pid2id[pid]}/'
+                    f'blkio.throttle.io_service_bytes'
+                 )) if self.csize == 1 else f'/proc/{pid}/io'
+            try:
+                self.pid2procfds[pid]["blk"] =  open(blk) # require SUDO for csize > 1
+            except:
+                log.error(f"ERROR: You need root permissions to read {blk}")
+                os._exit(-1)
         self.procfs_fd = open(f'{OPREFIX}-{self.procfs_fname}.{OEXT}', "w")
 
     def teardown_file_handles(self):
@@ -122,10 +124,7 @@ class MetricsCollector:
             cpu = get_cpu_metrics(self.pid2procfds[pid]["cpu"]).strip() # all cpu stats
             mem = get_mem_metrics(self.pid2procfds[pid]["mem"])
             net = get_net_metrics(self.pid2procfds[pid]["net"]) # Whole eth* row
-          #  if self.csize == 1:
-          #      blk = get_blk_metrics(self.pid2procfds[pid]["blk"], self.csize) # Read, Write
-          #  else:
-          #      blk = get_blk_metrics(self.pid2procfds[pid]["blk"], self.csize) # Read, Write, SUDO
+            blk = get_blk_metrics(self.pid2procfds[pid]["blk"], self.csize) # Read, Write
             blk = "Read 0, Write 0"
             out = ( f'SAMPLE_{self.procfs_sample_cnt} '
                     f'{pid} {time.time()} '         # file has pid to docker_id map
@@ -140,7 +139,7 @@ class MetricsCollector:
     def launch_procfs_monitor(self, procfs_fname):
         self.procfs_fname = procfs_fname
         self.populate_file_handles()    # including procfs_fd
-        self.procfs_fd.write((f'#container_size = {self.csize} '
+        self.procfs_fd.write((f'# container_size = {self.csize} '
                               f'procfs_sampling interval = {self.procfs_sampling_interval}\n'
                               ))
         self.procfs_fd.write(f'# {", ".join([f"{pid} = {self.docker_pid2id[pid]}" for pid in self.docker_pid2id])}\n')
@@ -209,7 +208,7 @@ class MetricsCollector:
                     self.docker_pid2name[pid] = docker_name
                     os.remove(f'{OPREFIX}-name-{pid}.{OEXT}')
 
-    def build_metadata(self, dps_fname, dinspect_fname, cpuinfo_fname, meminfo_fname, csize=1):
+    def build_metadata(self, dps_fname, dinspect_fname, cpuinfo_fname, meminfo_fname):
         self.record_the_basics(dps_fname, dinspect_fname, cpuinfo_fname, meminfo_fname)
         if self.csize == 1:
             self.build_pid2name_1()
@@ -233,10 +232,13 @@ class MetricsCollector:
                 target=self.launch_procfs_monitor, args=(procfs_fname,), daemon=True)
         self.procfs_thread.start()
 
+    def terminate_docker_stats(self):
+        log.info(f'stopping docker monitor : {self.docker_stats_pid}, {self.docker_stats_fname}')
+        os.kill(self.docker_stats_pid, signal.SIGKILL) # cannot use TERM/QUIT/INT
+
     def clean_up(self):
         self.teardown_file_handles()
-        os.kill(self.docker_stats_pid, signal.SIGTERM)
-        log.info(f'docker monitor stopped : {self.docker_stats_pid}, {self.docker_stats_fname}')
+        self.terminate_docker_stats()
 
     def signal_handler(self, sig, frame):
         self.clean_up()
