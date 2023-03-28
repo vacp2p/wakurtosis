@@ -1,15 +1,16 @@
 import logging as log
 
-import os, sys, threading, subprocess, signal
+import os, sys, pathlib
+import threading, subprocess, signal
 
 from collections import defaultdict
 
-from procfs import Proc
+#from procfs import Proc
 import sched, time
 import typer
 
-CGROUP="/sys/fs/cgroup/"
-OPREFIX="docker"
+ODIR="stats"
+OPREFIX=f'{ODIR}/docker'
 OEXT="out"
 
 # TODO: return only relevant bits to compute the percentages for CPU
@@ -39,10 +40,10 @@ def get_blk_metrics(f, csize):
     rbuff = f.readlines()
     lst = [0, 1] if csize == 1 else [4, 5]
     try: #sysfs is dodgy at times
-        res = ''.join([rbuff[i].replace("\n", " ") for i in lst])
+        res = ''.join([rbuff[i].replace("\n", " ").replace("259:0 ", "") for i in lst])
     except:
-        res = "BLK Read 0  Write 0 "
-    return res
+        res = "Read 0  Write 0 "
+    return f'BLK {res}'
 
 
 class MetricsCollector:
@@ -86,7 +87,7 @@ class MetricsCollector:
 
     def launch_docker_monitor(self, dstats_fname):
         cmd = f'exec {self.docker_stats} > {OPREFIX}-{dstats_fname}.{OEXT}'
-        log.info("docker monitor cmd : " +  cmd)
+        log.debug("docker monitor cmd : " +  cmd)
         process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, preexec_fn=os.setsid)
         self.docker_stats_pid, self.docker_stats_fname = process.pid, dstats_fname
         log.info(f'docker monitor started : {self.docker_stats_pid}, {self.docker_stats_fname}')
@@ -125,7 +126,6 @@ class MetricsCollector:
             mem = get_mem_metrics(self.pid2procfds[pid]["mem"])
             net = get_net_metrics(self.pid2procfds[pid]["net"]) # Whole eth* row
             blk = get_blk_metrics(self.pid2procfds[pid]["blk"], self.csize) # Read, Write
-            blk = "Read 0, Write 0"
             out = ( f'SAMPLE_{self.procfs_sample_cnt} '
                     f'{pid} {time.time()} '         # file has pid to docker_id map
                     f'{mem} {net} {blk} {cpu} {"".join(cpu_stat)}\n'
@@ -170,16 +170,16 @@ class MetricsCollector:
                 la = line.split("/")
                 self.docker_pid2name[la[0]] = la[1]
                 self.docker_pids.append(la[0])
-        log.info(f'docker: ids, pids : {str(self.docker_ids)}, {str(self.docker_pids)}')
-        log.info(f'docker: maps : {self.docker_pid2name}, {self.docker_name2id}')
+        log.debug(f'docker: ids, pids : {str(self.docker_ids)}, {str(self.docker_pids)}')
+        log.debug(f'docker: maps : {self.docker_pid2name}, {self.docker_name2id}')
 
     def build_pid2name_n(self):
-        log.info(self.ps_docker)
+        log.debug(self.ps_docker)
         self.build_and_exec(self.ps_docker, self.ps_pids_fname)
         self.ps_pids_fname = f'{OPREFIX}-{self.ps_pids_fname}.{OEXT}'
         with open(self.ps_pids_fname, "r") as f:
             self.ps_pids = f.read().strip().split("\n")
-        log.info(f'docker: pids : {str(self.ps_pids)}')
+        #log.info(f'docker: waku pids : {str(self.ps_pids)}')
         self.docker_pids = self.ps_pids
         for pid in self.docker_pids:
             get_shim_pid=((f'pstree -sg {pid} | '
@@ -214,6 +214,7 @@ class MetricsCollector:
             self.build_pid2name_1()
         else:
             self.build_pid2name_n()
+        log.info(f'docker: waku pids : {str(self.docker_pids)}')
         self.build_pid2id()
 
     def register_signals(self):
@@ -245,15 +246,29 @@ class MetricsCollector:
         sys.exit(0)
 
 
+MAX_CSIZE=10
+def _csize_callback(ctx: typer, Context, csize: int):
+    if csize <= 0 or csize > MAX_CSIZE:
+        raise ValueError(f"container_size must be an int in (0, {MAX_CSIZE}]")
+    return csize
+
+
+def _sinterval_callback(ctx: typer, Context, sinterval: int):
+    if sinterval <= 0 :
+        raise ValueError(f"sampling_interval must be > 0")
+    return sinterval
+
 def main(ctx: typer.Context,
-        container_size: int = typer.Option(1,
+        container_size: int = typer.Option(1, callback=_csize_callback,
         help="Specify the number of wakunodes per container"),
-        sampling_interval: int = typer.Option(1, help="Set the sampling interval in secs")
-        ):
+        sampling_interval: int = typer.Option(1, callback=_sinterval_callback,
+        help="Set the sampling interval in secs")):
+
     format = "%(asctime)s: %(message)s"
     log.basicConfig(format=format, level=log.INFO,
                         datefmt="%H:%M:%S")
 
+    pathlib.Path(ODIR).mkdir(parents=True, exist_ok=True)
     log.info("Metrics : starting")
     metrics = MetricsCollector(csize=container_size, sampling_interval=sampling_interval)
 
