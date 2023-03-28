@@ -44,24 +44,7 @@ class CustomFormatter(logging.Formatter):
         formatter = logging.Formatter(log_fmt, '%d-%m-%Y %H:%M:%S')
         return formatter.format(record)
 
-def generate_summary():
 
-    # summary = {
-    #     "end_ts" : time.time(),
-    #     "params" : config['general'],
-    #     "topics" : list(topics_msg_cnt.keys()),
-    #     "topics_msg_cnt" : topics_msg_cnt,
-    #     "simulation_time" : elapsed_s,
-    #     "total_messages" : len()
-    # }
-
-
-
-    # with open('./summary.json', 'w') as summary_file:
-    #     summary_file.write(json.dumps(summary, indent=4))
-
-    G_LOGGER.info('Analsysis sumnmary saved in  %s' %summary)
-    
 def plot_figure(msg_propagation_times, cpu_usage, memory_usage):
 
     fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15, 10))
@@ -377,9 +360,6 @@ def main():
 
     # Generate Figure
     plot_figure(msg_propagation_times, cpu_usage, memory_usage)
-
-    # Generate summary
-    # generate_summary()
     
     """ We are done """
     G_LOGGER.info('Ended')
