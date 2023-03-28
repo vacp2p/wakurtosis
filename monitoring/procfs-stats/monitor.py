@@ -77,7 +77,7 @@ class MetricsCollector:
         self.procfs_scheduler = sched.scheduler(time.time, time.sleep)
         self.procfs_sample_cnt = 0
 
-        # self.container_id = -1 self.container_name = -1 self.cpu_usage = -1 
+        # self.container_id = -1 self.container_name = -1 self.cpu_usage = -1
         # self.mem_usage_abs = -1 self.mem_usage_perc = -1 self.net_sends = -1
         # self.net_recvs = -1 self.block_reads = -1 self.block_writes = -1
 
@@ -257,6 +257,7 @@ def _sinterval_callback(ctx: typer, Context, sinterval: int):
     if sinterval <= 0 :
         raise ValueError(f"sampling_interval must be > 0")
     return sinterval
+
 
 def main(ctx: typer.Context,
         container_size: int = typer.Option(1, callback=_csize_callback,
