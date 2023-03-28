@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
 Description: Wakurtosis simulation analysis
-
 """
 
 """ Dependencies """
@@ -10,7 +9,6 @@ from datetime import datetime
 from tqdm_loggable.auto import tqdm
 from tqdm_loggable.tqdm_logging import tqdm_logging
 import matplotlib.pyplot as plt
-from scipy import stats
 
 from prometheus_api_client import PrometheusConnect
 
@@ -24,6 +22,7 @@ G_DEFAULT_SIMULATION_PATH = './wakurtosis_logs'
 G_DEFAULT_FIG_FILENAME = 'analysis.pdf'
 G_DEFAULT_SUMMARY_FILENAME = 'summary.json'
 G_LOGGER = None
+
 
 """ Custom logging formatter """
 class CustomFormatter(logging.Formatter):
@@ -123,6 +122,7 @@ def fetch_cadvisor_summary_from_container(container_id):
     # G_LOGGER.debug(summary_stats)
 
     return summary_stats
+
 
 def fetch_cadvisor_stats_from_container(container_id, start_ts, end_ts):
     
@@ -278,19 +278,72 @@ def get_relay_line_info(log_line):
     return msg_topics, msg_topic, msg_hash, msg_peer_id
 
 
-def main():
-    simulation_path = _parse_args()
-        
-    """ Load Topics Structure """
-    topology = load_topology(simulation_path + "/network_data.json")
-    load_topics_into_topology(topology)
+def analyze_published(log_line, node_logs, msgs_dict, msg_publishTime):
+    msg_topics, msg_topic, msg_hash, msg_peer_id = get_relay_line_info(log_line)
 
-    """ Load Simulation Messages """
-    injected_msgs_dict = load_messages(simulation_path)
+    node_logs[msg_peer_id]['published'].append([msg_publishTime, msg_topics, msg_topic, msg_hash])
 
+    if msg_hash not in msgs_dict:
+        msgs_dict[msg_hash] = {'published': [{'ts': msg_publishTime, 'peer_id': msg_peer_id}],
+                               'received': []}
+    else:
+        msgs_dict[msg_hash]['published'].append(
+            {'ts': msg_publishTime, 'peer_id': msg_peer_id})
+
+
+def analyze_received(log_line, node_logs, msgs_dict, msg_receivedTime):
+    msg_topics, msg_topic, msg_hash, msg_peer_id = get_relay_line_info(log_line)
+    node_logs[msg_peer_id]['received'].append([msg_receivedTime, msg_topics, msg_topic, msg_hash])
+
+    if msg_hash not in msgs_dict:
+        msgs_dict[msg_hash] = {'published': [], 'received': [
+            {'ts': msg_receivedTime, 'peer_id': msg_peer_id}]}
+    else:
+        msgs_dict[msg_hash]['received'].append(
+            {'ts': msg_receivedTime, 'peer_id': msg_peer_id})
+
+
+def parse_lines_in_file(file, node_logs, msgs_dict, min_tss, max_tss):
+    for log_line in file:
+        if 'waku.relay' in log_line:
+            if 'published' in log_line:
+                msg_publishTime = int(re.search(r'publishTime=([\d]+)', log_line).group(1))
+
+                analyze_published(log_line, node_logs, msgs_dict, msg_publishTime)
+
+                min_tss, max_tss = compare_tss(msg_publishTime, min_tss, max_tss)
+
+            elif 'received' in log_line:
+                msg_receivedTime = int(re.search(r'receivedTime=([\d]+)', log_line).group(1))
+
+                analyze_received(log_line, node_logs, msgs_dict, msg_receivedTime)
+
+                min_tss, max_tss = compare_tss(msg_receivedTime, min_tss, max_tss)
+
+    return min_tss, max_tss
+
+
+def open_file(folder):
+    try:
+        file = open(f'{folder[0]}/output.log', mode='r')
+    except OSError as e:
+        G_LOGGER.error(f'{e.__doc__}: {e}')
+        sys.exit()
+
+    return file
+
+
+def prepare_node_in_logs(node_pbar, topology, node_logs, container_name):
+    for node in node_pbar:
+        node_info = topology["nodes"][node]
+        peer_id = node_info["peer_id"][:3] + "*" + node_info["peer_id"][-6:]
+        node_logs[peer_id] = {'published': [], 'received': [],
+                              'container_name': container_name, 'peer_id': node}
+
+
+def analyze_containers(topology, simulation_path):
     node_logs = {}
     msgs_dict = {}
-
     max_tss = -sys.maxsize - 1
     min_tss = sys.maxsize
 
@@ -299,82 +352,31 @@ def main():
 
         node_pbar.set_description(f"Parsing log of container {container_name}")
 
-        for node in node_pbar:
-            node_info = topology["nodes"][node]
-            peer_id = node_info["peer_id"][:3] + "*" + node_info["peer_id"][-6:]
-            node_logs[peer_id] = {'published': [], 'received': [],
-                               'container_name': container_name, 'peer_id': node}
+        prepare_node_in_logs(node_pbar, topology, node_logs, container_name)
 
         folder = glob.glob(f'{simulation_path}/{container_name}*')
         if len(folder) > 1:
             raise RuntimeError(f"Error: Multiple containers with same name: {folder}")
 
-        try:
-            file = open(f'{folder[0]}/output.log', mode='r')
-        except OSError as e:
-            G_LOGGER.error(f'{e.__doc__}: {e}')
-            sys.exit()
-
-        for log_line in file:
-            if 'waku.relay' in log_line:
-                msg_topics, msg_topic, msg_hash, msg_peer_id = get_relay_line_info(log_line)
-
-                if 'published' in log_line:
-                    msg_publishTime = int(re.search(r'publishTime=([\d]+)', log_line).group(1))
-                    min_tss, max_tss = compare_tss(msg_publishTime, min_tss, max_tss)
-
-                    node_logs[msg_peer_id]['published'].append(
-                        [msg_publishTime, msg_topics, msg_topic, msg_hash])
-
-                    if msg_hash not in msgs_dict:
-                        msgs_dict[msg_hash] = {
-                            'published': [{'ts': msg_publishTime, 'peer_id': msg_peer_id}],
-                            'received': []}
-                    else:
-                        msgs_dict[msg_hash]['published'].append(
-                            {'ts': msg_publishTime, 'peer_id': msg_peer_id})
-
-                elif 'received' in log_line:
-                    msg_receivedTime = int(re.search(r'receivedTime=([\d]+)',
-                                                     log_line).group(1))
-                    min_tss, max_tss = compare_tss(msg_receivedTime, min_tss, max_tss)
-
-                    node_logs[msg_peer_id]['received'].append(
-                        [msg_receivedTime, msg_topics, msg_topic, msg_hash])
-
-                    if msg_hash not in msgs_dict:
-                        msgs_dict[msg_hash] = {'published': [], 'received': [
-                            {'ts': msg_receivedTime, 'peer_id': msg_peer_id}]}
-                    else:
-                        msgs_dict[msg_hash]['received'].append(
-                            {'ts': msg_receivedTime, 'peer_id': msg_peer_id})
-
+        file = open_file(folder)
+        min_tss, max_tss = parse_lines_in_file(file, node_logs, msgs_dict, min_tss, max_tss)
         file.close()
 
-    # Compute simulation time window
-    simulation_time_ms = round((max_tss - min_tss) / 1000000)
-    G_LOGGER.info(f'Simulation started at {min_tss}, ended at {max_tss}. '
-                  f'Effective simulation time was {simulation_time_ms} ms.')
-    
-    # Compute message delivery
-    total_messages = len(injected_msgs_dict)
-    delivered_messages = len(msgs_dict)
-    lost_messages = total_messages - delivered_messages
-    delivery_rate = delivered_messages * 100 / total_messages
-    
-    G_LOGGER.info('%d of %d messages delivered. Lost: %d Delivery rate %.2f%%' %(delivered_messages, total_messages, lost_messages, delivery_rate))
+    return node_logs, msgs_dict, min_tss, max_tss
 
+
+def compute_message_latencies(msgs_dict):
     # Compute message latencies and propagation times througout the network
     pbar = tqdm(msgs_dict.items())
     for msg_id, msg_data in pbar:
         # NOTE: Carefull here as I am assuming that every message is published once ...
         if len(msg_data['published']) > 1:
             G_LOGGER.warning('Several publishers of message %s')
-        
+
         published_ts = int(msg_data['published'][0]['ts'])
         peer_id = msg_data['published'][0]['peer_id']
-        
-        pbar.set_description('Computing latencies of message %s' %msg_id)
+
+        pbar.set_description('Computing latencies of message %s' % msg_id)
 
         # Compute latencies
         latencies = []
@@ -388,25 +390,70 @@ def main():
             latency = int(received_data['ts']) - published_ts
             peer_id = msg_data['published'][0]['peer_id']
             latencies.append(latency)
-                    
+
         msgs_dict[msg_id]['latencies'] = latencies
-            
+
+
+def compute_propagation_times(msgs_dict):
     msg_propagation_times = []
     pbar = tqdm(msgs_dict.items())
+
     for msg_id, msg_data in pbar:
-        pbar.set_description('Computing propagation time of message %s' %msg_id)
-        msg_propagation_times.append(round(max(msg_data['latencies'])/1000000))
-    
-    # Fetch Hardware metrics from Node containers 
+        pbar.set_description('Computing propagation time of message %s' % msg_id)
+        msg_propagation_times.append(round(max(msg_data['latencies']) / 1000000))
+
+    return msg_propagation_times
+
+
+def get_hardware_metrics(node_logs, min_tss, max_tss):
+    # Fetch Hardware metrics from Node containers
     cpu_usage = []
     memory_usage = []
     pbar = tqdm(node_logs.items())
     for node in pbar:
-        pbar.set_description('Fetching hardware stats from container %s' %node[1]['container_name'])
-        container_stats = fetch_cadvisor_stats_from_container(node[1]['container_name'], min_tss, max_tss)
+        pbar.set_description(
+            'Fetching hardware stats from container %s' % node[1]['container_name'])
+        container_stats = fetch_cadvisor_stats_from_container(node[1]['container_name'], min_tss,
+                                                              max_tss)
         # NOTE: Here we could also chose a different statistic such as mean or average instead of max
         cpu_usage.append(max(container_stats['cpu_usage']))
         memory_usage.append(max(container_stats['memory_usage']))
+
+    return cpu_usage, memory_usage
+
+
+def compute_message_delivery(msgs_dict, injected_msgs_dict):
+    # Compute message delivery
+    total_messages = len(injected_msgs_dict)
+    delivered_messages = len(msgs_dict)
+    lost_messages = total_messages - delivered_messages
+    delivery_rate = delivered_messages * 100 / total_messages
+
+    G_LOGGER.info(f'{delivered_messages} of {total_messages} messages delivered. '
+                  f'Lost: {lost_messages}. Delivery rate {delivery_rate}')
+
+
+def main():
+    simulation_path = _parse_args()
+        
+    """ Load Topics Structure """
+    topology = load_topology(simulation_path + "/network_data.json")
+    load_topics_into_topology(topology)
+
+    """ Load Simulation Messages """
+    injected_msgs_dict = load_messages(simulation_path)
+
+    node_logs, msgs_dict, min_tss, max_tss = analyze_containers(topology, simulation_path)
+
+    # Compute simulation time window
+    simulation_time_ms = round((max_tss - min_tss) / 1000000)
+    G_LOGGER.info(f'Simulation started at {min_tss}, ended at {max_tss}. '
+                  f'Effective simulation time was {simulation_time_ms} ms.')
+    
+    compute_message_delivery(msgs_dict, injected_msgs_dict)
+    compute_message_latencies(msgs_dict)
+    msg_propagation_times = compute_propagation_times(msgs_dict)
+    cpu_usage, memory_usage = get_hardware_metrics(node_logs, min_tss, max_tss)
 
     # Generate Figure
     plot_figure(msg_propagation_times, cpu_usage, memory_usage)
