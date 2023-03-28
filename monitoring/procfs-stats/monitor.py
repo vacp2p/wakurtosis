@@ -118,8 +118,7 @@ class MetricsCollector:
         self.procfs_fd.close()
 
     def procfs_reader(self):
-        log.info("collecting " + str(self.procfs_sample_cnt))
-        stat = " ".join(get_cpu_metrics(self.pid2procfds[0]["cpu"]).splitlines())
+        cpu_stat = " ".join(get_cpu_metrics(self.pid2procfds[0]["cpu"]).splitlines())
         for pid in self.docker_pids:
             cpu = get_cpu_metrics(self.pid2procfds[pid]["cpu"]).strip() # all cpu stats
             mem = get_mem_metrics(self.pid2procfds[pid]["mem"])
@@ -130,26 +129,25 @@ class MetricsCollector:
                 blk = get_blk_metrics(self.pid2procfds[pid]["blk"], self.csize) # Read, Write, SUDO
             out = ( f"SAMPLE_{self.procfs_sample_cnt} "
                     f"{pid} {time.time()} "         # file has pid to docker_id map
-                    f"{mem} {net} {blk} {cpu}\n"
+                    f"{mem} {net} {blk} {cpu} {''.join(cpu_stat)}\n"
                   )
             #log.debug(str(pid)+str(out))
             self.procfs_fd.write(str(out))
+        log.info("collected " + str(self.procfs_sample_cnt))
         self.procfs_sample_cnt += 1
-        self.procfs_scheduler.enter(self.procfs_sampling_interval, 1,
-                     self.procfs_reader, ())
+        self.procfs_scheduler.enter(self.procfs_sampling_interval, 1, self.procfs_reader, ())
 
     def launch_procfs_monitor(self, procfs_fname):
         self.procfs_fname = procfs_fname
-        self.populate_file_handles()
+        self.populate_file_handles()    # including procfs_fd
         self.procfs_fd.write((f"#container_size = {self.csize} "
                               f"procfs_sampling interval = {self.procfs_sampling_interval}\n"
                               ))
-        self.procfs_fd.write(f"# {str(self.pid2docker)}\n")
+        self.procfs_fd.write(f'# {", ".join([f"{pid} = {self.pid2docker[pid]}" for pid in self.pid2docker])}\n')
         log.info("files handles populated")
         self.procfs_scheduler.enter(self.procfs_sampling_interval, 1,
                      self.procfs_reader, ())
         self.procfs_scheduler.run()
-
 
     def record_the_basics(self, dps_fname, dinspect_fname, cpuinfo_fname, meminfo_fname):
         self.build_and_exec(self.docker_ps, dps_fname)
@@ -169,6 +167,8 @@ class MetricsCollector:
                 la = line.split("/")
                 self.docker_pid2name[la[0]] = la[1]
                 self.docker_pids.append(la[0])
+        self.pid2docker = {pid :
+                self.docker_name2id[self.docker_pid2name[pid]] for pid in self.docker_pids}
         log.info(f"docker: ids, pids : {str(self.docker_ids)}, {str(self.docker_pids)}")
         log.info(f"docker: maps : {self.docker_pid2name}, {self.docker_name2id}")
 
@@ -181,15 +181,11 @@ class MetricsCollector:
         log.info(f"docker: pids : {str(self.ps_pids)}")
         self.docker_pids = self.ps_pids
 
-    def build_pid2docker_1(self):
-        self.pid2docker = {pid :
-                self.docker_name2id[self.docker_pid2name[pid]] for pid in self.docker_pids}
 
     def build_metadata(self, dps_fname, dinspect_fname, cpuinfo_fname, meminfo_fname, csize=1):
         self.record_the_basics(dps_fname, dinspect_fname, cpuinfo_fname, meminfo_fname)
         if self.csize == 1:
             self.build_docker_pids_1()
-            self.build_pid2docker_1()
         else:
             self.build_docker_pids_n()
             self.build_pid2docker_n()
