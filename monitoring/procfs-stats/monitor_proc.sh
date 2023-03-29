@@ -1,6 +1,10 @@
 #!/bin/bash
-wait_id=$1
-python3 ./procfs-stats.py  --sampling-interval 1 &
+dir=$1
+wait_cid=$2
+sinterval=1
+pf=$dir/procfs-stats.out
+
+python3 ./procfs-stats.py  --sampling-interval $sinterval --prefix $dir > $pf 2>&1 &
 $procfs_pid=$!
-docker wait $wait_id
-kill -15  $procfs_pid
+docker container wait $wait_cid
+kill -15  $procfs_pid   #procfs-stats is a su process
