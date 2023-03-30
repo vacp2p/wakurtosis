@@ -235,14 +235,14 @@ class MetricsCollector:
         self.teardown_file_handles()
 
     # register interruptible signals' handlers
-    def register_signals(self):
+    def register_signal_handlers(self):
         signal.signal(signal.SIGINT, self.signal_handler)
         signal.signal(signal.SIGTERM, self.signal_handler)
         signal.signal(signal.SIGQUIT, self.signal_handler)
 
     # the signal handler
     def signal_handler(self, sig, frame):
-        info.log("got signal: ", sig)
+        log.info(f'Metrics: got signal: {sig}, cleaning up')
         self.clean_up()
         sys.exit(0)
 
@@ -281,6 +281,9 @@ def main(ctx: typer.Context,
 
     log.info("Metrics: Processing system and container metadata...")
     metrics.process_metadata()
+
+    log.info("Metrics: Registering signal handlers...")
+    metrics.register_signal_handlers()
 
     log.info("Metrics: Starting the data collection threads")
     metrics.spin_up()
