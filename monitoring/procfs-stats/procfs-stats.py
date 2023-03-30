@@ -17,7 +17,7 @@ import logging as log
 # TODO: read only relevant fields to compute the percentages for CPU
 def get_cpu_metrics(f):
     f.seek(0)
-    return f'CPU {f.read()}'
+    return f'{f.read()}'
 
 # pulls VmPeak, VmSize, VmRSS stats per wakunode
 # TODO read only relevant fields
@@ -26,19 +26,30 @@ def get_mem_metrics(f):
     rbuff = f.readlines()
     lst = [16, 17, 21] #VmPeak, VmSize, VmRSS
     res = ''.join([rbuff[i].replace("\t", " ").replace("\n", " ").replace(":", " ") for i in lst])
-    return f'MEM {res}'
+    return res
 
 
 # TODO: read only Send/Recv fields
-def get_net_metrics(f, veth="eth0"):
+def get_net1_metrics(f, veth):
     f.seek(0)
     rbuff = f.readlines()
     res =  ''.join([line.replace("\t", " ").replace("\n", " ") for line in rbuff if veth in line])
-    return f'NET {veth} {res}'
+    if res == "":
+        res =  ''.join(
+                [line.replace("\t", " ").replace("\n", " ") for line in rbuff if "eth0" in line])
+    return f'{veth} {res}'
 
-def get_metrics(f, prefix):
+def get_net2_metrics(f, veth="eth0"):
     f.seek(0)
-    return f'{prefix} {f.read().strip()}'
+    rbuff = f.readlines()
+    ra = rbuff[3].split(" ")
+    res = f'InOctets {ra[7]} OutOctets {ra[8]}'
+    return f'{veth} {res}'
+
+def get_net3_metrics(frx, ftx, veth="eth0"):
+    frx.seek(0)
+    ftx.seek(0)
+    return f'{veth} NETRX {frx.read().strip()} NETWX {ftx.read().strip()}'
 
 # pulls the read/write bytes per wakunodes
 # TODO: read only relevant fields
@@ -95,9 +106,10 @@ class MetricsCollector:
         for pid in self.docker_pids:
             self.pid2procfds[pid]["cpu"] =  open(f'/proc/{pid}/stat')
             self.pid2procfds[pid]["mem"] =  open(f'/proc/{pid}/status')
-            self.pid2procfds[pid]["net"] =  open(f'/proc/{pid}/net/dev')
-            self.pid2procfds[pid]["netrx"] =  open(f'/sys/class/net/{self.docker_pid2veth[pid]}/statistics/rx_bytes')
-            self.pid2procfds[pid]["nettx"] =  open(f'/sys/class/net/{self.docker_pid2veth[pid]}/statistics/tx_bytes')
+            self.pid2procfds[pid]["net1"] =  open(f'/proc/{pid}/net/dev')
+            self.pid2procfds[pid]["net2"] =  open(f'/proc/{pid}/net/netstat')
+            self.pid2procfds[pid]["net3rx"] =  open(f'/sys/class/net/{self.docker_pid2veth[pid]}/statistics/rx_bytes')
+            self.pid2procfds[pid]["net3tx"] =  open(f'/sys/class/net/{self.docker_pid2veth[pid]}/statistics/tx_bytes')
             #blk = ((f'/sys/fs/cgroup/blkio/docker'
             #        f'/{self.docker_pid2id[pid]}/'
             #        f'blkio.throttle.io_service_bytes'
@@ -111,9 +123,10 @@ class MetricsCollector:
         for pid in self.docker_pids:
             self.pid2procfds[pid]["cpu"].close()
             self.pid2procfds[pid]["mem"].close()
-            self.pid2procfds[pid]["net"].close()
-            self.pid2procfds[pid]["netrx"].close()
-            self.pid2procfds[pid]["nettx"].close()
+            self.pid2procfds[pid]["net1"].close()
+            self.pid2procfds[pid]["net2"].close()
+            self.pid2procfds[pid]["net3rx"].close()
+            self.pid2procfds[pid]["net3tx"].close()
             self.pid2procfds[pid]["blk"].close()
         self.procfs_fd.close()
 
@@ -122,15 +135,17 @@ class MetricsCollector:
         cpu_stat1 = " ".join(get_cpu_metrics(self.pid2procfds[0]["cpu"]).splitlines())
         cpu_stat = "".join(cpu_stat1)
         for pid in self.docker_pids:
+            veth = self.docker_pid2veth[pid]
             cpu = get_cpu_metrics(self.pid2procfds[pid]["cpu"]).strip() # all cpu stats
             mem = get_mem_metrics(self.pid2procfds[pid]["mem"])
-            net = get_net_metrics(self.pid2procfds[pid]["net"], self.docker_pid2veth[pid]) # veth
-            netrx = get_metrics(self.pid2procfds[pid]["netrx"], prefix="NETRX") # RX bytes
-            nettx = get_metrics(self.pid2procfds[pid]["nettx"], prefix="NETTX") # TX bytes
+            net1 = get_net1_metrics(self.pid2procfds[pid]["net1"], veth) # this is dodgy
+            net2 = get_net2_metrics(self.pid2procfds[pid]["net2"], veth) # SNMP MIB
+            net3 = get_net3_metrics(self.pid2procfds[pid]["net3rx"],
+                    self.pid2procfds[pid]["net3tx"], veth) # sysfs/cgroup stats
             blk = get_blk_metrics(self.pid2procfds[pid]["blk"]) # Read, Write
             out = ( f'SAMPLE_{self.procfs_sample_cnt} '
                     f'{pid} {time.time()} '         # file has pid to docker_id map
-                    f'{mem} {net} {netrx} {nettx} {blk} {cpu} {cpu_stat}\n'
+                    f'MEM {mem} NET {net1} {net2} {net3} BLK {blk} CPU {cpu} {cpu_stat}\n'
                   )
             #log.debug(str(pid)+str(out))
             self.procfs_fd.write(str(out))
@@ -253,7 +268,7 @@ class MetricsCollector:
 #    return csize
 
 
-# ensure 0 < sampling_interval
+# ensure sampling_interval > 0
 def _sinterval_callback(ctx: typer, Context, sinterval: int):
     if sinterval <= 0 :
         raise ValueError(f"sampling_interval must be > 0")

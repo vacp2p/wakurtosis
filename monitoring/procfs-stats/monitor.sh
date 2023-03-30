@@ -1,15 +1,16 @@
 #!/bin/bash
-dir=stats1
+dir=stats
 
 if [ "$#" -ne 1 ]; then
-    echo "Usage: monitor.sh <container_id>"
-    echo "Will profile all running containers until the <container_id> exits"
+    echo "Usage: monitor.sh <container_name>"
+    echo "Will profile all running containers until the <container_name> exits"
     exit
 fi
 
-cline=`docker ps -qa | grep  $1`
+#cline=`docker ps -qa | grep  $1`  # for id
+cline=` docker ps -af "name=$1" | grep $1` # for name
 if [ "$cline" = "" ]; then
-    echo "Error: $1 is not a valid container id"
+    echo "Error: $1 is not a valid container name"
     exit
 fi
 
@@ -39,7 +40,8 @@ for container in $(docker ps --no-trunc -q); do
 done
 
 dstats=$dir/docker-stats.out
-docker stats --no-trunc --format  "{{.Container}} / {{.Name}} / {{.ID}} / {{.CPUPerc}} / {{.MemUsage}} / {{.MemPerc}} / {{.NetIO}} / {{.BlockIO}} / {{.PIDs}}" > $dstats &
+echo '# docker stats --no-trunc --format  "{{.Container}} / {{.Name}} / {{.ID}} / {{.CPUPerc}} / {{.MemUsage}} / {{.MemPerc}} / {{.NetIO}} / {{.BlockIO}} / {{.PIDs}}"' > $dstats
+docker stats --no-trunc --format  "{{.Container}} / {{.Name}} / {{.ID}} / {{.CPUPerc}} / {{.MemUsage}} / {{.MemPerc}} / {{.NetIO}} / {{.BlockIO}} / {{.PIDs}}" >> $dstats &
 docker_pid=$!
 
 #csize=${1:-1}

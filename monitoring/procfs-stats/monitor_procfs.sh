@@ -7,7 +7,6 @@ proclog=$dir/docker-proc-log.out
 
 . $rclist
 #echo "$DPS_FNAME, $DINSPECT_FNAME, $PIDLIST_FNAME, $ID2VETH_FNAME" 
-
 python3 ./procfs-stats.py  --sampling-interval $sinterval --prefix $dir > $proclog 2>&1 &
 procfs_pid=$!
 #docker container wait $wait_cid   # now wait for the wakurtosis to finish
