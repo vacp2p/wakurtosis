@@ -14,51 +14,65 @@ import logging as log
 # max number of wakunodes per container
 #MAX_CSIZE=10
 
-# TODO: read only relevant fields to compute the percentages for CPU
-def get_cpu_metrics(f):
+# pulls system-wide jiffies
+def get_cpu_system(f):
     f.seek(0)
-    return f'{f.read()}'
+    rbuff = f.readlines()
+    return f'{rbuff[0].strip()}'
+
+
+# pulls per-process user/system jiffies
+def get_cpu_process(f):
+    f.seek(0)
+    rbuff = f.read().strip().split()
+    lst = [-3, -2]  # user jiffies, system jiffies
+    return f'{rbuff[-3]} {rbuff[-2]}'
 
 # pulls VmPeak, VmSize, VmRSS stats per wakunode
-# TODO read only relevant fields
 def get_mem_metrics(f):
     f.seek(0)
     rbuff = f.readlines()
-    lst = [16, 17, 21] #VmPeak, VmSize, VmRSS
-    res = ''.join([rbuff[i].replace("\t", " ").replace("\n", " ").replace(":", " ") for i in lst])
+    lst = [16, 17, 21, 25, 26] #VmPeak, VmSize, VmRSS, VmData, VmStack
+    out = [' '.join(rbuff[i].replace("\n", " ").replace(":", "").split()) for i in lst]
+    res = ' '.join(out)
     return res
 
 
-# TODO: read only Send/Recv fields
-def get_net1_metrics(f, veth):
+# pulls Rx/Tx Bytes and Packers per wakunode
+def get_net1_metrics(f, host_if):
     f.seek(0)
     rbuff = f.readlines()
-    res =  ''.join([line.replace("\t", " ").replace("\n", " ") for line in rbuff if veth in line])
-    if res == "":
-        res =  ''.join(
-                [line.replace("\t", " ").replace("\n", " ") for line in rbuff if "eth0" in line])
-    return f'{veth} {res}'
+    out = [line.strip().split() for line in rbuff if "eth0" in line]        # docker
+    if out == []:
+        out = [line.strip().split() for line in rbuff if host_if in line]     # host
+    out = out[0]
+    res = f'{out[0]} RxBytes {out[1]} RxPackers {out[2]} TxBytes {out[9]} TxPackets {out[10]}'
+    return res
 
+
+# pulls Rx/Tx Bytes per wakunode
 def get_net2_metrics(f, veth="eth0"):
     f.seek(0)
     rbuff = f.readlines()
-    ra = rbuff[3].split(" ")
+    ra = rbuff[3].split()
     res = f'InOctets {ra[7]} OutOctets {ra[8]}'
     return f'{veth} {res}'
 
+
+# pulls Rx/Tx Bytes per wakunode
 def get_net3_metrics(frx, ftx, veth="eth0"):
     frx.seek(0)
     ftx.seek(0)
     return f'{veth} NETRX {frx.read().strip()} NETWX {ftx.read().strip()}'
 
-# pulls the read/write bytes per wakunodes
-# TODO: read only relevant fields
+
+# pulls the disk read/write bytes per wakunodes
 def get_blk_metrics(f):
     f.seek(0)
     rbuff = f.readlines()
     lst = [4, 5]        #lst = [0, 1] if csize == 1 else [4, 5]
     res = ''.join([rbuff[i].replace("\n", " ").replace("259:0 ", "") for i in lst])
-    return f'BLK {res}'
+    return res
 
 
 class MetricsCollector:
@@ -88,7 +102,7 @@ class MetricsCollector:
         self.procfs_scheduler = sched.scheduler(time.time, time.sleep)
         self.procfs_sample_cnt = 0
 
-        self.local_if=os.environ["LOCAL_IF"]
+        self.host_if=os.environ["LOCAL_IF"]
 
         # self.container_id = -1 self.container_name = -1 self.cpu_usage = -1
         # self.mem_usage_abs = -1 self.mem_usage_perc = -1 self.net_sends = -1
@@ -132,20 +146,20 @@ class MetricsCollector:
 
     # the /proc reader : this is is in fast path
     def procfs_reader(self):
-        cpu_stat1 = " ".join(get_cpu_metrics(self.pid2procfds[0]["cpu"]).splitlines())
-        cpu_stat = "".join(cpu_stat1)
         for pid in self.docker_pids:
             veth = self.docker_pid2veth[pid]
-            cpu = get_cpu_metrics(self.pid2procfds[pid]["cpu"]).strip() # all cpu stats
+            sys_stat = get_cpu_system(self.pid2procfds[0]["cpu"])
+            stat = get_cpu_process(self.pid2procfds[pid]["cpu"])
             mem = get_mem_metrics(self.pid2procfds[pid]["mem"])
-            net1 = get_net1_metrics(self.pid2procfds[pid]["net1"], veth) # this is dodgy
+            net1 = get_net1_metrics(self.pid2procfds[pid]["net1"], self.host_if) # eth0 'in' docker?
             net2 = get_net2_metrics(self.pid2procfds[pid]["net2"], veth) # SNMP MIB
             net3 = get_net3_metrics(self.pid2procfds[pid]["net3rx"],
                     self.pid2procfds[pid]["net3tx"], veth) # sysfs/cgroup stats
             blk = get_blk_metrics(self.pid2procfds[pid]["blk"]) # Read, Write
             out = ( f'SAMPLE_{self.procfs_sample_cnt} '
-                    f'{pid} {time.time()} '         # file has pid to docker_id map
-                    f'MEM {mem} NET {net1} {net2} {net3} BLK {blk} CPU {cpu} {cpu_stat}\n'
+                    f'{pid} {time.time()} '
+                    f'MEM {mem} NET {net1} {net2} {net3} '
+                    f'BLK {blk} CPU-SYS {sys_stat} CPU-process {stat}\n'
                   )
             #log.debug(str(pid)+str(out))
             self.procfs_fd.write(str(out))
@@ -195,8 +209,8 @@ class MetricsCollector:
                     self.docker_pid2name[pid] = dname
                     self.docker_name2id[dname] = did
                     self.docker_pid2id[pid] = did
-                    self.docker_id2veth[did] = self.local_if
-                    self.docker_pid2veth[pid] = self.local_if
+                    self.docker_id2veth[did] = self.host_if
+                    self.docker_pid2veth[pid] = self.host_if
                     continue
                 get_docker_name = ((f'docker inspect --format '
                                     '"{{.State.Pid}}, {{.Name}}"'
@@ -205,7 +219,7 @@ class MetricsCollector:
                 self.build_and_exec(get_docker_name, f'name-{pid}')
                 with open(f'name-{pid}', "r") as f:
                     tmp = f.read().strip().replace(" /", "")
-                    pid, docker_name = tmp.split(',')
+                    pid, docker_name = tmp.split(",")
                     self.docker_pid2name[pid] = docker_name
                     os.remove(f'name-{pid}')
 
