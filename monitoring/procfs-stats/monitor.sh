@@ -45,11 +45,12 @@ docker_pid=$!
 #csize=${1:-1}
 #sinterval=${2:-1}
 #echo $csize, $sinterval
-sleep 3
+
+lif=`ip route get 1.1.1.1 | awk '{ print $5}'`
 
 rclist=$dir/docker-rc-list.out
 procout=$dir/docker-proc.out
-echo "export DPS_FNAME=$dps DINSPECT_FNAME=$dinspect PIDLIST_FNAME=$pidlist ID2VETH_FNAME=$id2veth PROCOUT_FNAME=$procout" >  $rclist
+echo "export DPS_FNAME=$dps DINSPECT_FNAME=$dinspect PIDLIST_FNAME=$pidlist ID2VETH_FNAME=$id2veth PROCOUT_FNAME=$procout LOCAL_IF=$lif" >  $rclist
 
 # only /proc collector runs as root
 #sudo python3 ./procfs-stats.py  --sampling-interval 1 & $collector_pid=$! & docker wait $docker_id; kill -15  $collector_pid; kill -15 $docker_pid

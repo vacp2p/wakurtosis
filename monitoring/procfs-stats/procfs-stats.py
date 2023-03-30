@@ -12,14 +12,15 @@ import logging as log
 
 
 # max number of wakunodes per container
-MAX_CSIZE=10
+#MAX_CSIZE=10
 
-# TODO: return only relevant fields to compute the percentages for CPU
+# TODO: read only relevant fields to compute the percentages for CPU
 def get_cpu_metrics(f):
     f.seek(0)
     return f'CPU {f.read()}'
 
 # pulls VmPeak, VmSize, VmRSS stats per wakunode
+# TODO read only relevant fields
 def get_mem_metrics(f):
     f.seek(0)
     rbuff = f.readlines()
@@ -28,7 +29,7 @@ def get_mem_metrics(f):
     return f'MEM {res}'
 
 
-# TODO: return only Send/Recv fields
+# TODO: read only Send/Recv fields
 def get_net_metrics(f, veth="eth0"):
     f.seek(0)
     rbuff = f.readlines()
@@ -40,6 +41,7 @@ def get_metrics(f, prefix):
     return f'{prefix} {f.read().strip()}'
 
 # pulls the read/write bytes per wakunodes
+# TODO: read only relevant fields
 def get_blk_metrics(f):
     f.seek(0)
     rbuff = f.readlines()
@@ -70,11 +72,12 @@ class MetricsCollector:
 
         self.docker_pid2id = {}
 
-
         self.procout_fname = os.environ["PROCOUT_FNAME"]
         self.procfs_fd = ""
         self.procfs_scheduler = sched.scheduler(time.time, time.sleep)
         self.procfs_sample_cnt = 0
+
+        self.local_if=os.environ["LOCAL_IF"]
 
         # self.container_id = -1 self.container_name = -1 self.cpu_usage = -1
         # self.mem_usage_abs = -1 self.mem_usage_perc = -1 self.net_sends = -1
@@ -177,8 +180,8 @@ class MetricsCollector:
                     self.docker_pid2name[pid] = dname
                     self.docker_name2id[dname] = did
                     self.docker_pid2id[pid] = did
-                    self.docker_id2veth[pid] = "eth0"
-                    #self.docker_pid2veth[pid] = "eth0"
+                    self.docker_id2veth[did] = self.local_if
+                    self.docker_pid2veth[pid] = self.local_if
                     continue
                 get_docker_name = ((f'docker inspect --format '
                                     '"{{.State.Pid}}, {{.Name}}"'
@@ -244,10 +247,10 @@ class MetricsCollector:
         sys.exit(0)
 
 # ensure 0 < container size <= MAX_SIZE
-def _csize_callback(ctx: typer, Context, csize: int):
-    if csize <= 0 or csize > MAX_CSIZE:
-        raise ValueError(f"container_size must be an int in (0, {MAX_CSIZE}]")
-    return csize
+#def _csize_callback(ctx: typer, Context, csize: int):
+#    if csize <= 0 or csize > MAX_CSIZE:
+#        raise ValueError(f"container_size must be an int in (0, {MAX_CSIZE}]")
+#    return csize
 
 
 # ensure 0 < sampling_interval
@@ -259,11 +262,13 @@ def _sinterval_callback(ctx: typer, Context, sinterval: int):
 
 def main(ctx: typer.Context,
         prefix: str = typer.Option("",
-        help="Specify the number of wakunodes per container"),
-        container_size: int = typer.Option(1, callback=_csize_callback,
-        help="Specify the number of wakunodes per container"),
+            help="Specify the path for find the data files"),
+        local_if: str = typer.Option("eth0",
+            help="Specify the local interface to account non-docker nw stats"),
+        #container_size: int = typer.Option(1, callback=_csize_callback,
+        #    help="Specify the number of wakunodes per container"),
         sampling_interval: int = typer.Option(1, callback=_sinterval_callback,
-        help="Set the sampling interval in secs")):
+            help="Set the sampling interval in secs")):
 
     format = "%(asctime)s: %(message)s"
     log.basicConfig(format=format, level=log.INFO,
