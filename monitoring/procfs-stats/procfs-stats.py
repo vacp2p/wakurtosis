@@ -11,9 +11,6 @@ import typer
 import logging as log
 
 
-# max number of wakunodes per container
-#MAX_CSIZE=10
-
 # TODO: return the CPU %s instead?
 # pulls system-wide jiffies
 def get_cpu_system(f):
@@ -28,6 +25,7 @@ def get_cpu_process(f):
     rbuff = f.read().strip().split()
     lst = [-3, -2]  # user jiffies, system jiffies
     return f'{rbuff[-3]} {rbuff[-2]}'
+
 
 # pulls VmPeak, VmSize, VmRSS stats per wakunode
 def get_mem_metrics(f):
@@ -51,6 +49,7 @@ def get_net1_metrics(f, host_if):
     return res
 
 
+# TODO: reconcile with net1 and net3
 # pulls Rx/Tx Bytes per wakunode
 def get_net2_metrics(f, veth="eth0"):
     f.seek(0)
