@@ -14,6 +14,7 @@ import logging as log
 # max number of wakunodes per container
 #MAX_CSIZE=10
 
+# TODO: return the CPU %s instead?
 # pulls system-wide jiffies
 def get_cpu_system(f):
     f.seek(0)
@@ -32,7 +33,7 @@ def get_cpu_process(f):
 def get_mem_metrics(f):
     f.seek(0)
     rbuff = f.readlines()
-    lst = [16, 17, 21, 25, 26] #VmPeak, VmSize, VmRSS, VmData, VmStack
+    lst = [16, 17, 20, 21, 25, 26] #VmPeak, VmSize, VmHWM, VmRSS, VmData, VmStack
     out = [' '.join(rbuff[i].replace("\n", " ").replace(":", "").split()) for i in lst]
     res = ' '.join(out)
     return res
@@ -229,6 +230,7 @@ class MetricsCollector:
         self.docker_pid2id = {pid :
                 self.docker_name2id[self.docker_pid2name[pid]] for pid in self.docker_pids}
 
+    # build the pid to host side veth pair map
     def build_docker_pid2veth(self):
         with open(self.docker_pid2veth_fname) as f:
             for line in f.readlines():
