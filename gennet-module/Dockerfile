@@ -8,7 +8,7 @@ RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Perform the installs
-COPY requirements.txt .
+COPY gennet-module/requirements.txt .
 RUN pip install -r requirements.txt
 
 # Create the production image
@@ -20,8 +20,14 @@ LABEL authors="0xFugue, Daimakaimura"
 COPY --from=build-image /opt/venv /opt/venv
 
 # Copy the gennet files to the production image
+WORKDIR /config/traits
+COPY config/traits .
+
+WORKDIR /config
+COPY config/config.json .
+
 WORKDIR /gennet
-COPY . .
+COPY gennet-module .
 
 # Deploy the virtualenv in production image
 ENV PATH="/opt/venv/bin:$PATH"

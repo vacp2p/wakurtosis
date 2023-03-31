@@ -11,7 +11,7 @@ from collections import defaultdict
 
 import time, tracemalloc
 import string
-import typer, tomli
+import typer
 
 from enum import Enum, EnumMeta
 
@@ -23,29 +23,29 @@ class MetaEnum(EnumMeta):
             cls(item)
         except ValueError:
             return False
-        return True    
+        return True
 
 class BaseEnum(Enum, metaclass=MetaEnum):
     pass
 
 class Trait(BaseEnum):
-    NWAKU = 	"nwaku"
-    GOWAKU = 	"gowaku"
-    DISCV5 = 	"discv5"
-    DNSDISC = 	"dnsdisc"
-    DNS = 	"dns"
-    FLTER = 	"flter"
+    NWAKU   =	"nwaku"
+    GOWAKU  =	"gowaku"
+    DISCV5  =	"discv5"
+    DNSDISC =	"dnsdisc"
+    DNS     =    "dns"
+    FLTER   =	"flter"
     LIGHTPUSH = "lightpush"
-    METRICS = 	"metrics"
-    NODE = 	"node"
-    PEER = 	"peer"
+    METRICS =	"metrics"
+    NODE    =	"node"
+    PEER    =	"peer"
     PEERXCHNG = "peerxchng"
-    RELAY = 	"relay"
-    REST = 	"rest"
-    RLN = 	"rln"
-    RPC = 	"rpc"
-    STORE = 	"store"
-    SWAP = 	"swap"
+    RELAY   =	"relay"
+    REST    =	"rest"
+    RLN     =	"rln"
+    RPC     =	"rpc"
+    STORE   =	"store"
+    SWAP    =	"swap"
     WEBSOCKET = "websocket"
 
 # To add a new node type, add appropriate entries to the nodeType and nodeTypeToDocker
@@ -260,7 +260,7 @@ def generate_subnets(G, num_subnets):
         # Remember, these are *sorted* offsets in the range of 0..n and without replacement; so 
         # they will all index correctly.
         # Finally, assign all these node to the current subnet.
-        for i in range(start, end + 1): 
+        for i in range(start, end + 1):
             node2subnet[f"{NODE_PREFIX}{ID_STR_SEPARATOR}{lst[i]}"] = f"{SUBNET_PREFIX}_{subnet_id}"
             #node2subnet[lst[i]] = subnet_id
         start = end     # roll over the start to the end of the last offset
@@ -280,12 +280,12 @@ def generate_toml(traits_dir, topics, traits_list):
         topic_str = f"\"{topic_str}\""
 
     for trait in traits_list[1:]:       # skip the first trait as it is docker/node selector.
+        toml = f'#{trait}\n'
         with open(f"{traits_dir}/{trait}.toml", 'rb') as f:
-            toml = ""
-            for key, value in tomli.load(f).items():
-                toml += f"{key} = {str(value)}\n"
-        tomls += toml
-    return f"{tomls}topics = {topic_str}\n"
+            strlines = [l.decode("utf-8").strip() for l in f if not len(l.split()) == 0]
+            toml += ''.join([f'{l}\n' for l in strlines if not l.startswith('#')])
+        tomls += toml + '\n'
+    return f"{tomls}#topics\ntopics = {topic_str}\n"
 
 
 # Convert a dict to pair of arrays
@@ -374,7 +374,7 @@ def generate_and_write_files(ctx: typer, G):
     for container, nodes in container2nodes.items():
         json_dump[CONTAINER_PREFIX][container] = nodes
 
-    i, traits_dir = 0,  ctx.params["traits_dir"] 
+    i, traits_dir = 0,  ctx.params["traits_dir"]
     for node in G.nodes:
         # write the per node toml for the i^ith node of appropriate type
         traits_list, i = traits_distribution[i].split(":"),  i+1
