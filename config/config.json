@@ -1,6 +1,6 @@
 {
   "general":{
-    "prng_seed" : 67
+    "prng_seed" : 1
   },
   "kurtosis": {
     "enclave_name": "wakurtosis",
@@ -15,11 +15,7 @@
     "num_partitions": 1,
     "num_subnets": 1,
     "container_size": "1",
-    "node_type_distribution": { "nwaku":100, "gowaku":0 },
-    "node_config": {
-      "nwaku": "rpc-admin = true\nkeep-alive = true\nmetrics-server = true\ndiscv5-discovery = true\n",
-      "gowaku": "rpc-admin = true\nmetrics-server = true\nrpc = true\n"
-    },
+    "node_type_distribution": { "nwaku:relay":100, "gowaku:rln:dnsdisc:dns":0 },
     "network_type": "newmanwattsstrogatz",
     "output_dir": "network_data",
     "benchmark": "False"

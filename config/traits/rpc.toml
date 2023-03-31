@@ -1,0 +1,14 @@
+# --rpc                     Enable Waku JSON-RPC server: true|false [=true].
+# --rpc-address             Listening address of the JSON-RPC server.
+#                               [=ValidIpAddress.init("127.0.0.1")].
+# --rpc-port                Listening port of the JSON-RPC server. [=8545].
+# --rpc-admin               Enable access to JSON-RPC Admin API: true|false
+#                               [=false].
+# --rpc-private             Enable access to JSON-RPC Private API: true|false
+#                               [=false].
+
+rpc=true
+rpc-address="127.0.0.1"
+rpc-port=8545
+rpc-admin=false
+rpc-private=false
