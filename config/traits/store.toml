@@ -1,0 +1,21 @@
+# --store                   Enable/disable waku store protocol [=false].
+# --storenode               Peer multiaddress to query for storage.
+# --store-message-retention-policy  Message store retention policy. Time retention
+#                               policy: 'time:<seconds>'. Capacity retention
+#                               policy: 'capacity:<count>'. Set to 'none' to
+#                               disable. [="time:" & $2.days.seconds].
+# --store-message-db-url    The database connection URL for peristent
+#                               storage. [=sqlite://store.sqlite3].
+# --store-message-db-vacuum  Enable database vacuuming at start. Only
+#                               supported by SQLite database engine. [=false].
+# --store-message-db-migration  Enable database migration at start. [=true].
+# --store-resume-peer       Peer multiaddress to resume the message store at
+#                               boot..
+
+store=false
+#storenode=
+#store-message-retention-policy=
+#store-message-db-url=
+store-message-db-vacuum=false
+store-message-db-migration=true
+#store-resume-peer=

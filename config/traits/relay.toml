@@ -1,0 +1,6 @@
+# --relay                   Enable relay protocol: true|false [=true].
+# --relay-peer-exchange     Enable gossipsub peer exchange in relay protocol:
+#                               true|false [=false].
+
+relay=true
+relay-peer-exchange=false
