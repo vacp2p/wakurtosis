@@ -1,5 +1,5 @@
 #!/bin/bash
-dir=stats
+dir=./wakurtosis-dstats/monitoring/procfs-stats/stats
 
 if [ "$#" -ne 1 ]; then
     echo "Usage: monitor.sh <container_name>"
