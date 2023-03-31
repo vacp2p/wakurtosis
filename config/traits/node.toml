@@ -32,9 +32,9 @@ agent-string="nwaku"
 #nodekey=
 
 #config-file=
-log-level=logging.LogLevel.INFO
-log-format=logging.LogFormat.TEXT
-listen-address=
+log-level="INFO"
+log-format="TEXT"
+#listen-address=
 tcp-port=60000
 
 
@@ -43,7 +43,7 @@ max-connections=50
 
 
 ports-shift=0
-nat=any
+#nat=any
 #ext-multiaddr=
 #staticnode=
 
