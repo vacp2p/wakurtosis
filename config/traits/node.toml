@@ -1,0 +1,52 @@
+# --agent-string            Node agent string which is used as identifier in
+#                               network [=nwaku].
+# --nodekey                 P2P node private key as 64 char hex string..
+#
+#
+# --config-file             Loads configuration from a TOML file (cmd-line
+#                               parameters take precedence).
+# --log-level               Sets the log level for process. Supported levels:
+#                               TRACE, DEBUG, INFO, NOTICE, WARN, ERROR or FATAL
+#                               [=logging.LogLevel.INFO].
+# --log-format              Specifies what kind of logs should be written to
+#                               stdout. Suported formats: TEXT, JSON
+#                               [=logging.LogFormat.TEXT].
+#  --listen-address          Listening address for LibP2P (and Discovery v5,
+#                               if enabled) traffic. [=defaultListenAddress()].
+# --tcp-port                TCP listening port. [=60000].
+# --keep-alive              Enable keep-alive for idle connections:
+#                               true|false [=false].
+# --max-connections         Maximum allowed number of libp2p connections.
+#                               [=50].
+#
+# --ports-shift             Add a shift to all port numbers. [=0].
+# --nat                     Specify method to use for determining public
+#                               address. Must be one of: any, none, upnp, pmp,
+#                               extip:<IP>. [=any].
+# --ext-multiaddr           External multiaddresses to advertise to the
+#                               network. Argument may be repeated..
+# --staticnode              Peer multiaddr to directly connect with. Argument
+#                               may be repeated..
+
+agent-string="nwaku"
+#nodekey=
+
+#config-file=
+log-level="INFO"
+log-format="TEXT"
+#listen-address=
+tcp-port=60000
+
+
+keep-alive=false
+max-connections=50
+
+
+ports-shift=0
+#nat=any
+#ext-multiaddr=
+#staticnode=
+
+
+# --topics                  Default topics to subscribe to (space separated
+#                               list). [=/waku/2/default-waku/proto].

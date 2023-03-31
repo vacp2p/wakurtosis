@@ -1,0 +1,4 @@
+#  --swap                    Enable swap protocol: true|false [=false].
+#                               messages.
+
+swap=false

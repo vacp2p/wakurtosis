@@ -1,0 +1,12 @@
+# --websocket-support       Enable websocket:  true|false [=false].
+# --websocket-port          WebSocket listening port. [=8000].
+# --websocket-secure-support  Enable secure websocket:  true|false [=false].
+# --websocket-secure-key-path  Secure websocket key path:   '/path/to/key.txt' .
+# --websocket-secure-cert-path  Secure websocket Certificate path:
+#                               '/path/to/cert.txt' .
+
+websocket-support=false
+websocket-port=8000
+#websocket-secure-support=
+#websocket-secure-key-path=
+#websocket-secure-cert-path=

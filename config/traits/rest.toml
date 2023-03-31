@@ -1,0 +1,18 @@
+# --rest                    Enable Waku REST HTTP server: true|false
+#                               [=false].
+# --rest-address            Listening address of the REST HTTP server.
+#                               [=ValidIpAddress.init("127.0.0.1")].
+# --rest-port               Listening port of the REST HTTP server. [=8645].
+# --rest-relay-cache-capacity  Capacity of the Relay REST API message cache.
+#                               [=30].
+# --rest-admin              Enable access to REST HTTP Admin API: true|false
+#                               [=false].
+# --rest-private            Enable access to REST HTTP Private API:
+#                               true|false [=false].
+
+rest=false
+#rest-address=
+#rest-port=
+#rest-relay-cache-capacity=
+#rest-admin=
+#rest-private=

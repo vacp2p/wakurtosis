@@ -1,0 +1,12 @@
+# --metrics-server          Enable the metrics server: true|false [=false].
+# --metrics-server-address  Listening address of the metrics server.
+#                               [=ValidIpAddress.init("127.0.0.1")].
+# --metrics-server-port     Listening HTTP port of the metrics server.
+#                               [=8008].
+# --metrics-logging         Enable metrics logging: true|false [=true].
+#                               ValidIpAddress.init("1.0.0.1")]].
+
+metrics-server=false
+#metrics-server-address=
+metrics-server-port=8008
+#metrics-logging=
