@@ -41,3 +41,4 @@ docker-stats.out
 docker-procfs.out
 docker-list-pids.out
 monitoring/procfs-stats/stats
+stats/
