@@ -99,6 +99,8 @@ service_uuid="$(kurtosis --cli-log-level $loglevel  enclave inspect --full-uuids
 # Construct the fully qualified container name that kurtosis has created
 cid="$service_name--$service_uuid"
 
+sh ./monitoring/procfs-stats/monitor.sh $cid
+
 # Wait for the container to halt; this will block
 echo -e "Waiting for simulation to finish ..."
 status_code="$(docker container wait $cid)"

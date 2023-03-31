@@ -161,7 +161,6 @@ class MetricsCollector:
                     f'MEM {mem} NET {net1} {net2} {net3} '
                     f'BLK {blk} CPU-SYS {sys_stat} CPU-process {stat}\n'
                   )
-            #log.debug(str(pid)+str(out))
             self.procfs_fd.write(str(out))
         log.info("collected " + str(self.procfs_sample_cnt))
         self.procfs_sample_cnt += 1
@@ -241,9 +240,6 @@ class MetricsCollector:
     # build metadata for the runs: about docker, build name2id, pid2name and pid2id maps
     def process_metadata(self):
         self.populate_docker_name2id()
-        #if self.csize == 1:
-        #    self.build_pid2name_1()
-        #else:
         self.build_pid2name_n()
         log.info(f'docker: waku pids : {str(self.docker_pids)}')
         self.build_docker_pid2id()
@@ -251,9 +247,8 @@ class MetricsCollector:
 
     # after metadata is collected, create the threads and launch data collection
     def spin_up(self):
-        log.info("Starting the procfs builder...")
+        log.info("Starting the procfs monitor...")
         self.launch_procfs_monitor()
-        self.procfs_thread.start()
 
     # kill docker stats : always kill, never TERM/QUIT/INT
     def terminate_docker_stats(self):
@@ -270,18 +265,11 @@ class MetricsCollector:
         signal.signal(signal.SIGTERM, self.signal_handler)
         signal.signal(signal.SIGQUIT, self.signal_handler)
 
-    # the signal handler
+    # the signal handler: does not return
     def signal_handler(self, sig, frame):
         log.info(f'Metrics: got signal: {sig}, cleaning up')
         self.clean_up()
         sys.exit(0)
-
-# ensure 0 < container size <= MAX_SIZE
-#def _csize_callback(ctx: typer, Context, csize: int):
-#    if csize <= 0 or csize > MAX_CSIZE:
-#        raise ValueError(f"container_size must be an int in (0, {MAX_CSIZE}]")
-#    return csize
-
 
 # ensure sampling_interval > 0
 def _sinterval_callback(ctx: typer, Context, sinterval: int):
@@ -289,7 +277,7 @@ def _sinterval_callback(ctx: typer, Context, sinterval: int):
         raise ValueError(f"sampling_interval must be > 0")
     return sinterval
 
-
+# does not return
 def main(ctx: typer.Context,
         prefix: str = typer.Option("",
             help="Specify the path for find the data files"),
@@ -319,14 +307,13 @@ def main(ctx: typer.Context,
     metrics.spin_up()
 
     # get sim time info from config.json? or  ioctl/select from WLS? or docker wait?
-    time.sleep(metrics.procfs_sampling_interval * 15)
+    #time.sleep(metrics.procfs_sampling_interval * 15)
 
-    # x.join()
 
-    log.info("Metrics : Clean up")
-    metrics.clean_up()
+    #log.info("Metrics : Clean up")
+    #metrics.clean_up()
 
-    log.info("Metrics : All done")
+    #log.info("Metrics : All done")
 
 
 if __name__ == "__main__":
