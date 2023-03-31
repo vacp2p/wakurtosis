@@ -39,12 +39,11 @@ def connect_nomos_to_peers(plan, service_name, node_id, port_id, peer_ids):
     plan.print(response)
 
 
-def make_service_wait(plan,service_id, time):
+def make_service_wait(plan, service_name, time):
     exec_recipe = struct(
-        service_id=service_id,
         command=["sleep", time]
     )
-    plan.exec(exec_recipe)
+    plan.exec(service_name = service_name, exec_recipe)
 
 
 def interconnect_nomos_nodes(plan, topology_information, interconnection_batch):

@@ -43,10 +43,9 @@ def connect_wakunode_to_peers(plan, service_name, node_id, port_id, peer_ids):
 
 def make_service_wait(plan, service_name, time):
     exec_recipe = struct(
-        service_name=service_name,
         command=["sleep", time]
     )
-    plan.exec(exec_recipe)
+    plan.exec(service_name=service_name, exec_recipe)
 
 
 def get_waku_peers(plan, waku_service_container, node_name):
