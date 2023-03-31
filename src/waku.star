@@ -45,7 +45,7 @@ def make_service_wait(plan, service_name, time):
     exec_recipe = struct(
         command=["sleep", time]
     )
-    plan.exec(service_name=service_name, exec_recipe)
+    plan.exec(service_name = service_name, recipe = exec_recipe)
 
 
 def get_waku_peers(plan, waku_service_container, node_name):
