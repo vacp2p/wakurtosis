@@ -48,7 +48,6 @@ def get_net1_metrics(f, host_if):
     res = f'{out[0]} RxBytes {out[1]} RxPackers {out[2]} TxBytes {out[9]} TxPackets {out[10]}'
     return res
 
-
 # TODO: reconcile with net1 and net3
 # pulls Rx/Tx Bytes per wakunode
 def get_net2_metrics(f, veth="eth0"):
@@ -67,6 +66,7 @@ def get_net3_metrics(frx, ftx, veth="eth0"):
 
 
 # pulls the disk read/write bytes per wakunodes
+# TODO: demonise block reads: UNIX sockets/IPC/MSG QUEUES
 def get_blk_metrics(f):
     f.seek(0)
     rbuff = f.readlines()
@@ -181,7 +181,7 @@ class MetricsCollector:
     # collect and record the basic info about the system and running dockers
     def populate_docker_name2id(self):
         #self.docker_ps_fname = f'{OPREFIX}-{docker_ps_fname}.{OEXT}'
-        with open(self.docker_ps_fname, "r") as f:
+        with open(self.docker_ps_fname) as f:
             for line in f:
                 l = line.split("#")
                 self.docker_name2id[l[1]] = l[0]
@@ -190,7 +190,7 @@ class MetricsCollector:
     # build the process pid to docker name map : will include non-docker wakunodes
     def build_pid2name_n(self):
         #self.ps_pids_fname = f'{OPREFIX}-{self.ps_pids_fname}.{OEXT}'
-        with open(self.ps_pids_fname, "r") as f:
+        with open(self.ps_pids_fname) as f:
             self.ps_pids = f.read().strip().split("\n")
         #log.info(f'docker: waku pids : {str(self.ps_pids)}')
         self.docker_pids = self.ps_pids
@@ -200,7 +200,7 @@ class MetricsCollector:
                            f'grep -Po "shim\([0-9]+\)---[a-z]+\(\K[^)]*"'
                          ))
             self.build_and_exec(get_shim_pid, f'shim-{pid}')
-            with open(f'shim-{pid}', "r") as f:
+            with open(f'shim-{pid}') as f:
                 shim_pid = f.read().strip()
                 os.remove(f'shim-{pid}')
                 if shim_pid == "":
@@ -217,7 +217,7 @@ class MetricsCollector:
                                     f' $(docker ps -q) | grep {shim_pid}'
                                   ))
                 self.build_and_exec(get_docker_name, f'name-{pid}')
-                with open(f'name-{pid}', "r") as f:
+                with open(f'name-{pid}') as f:
                     tmp = f.read().strip().replace(" /", "")
                     pid, docker_name = tmp.split(",")
                     self.docker_pid2name[pid] = docker_name
