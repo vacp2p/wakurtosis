@@ -15,6 +15,7 @@ build/
 node_modules/
 targets.json
 data/
+old/
 enclave.dump/
 wsl-module/requirements.txt
 wsl-module/__pycache__
@@ -30,3 +31,4 @@ summary.json
 wakurtosis_logs/
 log_trace_test
 nohup.out
+metrics.json
