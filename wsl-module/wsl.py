@@ -431,6 +431,12 @@ async def main():
     emitters_topics = [topics[i] for i in emitters_indices]
     G_LOGGER.info('Selected %d emitters out of %d total nodes' %(len(emitters), len(targets)))
 
+    """ Wait for signal to start """
+    while not os.path.exists('/wsl/start.signal'):
+        G_LOGGER.info('Waiting for signal to start ...')
+        print(os.listdir('/wsl'))
+        time.sleep(0.5)
+
     """ Start simulation """
     results = await simulate(config, emitters, emitters_indices, emitters_topics)
 
@@ -450,6 +456,10 @@ async def main():
     """ Save messages for further analysis """
     with open('./messages.json', 'w') as f:
         f.write(json.dumps(msgs_dict, indent=4))
+
+    # Delete de signal file just in case
+    if os.path.exists('/tmp/start.signal'):
+        os.remove('/tmp/start.signal')
 
     """ We are done """
     G_LOGGER.info('Ended')
