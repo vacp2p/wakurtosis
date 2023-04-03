@@ -297,6 +297,8 @@ def main():
     G_LOGGER.setLevel(G_LOG_LEVEL)
     handler.setLevel(G_LOG_LEVEL)
 
+    G_LOGGER.info('Started')
+
     """ Load config file """
     try:
         with open(G_DEFAULT_CONFIG_FILE, "r") as read_file:
@@ -308,16 +310,7 @@ def main():
         sys.exit()
 
     G_LOGGER.info('Loaded configuration from %s' %G_DEFAULT_CONFIG_FILE)
-    
-    # Parameters
-    # container_str_pattern = 'waku'
-    # process_str_pattern = 'waku'
-    # sampling_interval_s = 1
-    # num_threads = 16
-    # wsl_pattern = 'wsl'
 
-    G_LOGGER.info('Started')
-    
     start_ts = time.time_ns()
     
     # Prepare the sampling probe we are going to inject into the containers
