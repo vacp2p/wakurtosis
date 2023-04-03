@@ -5,11 +5,11 @@
   "kurtosis": {
     "enclave_name": "wakurtosis",
     "topology_path": "./config/topology_generated/",
-    "jobs": 4,
-    "interconnection_batch": 10
+    "jobs": 16,
+    "interconnection_batch": 16
   },
   "gennet": {
-    "num_nodes": 9,
+    "num_nodes": 10,
     "num_topics": 1,
     "num_partitions": 1,
     "num_subnets": 1,
@@ -21,11 +21,19 @@
   },
   "wsl": {
     "simulation_time": 60,
-    "message_rate": 10,
-    "min_packet_size": 2,
+    "message_rate": 100,
+    "min_packet_size": 512,
     "max_packet_size": 1024,
     "inter_msg_type": "poisson",
-    "dist_type": "gaussian",
+    "dist_type": "uniform",
     "emitters_fraction": 1.0
-  }
+  },
+  "monitoring": {
+    "wsl_pattern": "wsl",
+    "container_str_pattern": "waku",
+    "process_str_pattern": "waku",
+    "sampling_interval_s": 1,
+    "probe_filename" : "./monitoring/probe.sh",
+    "metrics_filename" : "./monitoring/metrics.json"
+   }
 }

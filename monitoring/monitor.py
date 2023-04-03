@@ -15,9 +15,9 @@ import concurrent.futures
 """ Globals """
 G_APP_NAME = 'WLS-MONITOR'
 G_LOG_LEVEL = 'INFO'
-G_DEFAULT_SIMULATION_PATH = './wakurtosis_logs'
-G_DEFAULT_METRICS_FILENAME = './monitoring/metrics.json'
-G_PROBE_FILENAME = './monitoring/probe.sh'
+G_DEFAULT_CONFIG_FILE = './config/config.json'
+# G_DEFAULT_SIMULATION_PATH = './wakurtosis_logs'
+# G_DEFAULT_METRICS_FILENAME = './monitoring/metrics.json'
 
 G_LOGGER = None
 
@@ -293,17 +293,28 @@ def main():
     handler.setFormatter(CustomFormatter())
     G_LOGGER.addHandler(handler)
 
-    # Set loglevel from config
+    # Set loglevel
     G_LOGGER.setLevel(G_LOG_LEVEL)
     handler.setLevel(G_LOG_LEVEL)
+
+    """ Load config file """
+    try:
+        with open(G_DEFAULT_CONFIG_FILE, "r") as read_file:
+            config_obj = json.load(read_file)
+            config_obj = config_obj['monitoring']
+
+    except Exception as e:
+        G_LOGGER.error('%s: %s' % (e.__doc__, e))
+        sys.exit()
+
+    G_LOGGER.info('Loaded configuration from %s' %G_DEFAULT_CONFIG_FILE)
     
     # Parameters
-    container_str_pattern = 'waku'
-    process_str_pattern = 'waku'
-    sampling_interval_s = 1
-    num_threads = 16
-    wsl_pattern = 'wsl'
-
+    # container_str_pattern = 'waku'
+    # process_str_pattern = 'waku'
+    # sampling_interval_s = 1
+    # num_threads = 16
+    # wsl_pattern = 'wsl'
 
     G_LOGGER.info('Started')
     
@@ -312,26 +323,26 @@ def main():
     # Prepare the sampling probe we are going to inject into the containers
     script_tar_data = io.BytesIO()
     with tarfile.open(fileobj=script_tar_data, mode='w') as tar:
-        tar.add(G_PROBE_FILENAME, arcname=os.path.basename(G_PROBE_FILENAME))
+        tar.add(config_obj['probe_filename'], arcname=os.path.basename(config_obj['probe_filename']))
     script_tar_data.seek(0)
 
     # Wait for the simulation to start
     G_LOGGER.info(f"Waiting for WSL to start...")
-    wsl_id, wsl_container = asyncio.run(get_running_container_id(wsl_pattern))
+    wsl_id, wsl_container = asyncio.run(get_running_container_id(config_obj['wsl_pattern']))
     while wsl_id is None:
-        wsl_id, wsl_container  = asyncio.run(get_running_container_id(wsl_pattern))
+        wsl_id, wsl_container  = asyncio.run(get_running_container_id(config_obj['wsl_pattern']))
         time.sleep(1)
 
-    G_LOGGER.info('Found container with name \'%s\'.' %wsl_pattern)
+    G_LOGGER.info('Found container with name \'%s\'.' %config_obj['wsl_pattern'])
 
     # Get all running containers
     client = docker.from_env()
     containers = client.containers.list()
 
     # Filter the containers that match the container_str_pattern
-    node_containers = [container for container in containers if container_str_pattern in container.image.tags[0]]
+    node_containers = [container for container in containers if config_obj['container_str_pattern'] in container.image.tags[0]]
     if len(node_containers) == 0:
-        G_LOGGER.error('No containers found matching \"%s\".' %container_str_pattern)
+        G_LOGGER.error('No containers found matching \"%s\".' %config_obj['container_str_pattern'])
         exit(1)
 
     # Pre-fetch the processes from each container
@@ -340,7 +351,7 @@ def main():
        
         container_id = container.id
        
-        processes = asyncio.run(find_processes(container_id, process_str_pattern))
+        processes = asyncio.run(find_processes(container_id, config_obj['container_str_pattern']))
        
         container_data = {
             "container" : container,
@@ -355,7 +366,7 @@ def main():
     G_LOGGER.info('Injecting probes into %d containers' % len(node_containers))
         
     # Start the script in the target containers 
-    probes_ids = inject_probes(script_tar_data, containers_data, sampling_interval_s)
+    probes_ids = inject_probes(script_tar_data, containers_data, config_obj['sampling_interval_s'])
         
     # Notify the simulation that the probes are ready
     asyncio.run(signal_wsl(wsl_container))
@@ -377,8 +388,10 @@ def main():
 
     end_ts = time.time_ns()
 
-    header = {'elapsed_ns' : end_ts - start_ts, 'sampling_interval_s' : sampling_interval_s, 'start_ts' : start_ts, 'end_ts' : end_ts, 'num_containers' : len(node_containers), 'probe' : G_PROBE_FILENAME, 'container_str_pattern' : container_str_pattern, 'process_str_pattern' : process_str_pattern}
-    save_metrics_to_disk({'header' : header, 'containers' : all_container_metrics}, G_DEFAULT_METRICS_FILENAME)
+    header = {'elapsed_ns' : end_ts - start_ts, 'sampling_interval_s' : config_obj['sampling_interval_s'], 'start_ts' : start_ts, 'end_ts' : end_ts, \
+              'num_containers' : len(node_containers), 'probe' : config_obj['probe_filename'], 'container_str_pattern' : config_obj['container_str_pattern'], \
+              'process_str_pattern' : config_obj['process_str_pattern']}
+    save_metrics_to_disk({'header' : header, 'containers' : all_container_metrics}, config_obj['metrics_filename'])
 
     """ We are done """
     G_LOGGER.info('Ended')
