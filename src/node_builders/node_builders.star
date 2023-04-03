@@ -88,3 +88,10 @@ def _add_service_info_to_topology(plan, all_services_information, network_topolo
 
         ports_adder = dispatchers.ports_dispatcher[node_info[vars.GENNET_IMAGE_KEY]]
         ports_adder(network_topology, all_services_information, node_info, node_id)
+
+    for container_id, container_info in network_topology[vars.GENNET_ALL_CONTAINERS_KEY].items():
+        nodes = container_info
+        ip = network_topology[vars.GENNET_NODES_KEY][nodes[0]][vars.IP_KEY]
+        network_topology[vars.GENNET_ALL_CONTAINERS_KEY][container_id] = {}
+        network_topology[vars.GENNET_ALL_CONTAINERS_KEY][container_id][vars.GENNET_NODES_KEY] = nodes
+        network_topology[vars.GENNET_ALL_CONTAINERS_KEY][container_id][vars.KURTOSIS_IP_KEY] = ip
