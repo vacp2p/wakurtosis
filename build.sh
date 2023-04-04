@@ -6,7 +6,7 @@ apt-get install -y jq
 apt-get install -y ipcalc
 
 # Install the suitable kurtosis-cli
-kurtosis_version=0.67.1
+kurtosis_version=0.70.2
 echo "deb [trusted=yes] https://apt.fury.io/kurtosis-tech/ /" | sudo tee /etc/apt/sources.list.d/kurtosis.list
 sudo apt update
 sudo apt-mark unhold kurtosis-cli
