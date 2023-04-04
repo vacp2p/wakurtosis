@@ -5,6 +5,7 @@ import requests
 import sys
 import random
 import base64
+import aiohttp
 
 # Project Imports
 from src.utils import wls_logger
@@ -62,7 +63,22 @@ def _send_waku_rpc(data, node_address):
 
     return response_obj, elapsed_ms
 
+async def _send_waku_rpc_async(data, node_address):
+    s_time = time.time()
 
+    json_data = json.dumps(data)
+
+    async with aiohttp.ClientSession() as session:
+        
+        async with session.post(node_address, data=json_data, headers={'content-type': 'application/json'}) as response:
+            
+            elapsed_ms = (time.time() - s_time) * 1000
+                        
+            wls_logger.G_LOGGER.debug(f"Response from {node_address}: {response.status} [{elapsed_ms:.4f} ms.]")
+
+            return response.status, elapsed_ms
+
+   
 def send_msg_to_node(node_address, topic, payload, nonce=1):
     my_payload = _get_waku_payload(nonce, payload)
     waku_msg = _create_waku_msg(my_payload)
@@ -72,6 +88,14 @@ def send_msg_to_node(node_address, topic, payload, nonce=1):
 
     return response_obj, elapsed_ms, json.dumps(waku_msg), my_payload['ts']
 
+async def send_msg_to_node_async(node_address, topic, payload, nonce=1):
+    my_payload = _get_waku_payload(nonce, payload)
+    waku_msg = _create_waku_msg(my_payload)
+    data = _create_waku_rpc_data(topic, waku_msg, node_address)
+
+    response_obj, elapsed_ms = await _send_waku_rpc_async(data, node_address)
+
+    return response_obj, elapsed_ms, json.dumps(waku_msg), my_payload['ts']
 
 def get_next_time_to_msg(inter_msg_type, msg_rate, simulation_time):
     if inter_msg_type == 'poisson':
