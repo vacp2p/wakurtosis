@@ -44,7 +44,7 @@ async def signal_wsl(wsl_container):
     
     G_LOGGER.info(f'Signalling WSL container {wsl_container.id} to start the simulation ...')
 
-    command = f"docker exec {wsl_container.id} touch /wsl/start.signal"
+    command = f"docker exec {wsl_container.id} touch /wls/start.signal"
     G_LOGGER.debug('Executing command: %s' %command)
     
     result = await run_command(command)
