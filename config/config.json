@@ -35,7 +35,7 @@
     "emitters_fraction": 1.0
   },
   "monitoring": {
-    "wsl_pattern": "wsl",
+    "wsl_pattern": "wls",
     "container_str_pattern": "waku",
     "process_str_pattern": "waku",
     "sampling_interval_s": 1,
