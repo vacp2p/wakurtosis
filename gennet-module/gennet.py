@@ -73,8 +73,8 @@ class networkType(Enum):
 
 
 NW_DATA_FNAME = "network_data.json"
-EXTERNAL_NODES_PREFIX, NODE_PREFIX, SUBNET_PREFIX, CONTAINER_PREFIX = \
-    "nodes", "node", "subnetwork", "containers"
+NODES_JSON, NODE_PREFIX, SUBNET_PREFIX, CONTAINERS_JSON, CONTAINER_PREFIX = \
+    "nodes", "node", "subnetwork", "containers", "containers"
 ID_STR_SEPARATOR = "-"
 
 ### I/O related fns ##############################################################
@@ -374,9 +374,9 @@ def generate_and_write_files(ctx: typer, G):
     node2container = pack_nodes(ctx.params["container_size"], node2subnet)
     container2nodes = invert_dict_of_list(node2container, 1)
 
-    json_dump, json_dump[CONTAINER_PREFIX], json_dump[EXTERNAL_NODES_PREFIX] = {}, {}, {}
+    json_dump, json_dump[CONTAINERS_JSON], json_dump[NODES_JSON] = {}, {}, {}
     for container, nodes in container2nodes.items():
-        json_dump[CONTAINER_PREFIX][container] = nodes
+        json_dump[CONTAINERS_JSON][container] = nodes
 
     i, traits_dir = 0,  ctx.params["traits_dir"]
     for node in G.nodes:
@@ -384,19 +384,19 @@ def generate_and_write_files(ctx: typer, G):
         traits_list, i = traits_distribution[i].split(":"),  i+1
         node_type = nodeType(traits_list[0])
         write_toml(ctx.params["output_dir"], node, generate_toml(traits_dir, topics, traits_list))
-        json_dump[EXTERNAL_NODES_PREFIX][node] = {}
-        json_dump[EXTERNAL_NODES_PREFIX][node]["static_nodes"] = []
+        json_dump[NODES_JSON][node] = {}
+        json_dump[NODES_JSON][node]["static_nodes"] = []
         for edge in G.edges(node):
-            json_dump[EXTERNAL_NODES_PREFIX][node]["static_nodes"].append(edge[1])
-        json_dump[EXTERNAL_NODES_PREFIX][node][SUBNET_PREFIX] = node2subnet[node]
-        json_dump[EXTERNAL_NODES_PREFIX][node]["image"] = nodeTypeToDocker.get(node_type)
+            json_dump[NODES_JSON][node]["static_nodes"].append(edge[1])
+        json_dump[NODES_JSON][node][SUBNET_PREFIX] = node2subnet[node]
+        json_dump[NODES_JSON][node]["image"] = nodeTypeToDocker.get(node_type)
             # the per node tomls will continue for now as they include topics
-        json_dump[EXTERNAL_NODES_PREFIX][node]["node_config"] = f"{node}.toml"
+        json_dump[NODES_JSON][node]["node_config"] = f"{node}.toml"
             # logs ought to continue as they need to be unique
-        json_dump[EXTERNAL_NODES_PREFIX][node]["node_log"] = f"{node}.log"
+        json_dump[NODES_JSON][node]["node_log"] = f"{node}.log"
         port_shift, cid = node2container[node]
-        json_dump[EXTERNAL_NODES_PREFIX][node]["port_shift"] = port_shift
-        json_dump[EXTERNAL_NODES_PREFIX][node]["container_id"] = cid
+        json_dump[NODES_JSON][node]["port_shift"] = port_shift
+        json_dump[NODES_JSON][node]["container_id"] = cid
     write_json(ctx.params["output_dir"], json_dump)  # network wide json
 
 
@@ -410,7 +410,7 @@ def _config_file_callback(ctx: typer.Context, param: typer.CallbackParam, cfile:
                 conf = json.load(f)
                 if "gennet" not in conf:
                     print(
-                        f"Gennet configuration not found in {cfile}. Skipping topology generation.")
+                        f"Gennet configuration not found in {cfile}. Skipping network generation.")
                     sys.exit(0)
                 if "general" in conf and "prng_seed" in conf["general"]:
                     conf["gennet"]["prng_seed"] = conf["general"]["prng_seed"]
@@ -442,22 +442,35 @@ def _num_subnets_callback(ctx: typer, Context, num_subnets: int):
 
 def main(ctx: typer.Context,
 
-        benchmark: bool = typer.Option(False, help="Measure CPU/Mem usage of Gennet"),
-         draw: bool = typer.Option(False, help="Draw the generated network"),
-         container_size: int =  typer.Option(1, help="Set the number of nodes per container"),
-         output_dir: str = typer.Option("network_data", help="Set the output directory for Gennet generated files"),
-         prng_seed: int = typer.Option(1, help="Set the random seed"),
-         num_nodes: int = typer.Option(4, help="Set the number of nodes"),
-         num_topics: int = typer.Option(1, help="Set the number of topics"),
-         fanout: int = typer.Option(3, help="Set the arity for trees & newmanwattsstrogatz"),
-         node_type_distribution: str = typer.Argument("{\"nwaku\" : 100 }" ,callback=ast.literal_eval, help="Set the node type distribution"),
-         node_config: str = typer.Argument("{}" ,callback=ast.literal_eval, help="Set the node configuration"),
-         network_type: networkType = typer.Option(networkType.NEWMANWATTSSTROGATZ.value, help="Set the node type"),
-         num_subnets: int = typer.Option(1, callback=_num_subnets_callback, help="Set the number of subnets"),
-         num_partitions: int = typer.Option(1, callback=_num_partitions_callback, help="Set the number of network partitions"),
-         config_file: str = typer.Option("", callback=_config_file_callback, is_eager=True, help="Set the input config file (JSON)"),
+        benchmark: bool = typer.Option(False,
+            help="Measure CPU/Mem usage of Gennet"),
+         draw: bool = typer.Option(False,
+             help="Draw the generated network"),
+         container_size: int =  typer.Option(1,
+             help="Set the number of nodes per container"),
+         output_dir: str = typer.Option("network_data",
+             help="Set the output directory for Gennet generated files"),
+         prng_seed: int = typer.Option(1,
+             help="Set the random seed"),
+         num_nodes: int = typer.Option(4,
+             help="Set the number of nodes"),
+         num_topics: int = typer.Option(1,
+             help="Set the number of topics"),
+         fanout: int = typer.Option(3,
+             help="Set the arity for trees & newmanwattsstrogatz"),
+         node_type_distribution: str = typer.Argument("{\"nwaku\" : 100 }",
+             callback=ast.literal_eval, help="Set the node type distribution"),
+         network_type: networkType = typer.Option(networkType.NEWMANWATTSSTROGATZ.value,
+             help="Set the node type"),
+         num_subnets: int = typer.Option(1, callback=_num_subnets_callback,
+             help="Set the number of subnets"),
+         num_partitions: int = typer.Option(1, callback=_num_partitions_callback,
+             help="Set the number of network partitions"),
+         config_file: str = typer.Option("", callback=_config_file_callback, is_eager=True,
+             help="Set the input config file (JSON)"),
          traits_dir: Path = typer.Option("./traits", exists=True, file_okay=False,
              dir_okay=True, readable=True, resolve_path=True, help="Set the traits directory")):
+
     # Benchmarking: record start time and start tracing mallocs
     if benchmark:
         tracemalloc.start()
