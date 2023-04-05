@@ -9,6 +9,8 @@ import sys, os
 import json, ast
 from collections import defaultdict
 
+from pathlib import Path
+
 import time, tracemalloc
 import string
 import typer
@@ -74,7 +76,6 @@ NW_DATA_FNAME = "network_data.json"
 EXTERNAL_NODES_PREFIX, NODE_PREFIX, SUBNET_PREFIX, CONTAINER_PREFIX = \
     "nodes", "node", "subnetwork", "containers"
 ID_STR_SEPARATOR = "-"
-DEFAULT_TRAITS_DIR="../config/traits"
 
 ### I/O related fns ##############################################################
 
@@ -281,7 +282,10 @@ def generate_toml(traits_dir, topics, traits_list):
 
     for trait in traits_list[1:]:       # skip the first trait as it is docker/node selector.
         toml = f'#{trait}\n'
-        with open(f"{traits_dir}/{trait}.toml", 'rb') as f:
+        tomlf = f"{traits_dir}/{trait}.toml"
+        if not os.path.isfile(tomlf):
+             raise ValueError(f"traits: missing trait file {tomlf}")
+        with open(tomlf, 'rb') as f:
             strlines = [l.decode("utf-8").strip() for l in f if not len(l.split()) == 0]
             toml += ''.join([f'{l}\n' for l in strlines if not l.startswith('#')])
         tomls += toml + '\n'
@@ -437,7 +441,8 @@ def _num_subnets_callback(ctx: typer, Context, num_subnets: int):
 
 
 def main(ctx: typer.Context,
-         benchmark: bool = typer.Option(False, help="Measure CPU/Mem usage of Gennet"),
+
+        benchmark: bool = typer.Option(False, help="Measure CPU/Mem usage of Gennet"),
          draw: bool = typer.Option(False, help="Draw the generated network"),
          container_size: int =  typer.Option(1, help="Set the number of nodes per container"),
          output_dir: str = typer.Option("network_data", help="Set the output directory for Gennet generated files"),
@@ -450,8 +455,9 @@ def main(ctx: typer.Context,
          network_type: networkType = typer.Option(networkType.NEWMANWATTSSTROGATZ.value, help="Set the node type"),
          num_subnets: int = typer.Option(1, callback=_num_subnets_callback, help="Set the number of subnets"),
          num_partitions: int = typer.Option(1, callback=_num_partitions_callback, help="Set the number of network partitions"),
-         config_file: str = typer.Option("", callback=_config_file_callback, is_eager=True, help="Set the input config file (JSON)")):
-
+         config_file: str = typer.Option("", callback=_config_file_callback, is_eager=True, help="Set the input config file (JSON)"),
+         traits_dir: Path = typer.Option("./traits", exists=True, file_okay=False,
+             dir_okay=True, readable=True, resolve_path=True, help="Set the traits directory")):
     # Benchmarking: record start time and start tracing mallocs
     if benchmark:
         tracemalloc.start()
@@ -461,11 +467,6 @@ def main(ctx: typer.Context,
     print("Setting the random seed to ", prng_seed)
     random.seed(prng_seed)
     np.random.seed(prng_seed)
-
-    if ctx.params["config_file"] == "":
-        ctx.params["traits_dir"] = DEFAULT_TRAITS_DIR
-    else:
-        ctx.params["traits_dir"] = os.path.dirname(ctx.params["config_file"]) + f"/traits"
 
     # validate node type distribution
     validate_traits_distribution(ctx.params["traits_dir"], node_type_distribution)

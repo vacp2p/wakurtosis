@@ -15,7 +15,9 @@ sudo rm /etc/apt/sources.list.d/kurtosis.list
 
 # Build Gennet & WLS docker images
 
-docker build -t gennet -f gennet-module/Dockerfile .
+cd gennet-module
+sh ./build_docker.sh
+cd ..
 
 cd wls-module
 docker build -t wls:0.0.1 .

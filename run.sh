@@ -53,7 +53,7 @@ rm -rf ./$enclave_name_logs > /dev/null 2>&1
 echo -e "\nRunning network generation"
 docker rm gennet-container > /dev/null 2>&1  # cleanup the old docker if any
 
-docker run --name gennet-container -v ${dir}/config/:/config:ro gennet --config-file /config/${wakurtosis_config_file}
+docker run --name gennet-container -v ${dir}/config/:/config:ro gennet --config-file /config/${wakurtosis_config_file} --traits-dir /config/traits
 err=$?
 
 if [ $err != 0 ]
