@@ -123,8 +123,8 @@ echo -e "Waiting monitoring to finish ..."
 wait $monitor_pid
 
 # Run process level analysis
-# python3 p_analysis.py 
-# echo -e "Analysis results in ./${enclave_name}_logs"
+python3 analysis.py 
+echo -e "Analysis results in ./${enclave_name}_logs"
 
 # Stop and delete the enclave
 echo "Stopping and destrying enclave $enclave_name ..."
