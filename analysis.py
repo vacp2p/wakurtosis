@@ -6,12 +6,13 @@ import os
 import subprocess
 
 """ Dependencies """
-import sys, logging, json, argparse, tomllib, glob, re, requests
+import sys, logging, json, argparse, tomllib, glob, re, statistics
 from datetime import datetime
 from tqdm_loggable.auto import tqdm
 from tqdm_loggable.tqdm_logging import tqdm_logging
 import matplotlib.pyplot as plt
-from datetime import datetime, timedelta
+from datetime import datetime
+import numpy as np
 
 from prometheus_api_client import PrometheusConnect
 
@@ -19,13 +20,13 @@ from prometheus_api_client import PrometheusConnect
 G_APP_NAME = 'WLS-ANALYSIS'
 G_LOG_LEVEL = 'DEBUG'
 G_DEFAULT_CONFIG_FILE = './config/config.json'
-G_DEFAULT_CONFIG_FILE = './config/config.json'
 G_DEFAULT_TOPOLOGY_PATH = './config/topology_generated'
 G_DEFAULT_SIMULATION_PATH = './wakurtosis_logs'
-G_DEFAULT_FIG_FILENAME = 'analysis.pdf'
+G_DEFAULT_CONTAINER_FIG_FILENAME = 'container_analysis.pdf'
+G_DEFAULT_NODES_FIG_FILENAME = 'node_analysis.pdf'
 G_DEFAULT_SUMMARY_FILENAME = 'summary.json'
+G_DEFAULT_METRICS_FILENAME = './monitoring/metrics.json'
 G_LOGGER = None
-
 
 
 """ Custom logging formatter """
@@ -48,43 +49,138 @@ class CustomFormatter(logging.Formatter):
         return formatter.format(record)
 
 
+def plot_figure_ex(msg_propagation_times, cpu_usage, memory_usage, network_usage, disk_usage, injection_times, simulation_summary, simulation_config):
+
+    def style_violin(parts, ax):
+
+        # Change the extrema lines to dashed grey lines
+        for line in parts['cmaxes'].get_segments() + parts['cmins'].get_segments():
+            line_obj = plt.Line2D(line[:, 0], line[:, 1], color='grey', linestyle='dashed', linewidth=0.5)
+            ax.add_line(line_obj)
+
+        # Remove the original extrema lines
+        parts['cmaxes'].set_visible(False)
+        parts['cmins'].set_visible(False)
+
+        # Change the vertical lines to dashed grey lines
+        for line in parts['cbars'].get_segments():
+            line_obj = plt.Line2D(line[:, 0], line[:, 1], color='grey', linestyle='dashed', linewidth=0.5)
+            ax.add_line(line_obj)
+
+        # Remove the original vertical lines
+        parts['cbars'].set_visible(False)
+
+        cmean_colors = parts['cmeans'].get_color()
+        colors = [cmean_colors[0],'red',cmean_colors[0],cmean_colors[0]]
+        parts['cmeans'].set_color(colors)
+
+        # loop over the paths of the mean lines
+        xy = [[l.vertices[:,0].mean(),l.vertices[0,1]] for l in parts['cmeans'].get_paths()]
+        xy = np.array(xy)
+        ax.scatter(xy[:,0], xy[:,1],s=25, c="crimson", marker="o", zorder=3)
+
+        # make lines invisible
+        parts['cmeans'].set_visible(False)
+    
+    fig, ((ax1, ax2, ax3), (ax4, ax5, ax6)) = plt.subplots(2, 3, figsize=(15, 15))
+    
+    parts = ax1.violinplot(msg_propagation_times, showmeans=True)
+    ax1.set_title('Popagation Time (per message)')
+    ax1.set_ylabel('Propagation Time (ms)')
+    ax1.spines[['right', 'top']].set_visible(False)
+    ax1.axes.xaxis.set_visible(False)
+    style_violin(parts, ax1)
+
+    parts = ax2.violinplot(cpu_usage, showmeans=True)
+    ax2.set_title('Peak CPU Usage (per node)')
+    ax2.set_ylabel('CPU Usage (%)')
+    ax2.spines[['right', 'top']].set_visible(False)
+    ax2.axes.xaxis.set_visible(False)
+    style_violin(parts, ax2)
+
+    parts = ax3.violinplot(memory_usage, showmeans=True)
+    ax3.set_title('Peak Memory Usage (per node)')
+    ax3.set_ylabel('Memory (MBytes)')
+    ax3.spines[['right', 'top']].set_visible(False)
+    ax3.axes.xaxis.set_visible(False)
+    style_violin(parts, ax3)
+
+    parts = ax4.violinplot([network_usage['rx_mbytes'], network_usage['tx_mbytes']], showmeans=True)
+    ax4.set_title('Total Netowrk IO (per node)')
+    ax4.set_ylabel('Bandwidth (MBytes)')
+    ax4.spines[['right', 'top']].set_visible(False)
+    ax4.set_xticks([1, 2])
+    ax4.set_xticklabels(['Received (Rx)', 'Sent (Tx)'])
+    style_violin(parts, ax4)
+
+    parts = ax5.violinplot(injection_times, showmeans=True)
+    ax5.set_title('Injection Time (per message)')
+    ax5.set_ylabel('Milliseconds (ms)')
+    ax5.spines[['right', 'top']].set_visible(False)
+    ax5.axes.xaxis.set_visible(False)
+    style_violin(parts, ax5)
+    
+    parts = ax6.violinplot([disk_usage['disk_read_mbytes'], disk_usage['disk_write_mbytes']], showmeans=True)
+    ax6.set_title('Peak Disk IO (per node)')
+    ax6.set_ylabel('Disk IO (MBytes)')
+    ax6.spines[['right', 'top']].set_visible(False)
+    ax6.set_xticks([1, 2])
+    ax6.set_xticklabels(['Read', 'Write'])
+    style_violin(parts, ax6)
+    
+    fig.suptitle('Wakurtosis Simulation Node Level Analysis\n(%d nodes, %d topic(s), Rate: %d msg/s, Time: %.2f s. Sampling Rate: %.2f samples/s.)\n' %(simulation_summary['num_nodes'], \
+    simulation_summary['num_topics'], simulation_config['wls']['message_rate'], simulation_summary['simulation_time_ms'] / 1000.0, \
+    simulation_summary['metrics']['esr']), fontsize=20)
+    
+    plt.tight_layout()
+
+    figure_path = '%s/%s' %(G_DEFAULT_SIMULATION_PATH, G_DEFAULT_NODES_FIG_FILENAME)
+    plt.savefig(figure_path, format="pdf", bbox_inches="tight")
+
+    G_LOGGER.info('Nodes analysis figure saved in %s' %figure_path)
+
 def plot_figure(msg_propagation_times, cpu_usage, memory_usage, bandwith_in, bandwith_out):
 
     fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(1, 5, figsize=(15, 10))
     
-    ax1.violinplot(msg_propagation_times, showmedians=True)
-    ax1.set_title('Message propagation times \n(sample size: %d messages)' %len(msg_propagation_times))
-    ax1.set_ylabel('Propagation Time (ms)')
-    ax1.spines[['right', 'top']].set_visible(False)
-    ax1.axes.xaxis.set_visible(False)
+    if msg_propagation_times:
+        ax1.violinplot(msg_propagation_times, showmedians=True)
+        ax1.set_title('Message propagation times \n(sample size: %d messages)' %len(msg_propagation_times))
+        ax1.set_ylabel('Propagation Time (ms)')
+        ax1.spines[['right', 'top']].set_visible(False)
+        ax1.axes.xaxis.set_visible(False)
 
-    ax2.violinplot(cpu_usage, showmedians=True)
-    ax2.set_title('Maximum CPU usage per Waku node \n(sample size: %d nodes)' %len(cpu_usage))
-    ax2.set_ylabel('CPU Cycles')
-    ax2.spines[['right', 'top']].set_visible(False)
-    ax2.axes.xaxis.set_visible(False)
+    if cpu_usage:
+        ax2.violinplot(cpu_usage, showmedians=True)
+        ax2.set_title('Maximum CPU usage per Waku node \n(sample size: %d nodes)' %len(cpu_usage))
+        ax2.set_ylabel('CPU Cycles')
+        ax2.spines[['right', 'top']].set_visible(False)
+        ax2.axes.xaxis.set_visible(False)
 
-    ax3.violinplot(memory_usage, showmedians=True)
-    ax3.set_title('Maximum memory usage per Waku node \n(sample size: %d nodes)' %len(memory_usage))
-    ax3.set_ylabel('Bytes')
-    ax3.spines[['right', 'top']].set_visible(False)
-    ax3.axes.xaxis.set_visible(False)
+    if memory_usage:
+        ax3.violinplot(memory_usage, showmedians=True)
+        ax3.set_title('Maximum memory usage per Waku node \n(sample size: %d nodes)' %len(memory_usage))
+        ax3.set_ylabel('Bytes')
+        ax3.spines[['right', 'top']].set_visible(False)
+        ax3.axes.xaxis.set_visible(False)
 
-    ax4.violinplot(bandwith_in, showmedians=True)
-    ax4.set_title('Bandwith IN usage per Waku node \n(sample size: %d nodes)' %len(memory_usage))
-    ax4.set_ylabel('Bytes')
-    ax4.spines[['right', 'top']].set_visible(False)
-    ax4.axes.xaxis.set_visible(False)
-
-    ax5.violinplot(bandwith_out, showmedians=True)
-    ax5.set_title('Bandwith IN usage per Waku node \n(sample size: %d nodes)' %len(memory_usage))
-    ax5.set_ylabel('Bytes')
-    ax5.spines[['right', 'top']].set_visible(False)
-    ax5.axes.xaxis.set_visible(False)
+    if bandwith_in:
+        ax4.violinplot(bandwith_in, showmedians=True)
+        ax4.set_title('Bandwith IN usage per Waku node \n(sample size: %d nodes)' %len(memory_usage))
+        ax4.set_ylabel('Bytes')
+        ax4.spines[['right', 'top']].set_visible(False)
+        ax4.axes.xaxis.set_visible(False)
+    
+    if bandwith_out:
+        ax5.violinplot(bandwith_out, showmedians=True)
+        ax5.set_title('Bandwith IN usage per Waku node \n(sample size: %d nodes)' %len(memory_usage))
+        ax5.set_ylabel('Bytes')
+        ax5.spines[['right', 'top']].set_visible(False)
+        ax5.axes.xaxis.set_visible(False)
     
     plt.tight_layout()
 
-    figure_path = '%s/%s' %(G_DEFAULT_SIMULATION_PATH, G_DEFAULT_FIG_FILENAME)
+    figure_path = '%s/%s' %(G_DEFAULT_SIMULATION_PATH, G_DEFAULT_CONTAINER_FIG_FILENAME)
     plt.savefig(figure_path, format="pdf", bbox_inches="tight")
 
     G_LOGGER.info('Figure saved in %s' %figure_path)
@@ -98,13 +194,13 @@ def fetch_cadvisor_stats_from_prometheus(container_ip, start_ts, end_ts, prometh
     try:
         G_LOGGER.debug('Connecting to Prometheus server in %s' %url)
         prometheus = PrometheusConnect(url, disable_ssl=True)
-        print(prometheus)
+        # print(prometheus)
     except Exception as e:
         G_LOGGER.error('%s: %s' % (e.__doc__, e))
         return None
 
     metrics = prometheus.get_label_values("__name__")
-    print(metrics)
+    # print(metrics)
     start_timestamp = datetime.utcfromtimestamp(start_ts / 1e9)
     end_timestamp = datetime.fromtimestamp(end_ts / 1e9)
 
@@ -302,14 +398,17 @@ def analyze_containers(topology, simulation_path):
     max_tss = -sys.maxsize - 1
     min_tss = sys.maxsize
 
+    print(topology["containers"])
+
     for container_name, container_info in topology["containers"].items():
+                
         node_pbar = tqdm(container_info["nodes"])
 
         node_pbar.set_description(f"Parsing log of container {container_name}")
 
         prepare_node_in_logs(node_pbar, topology, node_logs, container_name)
 
-        folder = glob.glob(f'{simulation_path}/{container_name}*')
+        folder = glob.glob(f'{simulation_path}/{container_name}--*')
         if len(folder) > 1:
             raise RuntimeError(f"Error: Multiple containers with same name: {folder}")
 
@@ -360,6 +459,10 @@ def compute_propagation_times(msgs_dict):
     return msg_propagation_times
 
 
+def compute_injection_times(injected_msgs_dict):
+    return [msg['injection_time'] for msg in injected_msgs_dict.values() if msg['status'] == 200]
+
+
 def get_hardware_metrics(topology, node_logs, min_tss, max_tss):
     # Fetch Hardware metrics from Node containers
     cpu_usage = []
@@ -368,9 +471,17 @@ def get_hardware_metrics(topology, node_logs, min_tss, max_tss):
     bandwith_out = []
     node_container_ips = [info["kurtosis_ip"] for info in topology["containers"].values()]
     pbar = tqdm(node_container_ips)
+    
     for container_ip in pbar:
+        
         pbar.set_description(f'Fetching hardware stats from container {container_ip}')
-        container_stats = fetch_cadvisor_stats_from_prometheus(container_ip, min_tss, max_tss)
+        
+        try:
+            container_stats = fetch_cadvisor_stats_from_prometheus(container_ip, min_tss, max_tss)
+        except Exception as e:
+            G_LOGGER.error('%s: %s' % (e.__doc__, e))
+            continue 
+            
         # NOTE: Here we could also choose a different statistic such as mean or average instead of max
         cpu_usage.append(max(container_stats['cpu_usage']))
         memory_usage.append(max(container_stats['memory_usage']))
@@ -381,6 +492,7 @@ def get_hardware_metrics(topology, node_logs, min_tss, max_tss):
 
 
 def compute_message_delivery(msgs_dict, injected_msgs_dict):
+    
     # Compute message delivery
     total_messages = len(injected_msgs_dict)
     delivered_messages = len(msgs_dict)
@@ -391,7 +503,133 @@ def compute_message_delivery(msgs_dict, injected_msgs_dict):
                   f'Lost: {lost_messages}. Delivery rate {delivery_rate}')
 
 
+def extract_node_id(s: str) -> str:
+    pattern = r"node-(\d+)\.toml"
+    match = re.search(pattern, s)
+    if match:
+        return f"node_{match.group(1)}"
+    else:
+        return None
+
+
+def load_process_level_metrics(metrics_file_path: str):
+    
+    metrics_dict = {}
+    
+    try:
+        with open(metrics_file_path, 'r') as file:
+            
+            metrics_obj = json.load(file)
+            
+            info = metrics_obj['header']
+            all_samples = metrics_obj['containers']
+            
+            for container_id, container_data in all_samples.items():
+
+                # tomls file names are unique per node
+                container_nodes = {}
+                for process in container_data['info']['processes']:
+                    
+                    node_id = extract_node_id(process['binary'])
+                    if not node_id:
+                        G_LOGGER.error('Couldn\'t match %s to node id in container %s' %(process['binary'], container_id))
+                        continue
+                    
+                    pid = process['pid']
+                    container_nodes[pid] = node_id  
+                
+                # Parse samples for each node
+                for sample in container_data['samples']:
+                    
+                    if sample['PID'] not in container_nodes:
+                        G_LOGGER.error('Couldn\'t find node id for PID %d in container %s' %(sample['PID'], container_id))
+                        continue
+                    
+                    node_id = container_nodes[sample['PID']]
+                    if not node_id:
+                        G_LOGGER.error('Couldn\'t find node id for PID %d in container %s' %(sample['PID'], container_id))
+                        continue
+                    
+                    if node_id in metrics_dict:
+                        metrics_dict[node_id]['samples'].append(sample)
+                    else:
+                        metrics_dict[node_id] = {'samples' : [sample]}
+            
+    except Exception as e:
+        G_LOGGER.error('%s: %s' % (e.__doc__, e))
+        sys.exit()
+
+    G_LOGGER.info('Loaded metrics for %d nodes.' %len(metrics_dict))
+
+    return metrics_dict, info
+
+
+def build_summary(metrics_info, simulation_config, msgs_dict, node_logs, topics, min_tss, max_tss, avg_samples_per_node):
+
+    simulation_summary = {'general' : {}, 'nodes' : {}, 'messages' : {}, 'parameters' : {}}
+    simulation_summary['general']['datetime'] = datetime.now().isoformat()
+    simulation_summary['general']['num_messages'] = len(msgs_dict)
+    simulation_summary['general']['num_nodes'] = len(node_logs)
+    simulation_summary['general']['num_topics'] = len(topics)
+    simulation_summary['general']['topics'] = list(topics)
+
+    # Compute effective simulation time window
+    simulation_start_ts = min_tss
+    simulation_end_ts = max_tss
+    simulation_time_ms = round((simulation_end_ts - simulation_start_ts) / 1000000)
+    simulation_summary['general']['simulation_start_ts'] = simulation_start_ts
+    simulation_summary['general']['simulation_end_ts'] = simulation_end_ts
+    simulation_summary['general']['simulation_time_ms'] = simulation_time_ms
+
+    simulation_summary['general']['metrics'] = metrics_info
+    simulation_summary['general']['metrics']['avg_samples_per_node'] = avg_samples_per_node
+    simulation_summary['general']['metrics']['esr'] = simulation_summary['general']['metrics']['avg_samples_per_node'] / (simulation_summary['general']['simulation_time_ms'] / 1000.0)
+
+    # Load Simulation Parameters
+    try:
+        with open(G_DEFAULT_CONFIG_FILE, "r") as read_file:
+            simulation_summary['parameters'] = json.load(read_file)
+    except Exception as e:
+        G_LOGGER.error('%s: %s' % (e.__doc__, e))
+        
+    return simulation_summary
+
+
+def compute_process_level_metrics():
+
+    """ Load Metrics """
+    node_metrics, metrics_info = load_process_level_metrics(G_DEFAULT_METRICS_FILENAME)
+    
+    """ Compute Metrics """
+    max_cpu_usage = []
+    max_memory_usage = []
+    total_network_usage = {'rx_mbytes' : [], 'tx_mbytes' : []}
+    max_disk_usage = {'disk_read_mbytes' : [], 'disk_write_mbytes' : []}
+    num_samples = []
+
+    for node_id, node_obj in node_metrics.items():
+
+        num_samples.append(len(node_obj['samples']))
+        
+        # Peak values
+        max_cpu_usage.append(max(obj['CPUPercentage'] for obj in node_obj['samples']))
+        max_memory_usage.append(max(obj['MemoryUsageMB'] for obj in node_obj['samples']))
+        
+        # This accumulated 
+        total_network_usage['rx_mbytes'].append(sum(obj['NetStats']['all']['total_received'] for obj in node_obj['samples']) / (1024*1024))
+        total_network_usage['tx_mbytes'].append(sum(obj['NetStats']['all']['total_sent'] for obj in node_obj['samples']) / (1024*1024))
+
+        # Peak values
+        max_disk_usage['disk_read_mbytes'].append(max(obj['DiskIORChar'] for obj in node_obj['samples']) / (1024*1024))
+        max_disk_usage['disk_write_mbytes'].append(max(obj['DiskIOWChar'] for obj in node_obj['samples']) / (1024*1024))
+    
+    avg_samples_per_node = statistics.mean(num_samples)
+   
+    return metrics_info, max_cpu_usage, max_memory_usage, total_network_usage, max_disk_usage, avg_samples_per_node
+
+
 def main():
+
     _innit_logger()
     simulation_path = _parse_args()
         
@@ -412,10 +650,31 @@ def main():
     compute_message_delivery(msgs_dict, injected_msgs_dict)
     compute_message_latencies(msgs_dict)
     msg_propagation_times = compute_propagation_times(msgs_dict)
+    msg_injection_times = compute_injection_times(injected_msgs_dict)
+    
+    # Pull hardware metrics from cAdvisor at a container level
     cpu_usage, memory_usage, bandwith_in, bandwith_out = get_hardware_metrics(topology, node_logs, min_tss, max_tss)
 
     # Generate Figure
     plot_figure(msg_propagation_times, cpu_usage, memory_usage, bandwith_in, bandwith_out)
+    # Pull metrics from process level monitoring
+    if os.path.exists(G_DEFAULT_METRICS_FILENAME):
+        metrics_info, max_cpu_usage, max_memory_usage, total_network_usage, max_disk_usage, avg_samples_per_node = compute_process_level_metrics()
+        
+        # Build simulation summary
+        summary = build_summary(metrics_info, topology, msgs_dict, node_logs, [], min_tss, max_tss, avg_samples_per_node)
+        
+        # Plot figure
+        plot_figure_ex(msg_propagation_times, max_cpu_usage, max_memory_usage, total_network_usage, max_disk_usage, 
+                       msg_injection_times, summary['general'], summary['parameters'])
+        
+        # Generate summary
+        summary_path = '%s/%s' %(G_DEFAULT_SIMULATION_PATH, G_DEFAULT_SUMMARY_FILENAME)
+        with open(summary_path, 'w') as fp:
+            json.dump(summary, fp, indent=4)
+        G_LOGGER.info('Analsysis sumnmary saved in  %s' %summary_path)
+    else:
+        G_LOGGER.info('No metrics file found. Skipping process level metrics.')
     
     """ We are done """
     G_LOGGER.info('Ended')
