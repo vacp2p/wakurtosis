@@ -18,7 +18,7 @@ from prometheus_api_client import PrometheusConnect
 
 """ Globals """
 G_APP_NAME = 'WLS-ANALYSIS'
-G_LOG_LEVEL = 'DEBUG'
+G_LOG_LEVEL = 'INFO'
 G_DEFAULT_CONFIG_FILE = './config/config.json'
 G_DEFAULT_TOPOLOGY_PATH = './config/topology_generated'
 G_DEFAULT_SIMULATION_PATH = './wakurtosis_logs'
@@ -186,21 +186,24 @@ def plot_figure(msg_propagation_times, cpu_usage, memory_usage, bandwith_in, ban
     G_LOGGER.info('Figure saved in %s' %figure_path)
 
 
-def fetch_cadvisor_stats_from_prometheus(container_ip, start_ts, end_ts, prometheus_port=52118):
-
+def prometheus_connect(prometheus_port=52118):
+    
     prometheus = subprocess.check_output("kurtosis enclave inspect wakurtosis | grep '\\<prometheus\\>' | awk '{print $6}'", shell=True)
     url = f'http://{prometheus[:-1].decode("utf-8") }'
 
     try:
         G_LOGGER.debug('Connecting to Prometheus server in %s' %url)
         prometheus = PrometheusConnect(url, disable_ssl=True)
-        # print(prometheus)
+        return prometheus
     except Exception as e:
         G_LOGGER.error('%s: %s' % (e.__doc__, e))
         return None
+    
+def fetch_cadvisor_stats_from_prometheus(prometheus, container_ip, start_ts, end_ts):
 
     metrics = prometheus.get_label_values("__name__")
     # print(metrics)
+    
     start_timestamp = datetime.utcfromtimestamp(start_ts / 1e9)
     end_timestamp = datetime.fromtimestamp(end_ts / 1e9)
 
@@ -464,6 +467,11 @@ def compute_injection_times(injected_msgs_dict):
 
 
 def get_hardware_metrics(topology, node_logs, min_tss, max_tss):
+    
+    prometheus = prometheus_connect()
+    if not prometheus:
+        return None, None, None, None
+
     # Fetch Hardware metrics from Node containers
     cpu_usage = []
     memory_usage = []
@@ -477,7 +485,7 @@ def get_hardware_metrics(topology, node_logs, min_tss, max_tss):
         pbar.set_description(f'Fetching hardware stats from container {container_ip}')
         
         try:
-            container_stats = fetch_cadvisor_stats_from_prometheus(container_ip, min_tss, max_tss)
+            container_stats = fetch_cadvisor_stats_from_prometheus(prometheus, container_ip, min_tss, max_tss)
         except Exception as e:
             G_LOGGER.error('%s: %s' % (e.__doc__, e))
             continue 
