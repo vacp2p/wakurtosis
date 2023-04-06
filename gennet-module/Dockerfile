@@ -28,4 +28,3 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 # Set the entrypoint
 ENTRYPOINT ["python", "gennet.py"]
-

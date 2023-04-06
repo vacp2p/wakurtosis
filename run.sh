@@ -49,20 +49,20 @@ rm -rf ./config/topology_generated > /dev/null 2>&1
 # Remove previous logs
 rm -rf ./$enclave_name_logs > /dev/null 2>&1
 
-# Create and run Gennet docker container
+# Run Gennet docker container
 echo -e "\nRunning network generation"
 docker rm gennet-container > /dev/null 2>&1  # cleanup the old docker if any
 
-cd gennet-module
-docker run --name gennet-container -v ${dir}/config/:/config gennet --config-file /config/${wakurtosis_config_file} --output-dir /config/topology_generated
+docker run --name gennet-container -v ${dir}/config/:/config:ro gennet --config-file /config/${wakurtosis_config_file} --traits-dir /config/traits
 err=$?
-cd ..
 
 if [ $err != 0 ]
 then
   echo "Gennet failed with error code $err"
   exit
 fi
+
+docker cp gennet-container:/gennet/network_data ${dir}/config/topology_generated
 
 docker rm gennet-container > /dev/null 2>&1
 

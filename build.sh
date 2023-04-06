@@ -13,14 +13,16 @@ sudo apt install kurtosis-cli=$kurtosis_version
 sudo apt-mark hold kurtosis-cli
 sudo rm /etc/apt/sources.list.d/kurtosis.list
 
-# Build WLS and Gennet docker image
+# Build Gennet & WLS docker images
+
+cd gennet-module
+sh ./build_docker.sh
+cd ..
+
 cd wls-module
 docker build -t wls:0.0.1 .
 cd ..
 
-cd gennet-module
-docker build -t gennet .
-cd ..
 
 git clone git@github.com:waku-org/go-waku.git
 cd go-waku
