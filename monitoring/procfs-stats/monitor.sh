@@ -1,5 +1,5 @@
 #!/bin/bash
-dir=./wakurtosis-dstats/monitoring/procfs-stats/stats
+dir=./monitoring/procfs-stats/stats
 
 if [ "$#" -ne 1 ]; then
     echo "Usage: monitor.sh <container_name>"
@@ -20,7 +20,7 @@ mkdir -p $dir
 
 # TODO: add more images to ancestor
 dps=$dir/docker-ps.out
-docker ps --no-trunc --filter "ancestor=statusteam/nim-waku"  --filter "ancestor=gowaku" --format "{{.ID}}#{{.Names}}#{{.Image}}#{{.Command}}#{{.State}}#{{.Status}}#{{.Ports}}" > $dps
+docker ps --no-trunc --filter "ancestor=statusteam/nim-waku"  --filter "ancestor=gowaku" --filter "ancestor=statusteam/nim-waku:nwaku-trace2" --format "{{.ID}}#{{.Names}}#{{.Image}}#{{.Command}}#{{.State}}#{{.Status}}#{{.Ports}}" > $dps
 
 dinspect=$dir/docker-inspect.out
 docker inspect --format "{{.State.Pid}}{{.Name}}/{{.Image}}/{{.State}}" $(docker ps -q) > $dinspect
@@ -34,7 +34,7 @@ cat /proc/meminfo > $dir/docker-meminfo.out
 id2veth=$dir/docker-id2veth.out
 :> $id2veth
 SHELL=sh
-for container in $(docker ps --no-trunc -q); do
+for container in $(docker ps --no-trunc  | grep -E "gowaku|nim-waku"   |  awk '{print $1}'); do
     iflink=`docker exec -it $container sh -c 'cat /sys/class/net/eth0/iflink' |  tr -d '\r'`
     veth=`grep -l $iflink /sys/class/net/veth*/ifindex | sed -e 's;^.*net/\(.*\)/ifindex$;\1;'`
     echo $container:$veth >> $id2veth
@@ -43,7 +43,7 @@ done
 # TODO: add more images to grep
 dstats=$dir/docker-stats.out
 echo '# docker stats --no-trunc --format  "{{.Container}} / {{.Name}} / {{.ID}} / {{.CPUPerc}} / {{.MemUsage}} / {{.MemPerc}} / {{.NetIO}} / {{.BlockIO}} / {{.PIDs}}"' > $dstats
-docker stats --no-trunc --format  "{{.Container}} / {{.Name}} / {{.ID}} / {{.CPUPerc}} / {{.MemUsage}} / {{.MemPerc}} / {{.NetIO}} / {{.BlockIO}} / {{.PIDs}}" | grep -E "gowaku|nim-waku"  >> $dstats &
+docker stats --no-trunc --format  "{{.Container}} / {{.Name}} / {{.ID}} / {{.CPUPerc}} / {{.MemUsage}} / {{.MemPerc}} / {{.NetIO}} / {{.BlockIO}} / {{.PIDs}}" | grep -E "gowaku|nim-waku|containers"  >> $dstats &
 docker_pid=$!
 
 #csize=${1:-1}
@@ -60,7 +60,7 @@ echo "export DPS_FNAME=$dps DINSPECT_FNAME=$dinspect PIDLIST_FNAME=$pidlist ID2V
 # TODO: only IO collector runs as root
 #sudo python3 ./procfs-stats.py  --sampling-interval 1 & $collector_pid=$! & docker wait $docker_id; kill -15  $collector_pid; kill -15 $docker_pid
 
-sudo sh ./wakurtosis-dstats/monitoring/procfs-stats/monitor_procfs.sh $rclist $dir $wait_cid
+sudo sh ./monitoring/procfs-stats/monitor_procfs.sh $rclist $dir $wait_cid
 #sh   -a ./monitor_procfs.sh $rclist $dir $wait_cid
 echo "stopping docker monitor $docker_pid"
 kill -15 $docker_pid
