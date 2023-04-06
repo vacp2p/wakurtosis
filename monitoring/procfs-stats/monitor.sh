@@ -33,9 +33,8 @@ cat /proc/meminfo > $dir/docker-meminfo.out
 
 id2veth=$dir/docker-id2veth.out
 :> $id2veth
-SHELL=sh
-for container in $(docker ps --no-trunc  | grep -E "gowaku|nim-waku"   |  awk '{print $1}'); do
-    iflink=`docker exec -it $container sh -c 'cat /sys/class/net/eth0/iflink' |  tr -d '\r'`
+for container in $(docker ps --no-trunc | grep -E "gowaku|nim-waku|nim-waku:nwaku-trace2" | awk '{print $1}'); do
+    iflink=`docker exec $container sh -c 'cat /sys/class/net/eth0/iflink' |  tr -d '\r'`
     veth=`grep -l $iflink /sys/class/net/veth*/ifindex | sed -e 's;^.*net/\(.*\)/ifindex$;\1;'`
     echo $container:$veth >> $id2veth
 done
@@ -60,7 +59,10 @@ echo "export DPS_FNAME=$dps DINSPECT_FNAME=$dinspect PIDLIST_FNAME=$pidlist ID2V
 # TODO: only IO collector runs as root
 #sudo python3 ./procfs-stats.py  --sampling-interval 1 & $collector_pid=$! & docker wait $docker_id; kill -15  $collector_pid; kill -15 $docker_pid
 
-sudo sh ./monitoring/procfs-stats/monitor_procfs.sh $rclist $dir $wait_cid
+usr=`id -u`
+grp=`id -g`
+
+sudo sh ./monitoring/procfs-stats/monitor_procfs.sh $rclist $dir $wait_cid $usr $grp
 #sh   -a ./monitor_procfs.sh $rclist $dir $wait_cid
 echo "stopping docker monitor $docker_pid"
 kill -15 $docker_pid
