@@ -1,24 +1,33 @@
 #!/bin/sh
 
-dir=$(pwd)
+#TODO: make them functions
+##################### SETUP & CLEANUP
+if [ "$#" -eq 0 ]; then
+    echo "Error: Must select the measurement infra: cadvisor, host-proc, container-proc"
+    echo "Usage: sh ./run.sh <measurement_infra> [enclave_name] [config_file]"
+    exit 1
+fi
 
-# Parse arg if any
-ARGS1=${1:-"cadvisor"}
+dir=$(pwd)
+# Parse args
+ARGS1=${1:-"cadvisor"} # mandatory
 ARGS2=${2:-"wakurtosis"}
 ARGS3=${3:-"config.json"}
-
 # Main .json configuration file
 metrics_infra=$ARGS1
 enclave_name=$ARGS2
 wakurtosis_config_file=$ARGS3
 loglevel="error"
-
+echo "- Metrics Infra: " $metrics_infra
 echo "- Enclave name: " $enclave_name
 echo "- Configuration file: " $wakurtosis_config_file
 
 # Cleanup previous runs
 echo -e "\Cleaning up previous runs"
 sh ./cleanup.sh $enclave_name
+echo -e "\Done cleaning up previous runs"
+##################### END
+
 
 ##################### CADVISOR
 if [ "$metrics_infra" = "cadvisor" ];
@@ -42,10 +51,11 @@ fi
 ##################### END
 
 
+
 ##################### GENNET
 # Run Gennet docker container
 echo -e "\nRunning network generation"
-docker run --name gennet -v ${dir}/config/:/config:ro gennet --config-file /config/${wakurtosis_config_file} --traits-dir /config/traits
+docker run --name cgennet -v ${dir}/config/:/config:ro gennet --config-file /config/${wakurtosis_config_file} --traits-dir /config/traits
 err=$?
 if [ $err != 0 ]
 then
@@ -53,8 +63,8 @@ then
   exit
 fi
 # Copy the network generated TODO: remove this extra copy
-docker cp gennet:/gennet/network_data ${dir}/config/topology_generated
-docker rm gennet > /dev/null 2>&1
+docker cp cgennet:/gennet/network_data ${dir}/config/topology_generated
+docker rm cgennet > /dev/null 2>&1
 ##################### END
 
 
@@ -65,55 +75,88 @@ jobs=$(cat config/${wakurtosis_config_file} | jq -r ".kurtosis.jobs")
 echo -e "\nSetting up the enclave: $enclave_name"
 kurtosis_cmd="kurtosis --cli-log-level \"$loglevel\" run --enclave-id ${enclave_name} . '{\"wakurtosis_config_file\" : \"config/${wakurtosis_config_file}\"}' --parallelism ${jobs} > kurtosisrun_log.txt 2>&1"
 START=$(date +%s)
-eval $kurtosis_cmd
+  eval $kurtosis_cmd
 END1=$(date +%s)
+
 DIFF1=$(( $END1 - $START ))
 echo -e "Enclave $enclave_name is up and running: took $DIFF1 secs to setup"
 
 # Extract the WLS service name
 wls_service_name=$(kurtosis --cli-log-level $loglevel enclave inspect $enclave_name | grep wls | awk '{print $1}')
 # kurtosis service logs $enclave_name $wls_service_name
-echo -e "\n--> To see simulation logs run: kurtosis service logs $enclave_name $wls_service_name <--"
+echo "\n--> To see simulation logs run: kurtosis service logs $enclave_name $wls_service_name <--"
 ##################### END
 
 
 
-##################### EXTRACT CIDS
-# Fetch the Grafana address & port
-grafana_host=$(kurtosis --cli-log-level $loglevel  enclave inspect $enclave_name | grep grafana | awk '{print $6}')
-echo -e "\n--> Statistics in Grafana server at http://$grafana_host/ <--"
-echo "Output of kurtosis run command written in kurtosisrun_log.txt"
-
+##################### EXTRACT WLS CID
 # Get the container prefix/suffix for the WLS service
 service_name=$(kurtosis --cli-log-level $loglevel  enclave inspect $enclave_name | grep $wls_service_name | awk '{print $2}')
 service_uuid=$(kurtosis --cli-log-level $loglevel  enclave inspect --full-uuids $enclave_name | grep $wls_service_name | awk '{print $1}')
 
 # Construct the fully qualified container name that kurtosis has created
-cid="$service_name--$service_uuid"
+wls_cid="$service_name--$service_uuid"
 ##################### END
 
-sh ./monitoring/procfs-stats/monitor.sh $cid &
 
+
+##################### HOST PROCFS MONITOR
+if [ "$metrics_infra" = "host-proc" ];
+then
+    echo "Starting the /proc fs and docker stat measurements"
+    sh ./monitoring/procfs-stats/monitor.sh $wls_cid &
+fi
+##################### END
+
+
+
+##################### DOCKER PROCFS MONITOR
+if [ "$metrics_infra" = "container-proc" ];
+then
+    echo "Jordi's measurement infra goes here"
+fi
+##################### END
+
+
+##################### GRAFANA
+# Fetch the Grafana address & port
+grafana_host=$(kurtosis --cli-log-level $loglevel  enclave inspect $enclave_name | grep grafana | awk '{print $6}')
+echo -e "\n--> Statistics in Grafana server at http://$grafana_host/ <--"
+echo "Output of kurtosis run command written in kurtosisrun_log.txt"
+##################### END
+
+
+
+##################### WAIT FOR THE WLS TO FINISH
 # Wait for the container to halt; this will block
 echo -e "Waiting for simulation to finish ..."
-status_code="$(docker container wait $cid)"
+status_code="$(docker container wait $wls_cid)"
+echo -e "Simulation ended with code $status_code Results in ./${enclave_name}_logs"
+END2=$(date +%s)
+DIFF2=$(( $END2 - $END1 ))
+echo "Simulation took $DIFF1 + $DIFF2 = $(( $END2 - $START)) secs"
 ##################### END
 
 
-### Logs
+
+##################### GATHER CONFIG, LOGS & METRICS
+# dump logs
 kurtosis enclave dump ${enclave_name} ${enclave_name}_logs > /dev/null 2>&1
-echo -e "Simulation ended with code $status_code Results in ./${enclave_name}_logs"
+cp kurtosisrun_log.txt ${enclave_name}_logs
 
 # copy metrics data, config, network_data to the logs dir
 cp -r ./config ${enclave_name}_logs
 cp -r ./monitoring/procfs-stats/stats  ${enclave_name}_logs/procfs-stats
 
-END2=$(date +%s)
-DIFF2=$(( $END2 - $END1 ))
 
-echo "Simulation took $DIFF1 + $DIFF2 = $(( $END2 - $START)) secs"
 # Copy simulation results
-# docker cp "$cid:/wls/summary.json" "./${enclave_name}_logs" > /dev/null 2>&1
-docker cp "$cid:/wls/messages.json" "./${enclave_name}_logs"
+# docker cp "$wls_cid:/wls/summary.json" "./${enclave_name}_logs" > /dev/null 2>&1
+docker cp "$wls_cid:/wls/messages.json" "./${enclave_name}_logs"
+
+echo "- Metrics Infra:  $metrics_infra" > ./${enclave_name}_logs/run_args
+echo "- Enclave name:  $enclave_name" >> ./${enclave_name}_logs/run_args
+echo "- Configuration file:  $wakurtosis_config_file" >> ./${enclave_name}_logs/run_args
+
 
 echo "Done."
+##################### END
