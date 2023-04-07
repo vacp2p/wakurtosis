@@ -51,9 +51,9 @@ rm -rf ./$enclave_name_logs > /dev/null 2>&1
 
 # Run Gennet docker container
 echo -e "\nRunning network generation"
-docker rm gennet-container > /dev/null 2>&1  # cleanup the old docker if any
+docker rm gennet > /dev/null 2>&1  # cleanup the old docker if any
 
-docker run --name gennet-container -v ${dir}/config/:/config:ro gennet --config-file /config/${wakurtosis_config_file} --traits-dir /config/traits
+docker run --name gennet -v ${dir}/config/:/config:ro gennet --config-file /config/${wakurtosis_config_file} --traits-dir /config/traits
 err=$?
 
 if [ $err != 0 ]
@@ -62,9 +62,9 @@ then
   exit
 fi
 
-docker cp gennet-container:/gennet/network_data ${dir}/config/topology_generated
+docker cp gennet:/gennet/network_data ${dir}/config/topology_generated
 
-docker rm gennet-container > /dev/null 2>&1
+docker rm gennet > /dev/null 2>&1
 
 # Create the new enclave and run the simulation
 jobs=$(cat config/${wakurtosis_config_file} | jq -r ".kurtosis.jobs")
@@ -105,9 +105,16 @@ sh ./monitoring/procfs-stats/monitor.sh $cid &
 echo -e "Waiting for simulation to finish ..."
 status_code="$(docker container wait $cid)"
 
+
 ### Logs
 kurtosis enclave dump ${enclave_name} ${enclave_name}_logs > /dev/null 2>&1
 echo -e "Simulation ended with code $status_code Results in ./${enclave_name}_logs"
+
+# copy metrics data, config, network_data to the logs dir
+
+cp -r ./config ${enclave_name}_logs
+
+cp -r ./monitoring/procfs-stats/stats  ${enclave_name}_logs/procfs-stats
 
 END2=$(date +%s)
 DIFF2=$(( $END2 - $END1 ))
