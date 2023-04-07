@@ -41,6 +41,7 @@ done
 
 # TODO: add more images to grep
 dstats=$dir/docker-stats.out
+echo "Starting the docker monitor"
 echo '# docker stats --no-trunc --format  "{{.Container}} / {{.Name}} / {{.ID}} / {{.CPUPerc}} / {{.MemUsage}} / {{.MemPerc}} / {{.NetIO}} / {{.BlockIO}} / {{.PIDs}}"' > $dstats
 docker stats --no-trunc --format  "{{.Container}} / {{.Name}} / {{.ID}} / {{.CPUPerc}} / {{.MemUsage}} / {{.MemPerc}} / {{.NetIO}} / {{.BlockIO}} / {{.PIDs}}" | grep -E "gowaku|nim-waku|containers"  >> $dstats &
 docker_pid=$!
@@ -64,5 +65,5 @@ grp=`id -g`
 
 sudo sh ./monitoring/procfs-stats/monitor_procfs.sh $rclist $dir $wait_cid $usr $grp
 #sh   -a ./monitor_procfs.sh $rclist $dir $wait_cid
-echo "stopping docker monitor $docker_pid"
+echo "Stopping the docker monitor $docker_pid"
 kill -15 $docker_pid
