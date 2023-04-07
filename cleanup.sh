@@ -1,6 +1,5 @@
 #!/bin/sh
 ARGS1=${1:-"wakurtosis"}
-enclave_name=$ARGS1
 rm -f   ./kurtosisrun_log.txt
 rm -rf  ./wakurtosis_logs ./config/topology_generated  ./monitoring/procfs-stats/stats
 # hardcoded folders
