@@ -14,22 +14,15 @@ loglevel="error"
 echo "- Enclave name: " $enclave_name
 echo "- Configuration file: " $wakurtosis_config_file
 
-# Delete the enclave just in case
-echo -e "\nCleaning up Kurtosis environment "$enclave_name
-docker container stop cadvisor > /dev/null 2>&1
-docker container rm cadvisor > /dev/null 2>&1
-kurtosis enclave rm -f $enclave_name > /dev/null 2>&1
-# kurtosis clean -a > /dev/null 2>&1 we do not want to delete all enclaves, just the one we will execute
+# Cleanup previous runs
+echo -e "\Cleaning up previous runs"
+sh ./cleanup.sh $enclave_name
 
-# Delete previous logs
-echo -e "\Deleting previous logs in ${enclave_name}_logs"
-rm -rf ./${enclave_name}_logs > /dev/null 2>&1
-rm ./kurtosisrun_log.txt > /dev/null 2>&1
 
 # Preparing enclave
-echo "Preparing enclave..."
-kurtosis enclave add --name ${enclave_name}
-enclave_preffix="$(kurtosis enclave inspect --full-uuids $enclave_name | grep UUID: | awk '{print $2}')"
+echo "Preparing the enclave..."
+kurtosis  --cli-log-level $loglevel  enclave add --name ${enclave_name}
+enclave_preffix=$(kurtosis --cli-log-level $loglevel  enclave inspect --full-uuids $enclave_name | grep UUID: | awk '{print $2}')
 echo "Enclave network: "$enclave_preffix
 
 # Get enclave last IP
@@ -44,15 +37,8 @@ echo "cAdvisor IP: $last_ip"
 docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev/disk/:/dev/disk:ro --volume=/sys:/sys:ro --volume=/etc/machine-id:/etc/machine-id:ro --publish=8080:8080 --detach=true --name=cadvisor --privileged --device=/dev/kmsg --network $enclave_preffix --ip=$last_ip gcr.io/cadvisor/cadvisor:v0.47.0
 
 
-# Delete topology
-rm -rf ./config/topology_generated > /dev/null 2>&1
-# Remove previous logs
-rm -rf ./$enclave_name_logs > /dev/null 2>&1
-
 # Run Gennet docker container
 echo -e "\nRunning network generation"
-docker rm gennet > /dev/null 2>&1  # cleanup the old docker if any
-
 docker run --name gennet -v ${dir}/config/:/config:ro gennet --config-file /config/${wakurtosis_config_file} --traits-dir /config/traits
 err=$?
 
@@ -63,7 +49,6 @@ then
 fi
 
 docker cp gennet:/gennet/network_data ${dir}/config/topology_generated
-
 docker rm gennet > /dev/null 2>&1
 
 # Create the new enclave and run the simulation
@@ -85,7 +70,7 @@ echo -e "\n--> To see simulation logs run: kurtosis service logs $enclave_name $
 
 
 # Fetch the Grafana address & port
-grafana_host=$(kurtosis enclave inspect $enclave_name | grep grafana | awk '{print $6}')
+grafana_host=$(kurtosis --cli-log-level $loglevel  enclave inspect $enclave_name | grep grafana | awk '{print $6}')
 echo -e "\n--> Statistics in Grafana server at http://$grafana_host/ <--"
 
 echo "Output of kurtosis run command written in kurtosisrun_log.txt"
@@ -93,8 +78,8 @@ echo "Output of kurtosis run command written in kurtosisrun_log.txt"
 ### Wait for WLS to finish
 
 # Get the container prefix/uffix for the WLS service
-service_name="$(kurtosis --cli-log-level $loglevel  enclave inspect $enclave_name | grep $wls_service_name | awk '{print $2}')"
-service_uuid="$(kurtosis --cli-log-level $loglevel  enclave inspect --full-uuids $enclave_name | grep $wls_service_name | awk '{print $1}')"
+service_name=$(kurtosis --cli-log-level $loglevel  enclave inspect $enclave_name | grep $wls_service_name | awk '{print $2}')
+service_uuid=$(kurtosis --cli-log-level $loglevel  enclave inspect --full-uuids $enclave_name | grep $wls_service_name | awk '{print $1}')
 
 # Construct the fully qualified container name that kurtosis has created
 cid="$service_name--$service_uuid"
@@ -111,9 +96,7 @@ kurtosis enclave dump ${enclave_name} ${enclave_name}_logs > /dev/null 2>&1
 echo -e "Simulation ended with code $status_code Results in ./${enclave_name}_logs"
 
 # copy metrics data, config, network_data to the logs dir
-
 cp -r ./config ${enclave_name}_logs
-
 cp -r ./monitoring/procfs-stats/stats  ${enclave_name}_logs/procfs-stats
 
 END2=$(date +%s)
