@@ -1,5 +1,5 @@
 #!/bin/bash
-dir=./monitoring/procfs-stats/stats
+odir=./stats
 
 if [ "$#" -ne 1 ]; then
     echo "Usage: monitor.sh <container_name>"
@@ -16,22 +16,22 @@ fi
 
 wait_cid=$1
 
-mkdir -p $dir
+mkdir -p $odir
 
 # TODO: add more images to ancestor
-dps=$dir/docker-ps.out
+dps=$odir/docker-ps.out
 docker ps --no-trunc --filter "ancestor=statusteam/nim-waku"  --filter "ancestor=gowaku" --filter "ancestor=statusteam/nim-waku:nwaku-trace2" --format "{{.ID}}#{{.Names}}#{{.Image}}#{{.Command}}#{{.State}}#{{.Status}}#{{.Ports}}" > $dps
 
-dinspect=$dir/docker-inspect.out
+dinspect=$odir/docker-inspect.out
 docker inspect --format "{{.State.Pid}}{{.Name}}/{{.Image}}/{{.State}}" $(docker ps -q) > $dinspect
 
-pidlist=$dir/docker-pids.out
+pidlist=$odir/docker-pids.out
 ps -ef | grep -E "wakunode|waku" |grep -v docker | grep -v grep | awk '{print $2}' > $pidlist
 
-cat /proc/cpuinfo > $dir/docker-cpuinfo.out
-cat /proc/meminfo > $dir/docker-meminfo.out
+cat /proc/cpuinfo > $odir/docker-cpuinfo.out
+cat /proc/meminfo > $odir/docker-meminfo.out
 
-id2veth=$dir/docker-id2veth.out
+id2veth=$odir/docker-id2veth.out
 :> $id2veth
 for container in $(docker ps --no-trunc | grep -E "gowaku|nim-waku|nim-waku:nwaku-trace2" | awk '{print $1}'); do
     iflink=`docker exec $container sh -c 'cat /sys/class/net/eth0/iflink' |  tr -d '\r'`
@@ -40,11 +40,13 @@ for container in $(docker ps --no-trunc | grep -E "gowaku|nim-waku|nim-waku:nwak
 done
 
 # TODO: add more images to grep
-dstats=$dir/docker-stats.out
+dstats=$odir/docker-stats.out
 echo "Starting the docker monitor"
 echo '# docker stats --no-trunc --format  "{{.Container}} / {{.Name}} / {{.ID}} / {{.CPUPerc}} / {{.MemUsage}} / {{.MemPerc}} / {{.NetIO}} / {{.BlockIO}} / {{.PIDs}}"' > $dstats
 docker stats --no-trunc --format  "{{.Container}} / {{.Name}} / {{.ID}} / {{.CPUPerc}} / {{.MemUsage}} / {{.MemPerc}} / {{.NetIO}} / {{.BlockIO}} / {{.PIDs}}" | grep -E "gowaku|nim-waku|containers"  >> $dstats &
 docker_pid=$!
+
+echo "Docker stat is at $docker_pid and running"
 
 #csize=${1:-1}
 #sinterval=${2:-1}
@@ -52,8 +54,8 @@ docker_pid=$!
 
 lif=`ip route get 1.1.1.1 | awk '{ print $5}'`
 
-rclist=$dir/docker-rc-list.out
-procout=$dir/docker-proc.out
+rclist=$odir/docker-rc-list.out
+procout=$odir/docker-proc.out
 echo "export DPS_FNAME=$dps DINSPECT_FNAME=$dinspect PIDLIST_FNAME=$pidlist ID2VETH_FNAME=$id2veth PROCOUT_FNAME=$procout LOCAL_IF=$lif" >  $rclist
 
 # only /proc collector runs as root
@@ -63,7 +65,7 @@ echo "export DPS_FNAME=$dps DINSPECT_FNAME=$dinspect PIDLIST_FNAME=$pidlist ID2V
 usr=`id -u`
 grp=`id -g`
 
-sudo sh ./monitoring/procfs-stats/monitor_procfs.sh $rclist $dir $wait_cid $usr $grp
-#sh   -a ./monitor_procfs.sh $rclist $dir $wait_cid
+sudo sh ./procfs.sh $rclist $odir $wait_cid $usr $grp
+#sh   -a ./monitor_procfs.sh $rclist $odir $wait_cid
 echo "Stopping the docker monitor $docker_pid"
 kill -15 $docker_pid

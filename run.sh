@@ -104,7 +104,9 @@ wls_cid="$service_name--$service_uuid"
 if [ "$metrics_infra" = "host-proc" ];
 then
     echo "Starting the /proc fs and docker stat measurements"
-    sh ./monitoring/procfs-stats/monitor.sh $wls_cid &
+    cd monitoring/host-proc
+    sh ./main.sh $wls_cid &
+    cd -
 fi
 ##################### END
 
@@ -151,7 +153,7 @@ cp -r ./config ${enclave_name}_logs
 if [ "$metrics_infra" = "host-proc" ];
 then
     echo "Copying the /proc fs and docker stat measurements"
-    cp -r ./monitoring/procfs-stats/stats  ${enclave_name}_logs/procfs-stats
+    cp -r ./monitoring/host-proc/stats  ${enclave_name}_logs/host-proc-stats
 fi
 
 if [ "$metrics_infra" = "container-proc" ];

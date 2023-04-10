@@ -195,7 +195,7 @@ class MetricsCollector:
         with open(self.ps_pids_fname) as f:
             self.ps_pids = f.read().strip().split("\n")
         #log.info(f'docker: waku pids : {str(self.ps_pids)}')
-        self.docker_pids = self.ps_pids[:-1]
+        self.docker_pids = self.ps_pids
         for pid in self.docker_pids:
             get_shim_pid=((f'pstree -sg {pid} | '
                            f'head -n 1 | '
