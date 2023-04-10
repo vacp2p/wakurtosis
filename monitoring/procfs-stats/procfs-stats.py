@@ -196,7 +196,7 @@ class MetricsCollector:
         with open(self.ps_pids_fname) as f:
             self.ps_pids = f.read().strip().split("\n")
         #log.info(f'docker: waku pids : {str(self.ps_pids)}')
-        self.docker_pids = self.ps_pids
+        self.docker_pids = self.ps_pids[:-1]
         for pid in self.docker_pids:
             get_shim_pid=((f'pstree -sg {pid} | '
                            f'head -n 1 | '
@@ -250,9 +250,9 @@ class MetricsCollector:
         self.build_docker_pid2veth()
 
     # after metadata is collected, create the threads and launch data collection
-    def spin_up(self):
+    def spin_up(self, wls_cid):
         log.info("Starting the procfs monitor...")
-        self.launch_procfs_monitor()
+        self.launch_procfs_monitor(wls_cid)
 
     # kill docker stats : always kill, never TERM/QUIT/INT
     def terminate_docker_stats(self):

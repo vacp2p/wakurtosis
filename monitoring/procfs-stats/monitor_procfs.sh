@@ -16,7 +16,7 @@ python3 ./monitoring/procfs-stats/procfs-stats.py --sampling-interval $sinterval
 procfs_pid=$!
 echo "Waiting for WLS to finish"
 docker container wait $wait_cid   # now wait for the wakurtosis to finish
-sleep 60
+sleep 60        # make sure you collect the stats until last messages settle down
 
 echo "Stopping /proc fs monitor $procfs_pid"
 kill -15  $procfs_pid   # procfs-stats is a su process
