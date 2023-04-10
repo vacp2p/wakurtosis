@@ -167,12 +167,16 @@ class MetricsCollector:
         self.procfs_scheduler.enter(self.procfs_sampling_interval, 1, self.procfs_reader, ())
 
     # add headers and schedule /proc reader's first read
-    def launch_procfs_monitor(self):
+    def launch_procfs_monitor(self, wls_cid):
         self.populate_file_handles()    # including procout_fname
         self.procfs_fd.write((f'# procfs_sampling interval = {self.procfs_sampling_interval}\n'))
         self.procfs_fd.write(f'# {", ".join([f"{pid} = {self.docker_pid2id[pid]}" for pid in self.docker_pid2id])}\n')
         self.procfs_fd.write(f'# {", ".join([f"{pid} = {self.docker_pid2veth[pid]}" for pid in self.docker_pid2id])}\n')
         log.info("files handles populated")
+        signal_wls = f'docker exec {wls_cid} touch /wls/start.signal'
+        build_and_exec(signal_wls, "wls-signal")
+        print(signal_wls)
+        sys.exit(0)
         self.procfs_scheduler.enter(self.procfs_sampling_interval, 1,
                      self.procfs_reader, ())
         self.procfs_scheduler.run()
@@ -279,6 +283,8 @@ def _sinterval_callback(ctx: typer, Context, sinterval: int):
 
 # does not return
 def main(ctx: typer.Context,
+        wls_cid: str = typer.Option("",
+            help="Specify the WLS container id signal"),
         prefix: str = typer.Option("",
             help="Specify the path for find the data files"),
         local_if: str = typer.Option("eth0",
@@ -304,7 +310,7 @@ def main(ctx: typer.Context,
     metrics.register_signal_handlers()
 
     log.info("Metrics: Starting the data collection threads")
-    metrics.spin_up()
+    metrics.spin_up(wls_cid)
 
     # get sim time info from config.json? or  ioctl/select from WLS? or docker wait?
     #time.sleep(metrics.procfs_sampling_interval * 15)
