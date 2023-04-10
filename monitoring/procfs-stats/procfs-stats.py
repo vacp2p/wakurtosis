@@ -162,7 +162,7 @@ class MetricsCollector:
                     f'BLK {blk} CPU-SYS {sys_stat} CPU-process {stat}\n'
                   )
             self.procfs_fd.write(str(out))
-        log.info("collected " + str(self.procfs_sample_cnt))
+        log.info("Collected " + str(self.procfs_sample_cnt))
         self.procfs_sample_cnt += 1
         self.procfs_scheduler.enter(self.procfs_sampling_interval, 1, self.procfs_reader, ())
 
@@ -172,11 +172,10 @@ class MetricsCollector:
         self.procfs_fd.write((f'# procfs_sampling interval = {self.procfs_sampling_interval}\n'))
         self.procfs_fd.write(f'# {", ".join([f"{pid} = {self.docker_pid2id[pid]}" for pid in self.docker_pid2id])}\n')
         self.procfs_fd.write(f'# {", ".join([f"{pid} = {self.docker_pid2veth[pid]}" for pid in self.docker_pid2id])}\n')
-        log.info("files handles populated")
+        log.info("Files handles populated")
         signal_wls = f'docker exec {wls_cid} touch /wls/start.signal'
-        build_and_exec(signal_wls, "wls-signal")
-        print(signal_wls)
-        sys.exit(0)
+        log.info("Signalling WLS")
+        self.build_and_exec(signal_wls, "/dev/null") # revisit once Jordi's branch is merge
         self.procfs_scheduler.enter(self.procfs_sampling_interval, 1,
                      self.procfs_reader, ())
         self.procfs_scheduler.run()
@@ -256,7 +255,7 @@ class MetricsCollector:
 
     # kill docker stats : always kill, never TERM/QUIT/INT
     def terminate_docker_stats(self):
-        log.info(f'stopping docker monitor : {self.docker_stats_pid}, {self.docker_stats_fname}')
+        log.info(f'Stopping docker monitor : {self.docker_stats_pid}, {self.docker_stats_fname}')
         os.kill(self.docker_stats_pid, signal.SIGKILL) # do not use TERM/QUIT/INT
 
     # the cleanup: close the file handles and kill the docker
