@@ -146,8 +146,17 @@ cp kurtosisrun_log.txt ${enclave_name}_logs
 
 # copy metrics data, config, network_data to the logs dir
 cp -r ./config ${enclave_name}_logs
-cp -r ./monitoring/procfs-stats/stats  ${enclave_name}_logs/procfs-stats
 
+if [ "$metrics_infra" = "host-proc" ];
+then
+    echo "Copying the /proc fs and docker stat measurements"
+    cp -r ./monitoring/procfs-stats/stats  ${enclave_name}_logs/procfs-stats
+fi
+
+if [ "$metrics_infra" = "container-proc" ];
+then
+    echo "Jordi's data copy goes here"
+fi
 
 # Copy simulation results
 # docker cp "$wls_cid:/wls/summary.json" "./${enclave_name}_logs" > /dev/null 2>&1
