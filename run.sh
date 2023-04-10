@@ -141,6 +141,7 @@ echo "Simulation took $DIFF1 + $DIFF2 = $(( $END2 - $START)) secs"
 
 ##################### GATHER CONFIG, LOGS & METRICS
 # dump logs
+echo "Dumping Kurtosis logs"
 kurtosis enclave dump ${enclave_name} ${enclave_name}_logs > /dev/null 2>&1
 cp kurtosisrun_log.txt ${enclave_name}_logs
 

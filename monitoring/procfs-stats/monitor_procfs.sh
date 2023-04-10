@@ -12,10 +12,10 @@ proclog=$dir/docker-proc-log.out
 #echo "$DPS_FNAME, $DINSPECT_FNAME, $PIDLIST_FNAME, $ID2VETH_FNAME"
 
 echo "Starting the /proc fs monitor"
-python3 ./monitoring/procfs-stats/procfs-stats.py --sampling-interval $sinterval --prefix $dir > $proclog 2>&1 &
+python3 ./monitoring/procfs-stats/procfs-stats.py --sampling-interval $sinterval --prefix $dir  --wls-cid $wait_cid  > $proclog 2>&1 &
 procfs_pid=$!
 echo "Waiting for WLS to finish"
-#docker container wait $wait_cid   # now wait for the wakurtosis to finish
+docker container wait $wait_cid   # now wait for the wakurtosis to finish
 sleep 60
 
 echo "Stopping /proc fs monitor $procfs_pid"
