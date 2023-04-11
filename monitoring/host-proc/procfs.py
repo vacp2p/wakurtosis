@@ -87,6 +87,8 @@ class MetricsCollector:
         self.docker_ids = []
         self.docker_name2id = {}
 
+        self.docker_inspect_fname =  os.environ["DINSPECT_FNAME"]
+
         self.ps_pids_fname = os.environ["PIDLIST_FNAME"]
         self.ps_pids = []
 
@@ -211,7 +213,13 @@ class MetricsCollector:
         self.docker_pids = [pid for pid in self.ps_pids if self.pid_exists(pid)]
         #log.info((f'{self.docker_pids}:{len(self.docker_pids)} <- '
         #            f'{self.ps_pids}:{len(self.ps_pids)}'))
+        docker_shim2name = {}
+        with open(self.docker_inspect_fname) as f:
+            for line in f:
+                la = line.split("/")
+                docker_shim2name[la[0]] = la[1]
         for pid in self.docker_pids:
+            # TODO: add multinode support; the shim pid either dockers or process 1's
             get_shim_pid=((f'pstree -sg {pid} | '
                            f'head -n 1 | '
                            f'grep -Po "shim\([0-9]+\)---[a-z]+\(\K[^)]*"'
@@ -229,16 +237,7 @@ class MetricsCollector:
                     self.docker_id2veth[did] = self.host_if
                     self.docker_pid2veth[pid] = self.host_if
                     continue
-                get_docker_name = ((f'docker inspect --format '
-                                    '"{{.State.Pid}}, {{.Name}}"'
-                                    f' $(docker ps -q) | grep {shim_pid}'
-                                  ))
-                self.build_and_exec(get_docker_name, f'name-{pid}')
-                with open(f'name-{pid}') as f:
-                    tmp = f.read().strip().replace(" /", "")
-                    pid, docker_name = tmp.split(",")
-                    self.docker_pid2name[pid] = docker_name
-                    os.remove(f'name-{pid}')
+                self.docker_pid2name[pid] = docker_shim2name[shim_pid]
 
 
     # build the process pid to docker id map
