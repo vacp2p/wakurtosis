@@ -101,6 +101,7 @@ class MetricsCollector:
         self.procfs_fd = ""
         self.procfs_scheduler = sched.scheduler(time.time, time.sleep)
         self.procfs_sample_cnt = 0
+        self.got_signal = False
 
         self.host_if=os.environ["LOCAL_IF"]
 
@@ -162,9 +163,11 @@ class MetricsCollector:
                     f'BLK {blk} CPU-SYS {sys_stat} CPU-process {stat}\n'
                   )
             self.procfs_fd.write(str(out))
-        log.info("Collected " + str(self.procfs_sample_cnt))
-        self.procfs_sample_cnt += 1
-        self.procfs_scheduler.enter(self.procfs_sampling_interval, 1, self.procfs_reader, ())
+        self.procfs_sample_cnt += 1     # schedule the next event ASAP
+        if not self.got_signal: # could be xpensive : branch
+            self.procfs_scheduler.enter(self.procfs_sampling_interval, 1, self.procfs_reader, ())
+        if not self.procfs_sample_cnt % 50: # could be xpensive : branch + mod
+            log.info("Collected " + str(self.procfs_sample_cnt))
 
     # add headers and schedule /proc reader's first read
     def launch_procfs_monitor(self, wls_cid):
@@ -195,7 +198,7 @@ class MetricsCollector:
         with open(self.ps_pids_fname) as f:
             self.ps_pids = f.read().strip().split("\n")
         #log.info(f'docker: waku pids : {str(self.ps_pids)}')
-        self.docker_pids = self.ps_pids
+        self.docker_pids = self.ps_pids[:-1]
         for pid in self.docker_pids:
             get_shim_pid=((f'pstree -sg {pid} | '
                            f'head -n 1 | '
@@ -270,7 +273,9 @@ class MetricsCollector:
 
     # the signal handler: does not return
     def signal_handler(self, sig, frame):
-        log.info(f'Metrics: got signal: {sig}, cleaning up')
+        log.info(f'Metrics: got signal: {sig} @ {self.procfs_sample_cnt}, cleaning up...')
+        self.got_signal = True
+        time.sleep(self.procfs_sampling_interval)
         self.clean_up()
         sys.exit(0)
 
