@@ -139,6 +139,7 @@ def plot_figure_ex(msg_propagation_times, cpu_usage, memory_usage, network_usage
 
     G_LOGGER.info('Nodes analysis figure saved in %s' %figure_path)
 
+
 def plot_figure(msg_propagation_times, cpu_usage, memory_usage, bandwith_in, bandwith_out):
 
     fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(1, 5, figsize=(15, 10))
@@ -198,7 +199,8 @@ def prometheus_connect(prometheus_port=52118):
     except Exception as e:
         G_LOGGER.error('%s: %s' % (e.__doc__, e))
         return None
-    
+
+
 def fetch_cadvisor_stats_from_prometheus(prometheus, container_ip, start_ts, end_ts):
 
     metrics = prometheus.get_label_values("__name__")
@@ -401,7 +403,7 @@ def analyze_containers(topology, simulation_path):
     max_tss = -sys.maxsize - 1
     min_tss = sys.maxsize
 
-    print(topology["containers"])
+    # print(topology["containers"])
 
     for container_name, container_info in topology["containers"].items():
                 
@@ -623,11 +625,11 @@ def compute_process_level_metrics():
         max_cpu_usage.append(max(obj['CPUPercentage'] for obj in node_obj['samples']))
         max_memory_usage.append(max(obj['MemoryUsageMB'] for obj in node_obj['samples']))
         
-        # This accumulated 
-        total_network_usage['rx_mbytes'].append(sum(obj['NetStats']['all']['total_received'] for obj in node_obj['samples']) / (1024*1024))
-        total_network_usage['tx_mbytes'].append(sum(obj['NetStats']['all']['total_sent'] for obj in node_obj['samples']) / (1024*1024))
+        # Accumulated 
+        total_network_usage['rx_mbytes'].append(max(obj['NetStats']['all']['total_received'] for obj in node_obj['samples']) / (1024*1024))
+        total_network_usage['tx_mbytes'].append(max(obj['NetStats']['all']['total_sent'] for obj in node_obj['samples']) / (1024*1024))
 
-        # Peak values
+        # Accumulated
         max_disk_usage['disk_read_mbytes'].append(max(obj['DiskIORChar'] for obj in node_obj['samples']) / (1024*1024))
         max_disk_usage['disk_write_mbytes'].append(max(obj['DiskIOWChar'] for obj in node_obj['samples']) / (1024*1024))
     
