@@ -219,7 +219,6 @@ class MetricsCollector:
                 la = line.split("/")
                 docker_shim2name[la[0]] = la[1]
         for pid in self.docker_pids:
-            # TODO: add multinode support; the shim pid either dockers or process 1's
             get_shim_pid=((f'pstree -sg {pid} | '
                            f'head -n 1 | '
                            f'grep -Po "shim\([0-9]+\)---[a-z]+\(\K[^)]*"'
@@ -237,6 +236,7 @@ class MetricsCollector:
                     self.docker_id2veth[did] = self.host_if
                     self.docker_pid2veth[pid] = self.host_if
                     continue
+                #log.info(shim_pid, docker_shim2name[shim_pid])
                 self.docker_pid2name[pid] = docker_shim2name[shim_pid]
 
 
