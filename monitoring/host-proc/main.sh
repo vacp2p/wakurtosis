@@ -22,8 +22,11 @@ mkdir -p $odir
 dps=$odir/docker-ps.out
 docker ps --no-trunc --filter "ancestor=statusteam/nim-waku"  --filter "ancestor=gowaku" --filter "ancestor=statusteam/nim-waku:nwaku-trace2" --format "{{.ID}}#{{.Names}}#{{.Image}}#{{.Command}}#{{.State}}#{{.Status}}#{{.Ports}}" > $dps
 
+dids=$odir/docker-ids.out
+cut -f 1 -d '#' $dps > $dids
+
 dinspect=$odir/docker-inspect.out
-docker inspect --format "{{.State.Pid}}{{.Name}}/{{.Image}}/{{.State}}" $(docker ps -q) > $dinspect
+docker inspect --format "{{.State.Pid}}{{.Name}}/{{.Image}}/{{.State}}" $(cat $dids) > $dinspect
 
 pidlist=$odir/docker-pids.out
 ps -ef | grep -E "wakunode|waku" |grep -v docker | grep -v grep | awk '{print $2}' > $pidlist
@@ -33,17 +36,16 @@ cat /proc/meminfo > $odir/docker-meminfo.out
 
 id2veth=$odir/docker-id2veth.out
 :> $id2veth
-for container in $(docker ps --no-trunc | grep -E "gowaku|nim-waku|nim-waku:nwaku-trace2" | awk '{print $1}'); do
+for container in `cat $dids`; do
     iflink=`docker exec $container sh -c 'cat /sys/class/net/eth0/iflink' |  tr -d '\r'`
     veth=`grep -l $iflink /sys/class/net/veth*/ifindex | sed -e 's;^.*net/\(.*\)/ifindex$;\1;'`
     echo $container:$veth >> $id2veth
 done
 
-# TODO: add more images to grep
 dstats=$odir/docker-stats.out
 echo "Starting the docker monitor"
 echo '# docker stats --no-trunc --format  "{{.Container}} / {{.Name}} / {{.ID}} / {{.CPUPerc}} / {{.MemUsage}} / {{.MemPerc}} / {{.NetIO}} / {{.BlockIO}} / {{.PIDs}}"' > $dstats
-docker stats --no-trunc --format  "{{.Container}} / {{.Name}} / {{.ID}} / {{.CPUPerc}} / {{.MemUsage}} / {{.MemPerc}} / {{.NetIO}} / {{.BlockIO}} / {{.PIDs}}" | grep -E "gowaku|nim-waku|containers"  >> $dstats &
+docker stats --no-trunc --format  "{{.Container}} / {{.Name}} / {{.ID}} / {{.CPUPerc}} / {{.MemUsage}} / {{.MemPerc}} / {{.NetIO}} / {{.BlockIO}} / {{.PIDs}}" $(cat $dids)  >> $dstats &
 docker_pid=$!
 
 echo "Docker stat is at $docker_pid and running"
