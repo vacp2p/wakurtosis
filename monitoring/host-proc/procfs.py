@@ -1,4 +1,3 @@
-
 import os, sys, pathlib
 import threading, subprocess, signal
 
@@ -11,7 +10,7 @@ import typer
 import logging as log
 
 
-# TODO: return the CPU %s instead?
+# TODO: return the %CPU utilisation instead?
 # pulls system-wide jiffies
 def get_cpu_system(f):
     f.seek(0)
@@ -114,6 +113,7 @@ class MetricsCollector:
         cmdline = f'exec {cmd} > {fname}'
         subprocess.run(cmdline, shell=True)
 
+    # check if a wakunode/pid exists
     def pid_exists(self, pid):
         pid = int(pid)
         try:
@@ -181,13 +181,14 @@ class MetricsCollector:
     # add headers and schedule /proc reader's first read
     def launch_procfs_monitor(self, wls_cid):
         self.populate_file_handles()    # including procout_fname
-        self.procfs_fd.write((f'# procfs_sampling interval = {self.procfs_sampling_interval} : {len(self.docker_pids)}\n'))
+        self.procfs_fd.write((f'# procfs_sampling interval = {self.procfs_sampling_interval} : '
+                              f'{len(self.docker_pids)}\n'))
         self.procfs_fd.write(f'# {", ".join([f"{pid} = {self.docker_pid2id[pid]}" for pid in self.docker_pid2id])} : {len(self.docker_pid2id.keys())}\n')
         self.procfs_fd.write(f'# {", ".join([f"{pid} = {self.docker_pid2veth[pid]}" for pid in self.docker_pid2id])} : {len(self.docker_pid2veth.keys())}\n')
         log.info("Files handles populated")
         signal_wls = f'docker exec {wls_cid} touch /wls/start.signal'
         log.info("Signalling WLS")
-        self.build_and_exec(signal_wls, "/dev/null") # revisit once Jordi's branch is merge
+        self.build_and_exec(signal_wls, "/dev/null") # revisit once Jordi's branch is merged
         self.procfs_scheduler.enter(self.procfs_sampling_interval, 1,
                      self.procfs_reader, ())
         self.procfs_scheduler.run()
@@ -208,8 +209,8 @@ class MetricsCollector:
             self.ps_pids = f.read().strip().split("\n")
         #log.info(f'docker: waku pids : {str(self.ps_pids)}')
         self.docker_pids = [pid for pid in self.ps_pids if self.pid_exists(pid)]
-        log.info((f'{self.docker_pids}:{len(self.docker_pids)} <- '
-                    f'{self.ps_pids}:{len(self.ps_pids)}'))
+        #log.info((f'{self.docker_pids}:{len(self.docker_pids)} <- '
+        #            f'{self.ps_pids}:{len(self.ps_pids)}'))
         for pid in self.docker_pids:
             get_shim_pid=((f'pstree -sg {pid} | '
                            f'head -n 1 | '
