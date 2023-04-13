@@ -2,6 +2,7 @@
 import argparse
 import hashlib
 import random
+import os
 import sys
 import time
 import tomllib
@@ -186,6 +187,13 @@ def main():
     load_topics_into_topology(topology)
 
     random_emitters = get_random_emitters(topology, wls_config)
+
+    signal_file, t0 = '/wls/start.signal', time.time()
+    wls_logger.G_LOGGER.info('Waiting for the signal to start ...')
+    while not os.path.exists(signal_file):
+        time.sleep(5)
+    t1 = time.time()
+    wls_logger.G_LOGGER.info(f'Got the signal to start: took {t1-t0} secs')
 
     msgs_dict = start_traffic_injection(wls_config, random_emitters)
 
