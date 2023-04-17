@@ -56,7 +56,6 @@ def get_net2_metrics(f, veth="eth0"):
     res = f'InOctets {ra[7]} OutOctets {ra[8]}'
     return f'{veth} {res}'
 
-
 # pulls Rx/Tx Bytes per wakunode
 def get_net3_metrics(frx, ftx, veth="eth0"):
     frx.seek(0)
@@ -106,9 +105,11 @@ class MetricsCollector:
 
         self.host_if=os.environ["LOCAL_IF"]
 
-        # self.container_id = -1 self.container_name = -1 self.cpu_usage = -1
-        # self.mem_usage_abs = -1 self.mem_usage_perc = -1 self.net_sends = -1
-        # self.net_recvs = -1 self.block_reads = -1 self.block_writes = -1
+        # self.container_id = -1 self.container_name = -1 
+        # self.cpu_usage = -1
+        # self.mem_usage_abs = -1 self.mem_usage_perc = -1 
+        # self.net_sends = -1 self.net_recvs = -1 
+        # self.block_reads = -1 self.block_writes = -1
 
     # build, exec, and collect output
     def build_and_exec(self, cmd, fname):
@@ -205,7 +206,7 @@ class MetricsCollector:
                 self.docker_ids.append(l[0])
 
     # build the process pid to docker name map : will include non-docker wakunodes
-    def build_pid2name_n(self):
+    def build_pid2name(self):
         #self.ps_pids_fname = f'{OPREFIX}-{self.ps_pids_fname}.{OEXT}'
         with open(self.ps_pids_fname) as f:
             self.ps_pids = f.read().strip().split("\n")
@@ -213,20 +214,25 @@ class MetricsCollector:
         self.docker_pids = [pid for pid in self.ps_pids if self.pid_exists(pid)]
         #log.info((f'{self.docker_pids}:{len(self.docker_pids)} <- '
         #            f'{self.ps_pids}:{len(self.ps_pids)}'))
-        docker_shim2name = {}
+        docker_shimpid2name = {}
         with open(self.docker_inspect_fname) as f:
             for line in f:
                 la = line.split("/")
-                docker_shim2name[la[0]] = la[1]
+                docker_shimpid2name[la[0]] = la[1]
+        #log.debug(f'docker_shimpid2name - {docker_shimpid2name}')
         for pid in self.docker_pids:
-            get_shim_pid=((f'pstree -sg {pid} | '
-                           f'head -n 1 | '
-                           f'grep -Po "shim\([0-9]+\)---[a-z]+\(\K[^)]*"'
-                         ))
-            self.build_and_exec(get_shim_pid, f'shim-{pid}')
-            with open(f'shim-{pid}') as f:
-                shim_pid = f.read().strip()
-                os.remove(f'shim-{pid}')
+            get_shim_pid=f'pstree -sgA {pid}'
+            #get_shim_pid=((f'pstree -sgA {pid} | '
+            #               f'head -n 1 | '
+            #               f'grep -Po "shim\([0-9]+\)---[a-z]+\(\K[^)]*"'
+            #             ))
+            self.build_and_exec(get_shim_pid, f'pstree-{pid}')  # expensive?
+            with open(f'pstree-{pid}') as f:
+                pstree_line = f.readline().strip()
+                shim_str = pstree_line.split("shim")[1].split("wakunode")[1]
+                start, end  = shim_str.index('(') + 1, shim_str.index(')')
+                shim_pid = shim_str[start:end]
+                os.remove(f'pstree-{pid}')
                 if shim_pid == "":
                     dname = f'thundering_typhoons{pid}'
                     did = f'nondockerwakuPID{pid}'
@@ -236,8 +242,7 @@ class MetricsCollector:
                     self.docker_id2veth[did] = self.host_if
                     self.docker_pid2veth[pid] = self.host_if
                     continue
-                #log.info(shim_pid, docker_shim2name[shim_pid])
-                self.docker_pid2name[pid] = docker_shim2name[shim_pid]
+                self.docker_pid2name[pid] = docker_shimpid2name[shim_pid]
 
 
     # build the process pid to docker id map
@@ -257,7 +262,7 @@ class MetricsCollector:
     # build metadata for the runs: about docker, build name2id, pid2name and pid2id maps
     def process_metadata(self):
         self.populate_docker_name2id()
-        self.build_pid2name_n()
+        self.build_pid2name()
         log.info(f'docker: waku pids : {str(self.docker_pids)}')
         self.build_docker_pid2id()
         self.build_docker_pid2veth()
@@ -290,11 +295,13 @@ class MetricsCollector:
         self.clean_up()
         sys.exit(0)
 
+
 # ensure sampling_interval > 0
 def _sinterval_callback(ctx: typer, Context, sinterval: int):
     if sinterval <= 0 :
         raise ValueError(f"sampling_interval must be > 0")
     return sinterval
+
 
 # does not return
 def main(ctx: typer.Context,
