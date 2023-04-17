@@ -67,7 +67,21 @@ docker cp cgennet:/gennet/network_data ${dir}/config/topology_generated
 docker rm cgennet > /dev/null 2>&1
 ##################### END
 
-
+##################### HOST PROCFS MONITOR
+usr=`id -u`
+grp=`id -g`
+odir=./stats
+signal_fifo=/tmp/hostproc-signal.fifo   # do not create fifo under ./stats, or inside the repo
+if [ "$metrics_infra" = "host-proc" ];
+then
+    rclist=$odir/docker-rc-list.out
+    cd monitoring/host-proc
+    mkdir -p $odir
+    mkfifo $signal_fifo
+    sudo sh ./procfs.sh $rclist $odir $usr $grp $signal_fifo &
+    cd -
+fi
+##################### END
 
 ##################### KURTOSIS RUN
 # Create the new enclave and run the simulation
@@ -100,12 +114,12 @@ wls_cid="$service_name--$service_uuid"
 
 
 
-##################### HOST PROCFS MONITOR
+##################### HOST PROCFS MONITOR: EPILOGUE
 if [ "$metrics_infra" = "host-proc" ];
 then
     echo "Starting the /proc fs and docker stat measurements"
     cd monitoring/host-proc
-    sh ./main.sh $wls_cid &
+    sh ./main.sh  $wls_cid $odir $signal_fifo &
     cd -
 fi
 ##################### END
@@ -139,7 +153,8 @@ DIFF2=$(( $END2 - $END1 ))
 echo "Simulation took $DIFF1 + $DIFF2 = $(( $END2 - $START)) secs"
 ##################### END
 
-
+# give time for the messages to settle down before we collect logs
+sleep 60
 
 ##################### GATHER CONFIG, LOGS & METRICS
 # dump logs

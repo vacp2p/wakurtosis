@@ -1,8 +1,8 @@
 #!/bin/bash
 odir=./stats
 
-if [ "$#" -ne 1 ]; then
-    echo "Usage: monitor.sh <container_name>"
+if [ "$#" -ne 3 ]; then
+    echo "Usage: main.sh <container_name> <odir> <signal_fifo>"
     echo "Will profile all running containers until the <container_name> exits"
     exit
 fi
@@ -14,10 +14,16 @@ if [ "$cline" = "" ]; then
     exit
 fi
 
+echo "host-proc: begin the docker meta data collection"
+
 wait_cid=$1
+odir=${2:-"stats"}
+signal_fifo=${3:-"/tmp/hostproc-signal.fifo"}
 
-mkdir -p $odir
 
+#mkdir -p $odir
+
+echo "Gathering docker/process info..."
 # TODO: add more images to ancestor
 dps=$odir/docker-ps.out
 docker ps --no-trunc --filter "ancestor=statusteam/nim-waku"  --filter "ancestor=gowaku" --filter "ancestor=statusteam/nim-waku:nwaku-trace2" --format "{{.ID}}#{{.Names}}#{{.Image}}#{{.Command}}#{{.State}}#{{.Status}}#{{.Ports}}" > $dps
@@ -42,11 +48,13 @@ for container in `cat $dids`; do
     echo $container:$veth >> $id2veth
 done
 
+
+# will start collecting data *before* starting WLS so that we have an idle baseline
 dstats=$odir/docker-stats.out
 echo "Starting the docker monitor"
 echo '# docker stats --no-trunc --format  "{{.Container}} / {{.Name}} / {{.ID}} / {{.CPUPerc}} / {{.MemUsage}} / {{.MemPerc}} / {{.NetIO}} / {{.BlockIO}} / {{.PIDs}}"' > $dstats
 docker stats --no-trunc --format  "{{.Container}} / {{.Name}} / {{.ID}} / {{.CPUPerc}} / {{.MemUsage}} / {{.MemPerc}} / {{.NetIO}} / {{.BlockIO}} / {{.PIDs}}" $(cat $dids)  >> $dstats &
-docker_pid=$!
+dstats_pid=$!
 
 echo "Docker stat is at $docker_pid and running"
 
@@ -58,16 +66,19 @@ lif=`ip route get 1.1.1.1 | awk '{ print $5}'`
 
 rclist=$odir/docker-rc-list.out
 procout=$odir/docker-proc.out
-echo "export DPS_FNAME=$dps DINSPECT_FNAME=$dinspect PIDLIST_FNAME=$pidlist ID2VETH_FNAME=$id2veth PROCOUT_FNAME=$procout LOCAL_IF=$lif" >  $rclist
+echo "export DPS_FNAME=$dps DINSPECT_FNAME=$dinspect PIDLIST_FNAME=$pidlist ID2VETH_FNAME=$id2veth PROCOUT_FNAME=$procout LOCAL_IF=$lif WAIT_CID=$wait_cid DSTATS_PID=$dstats_pid" >  $rclist
+
+#signal the host-proc: unblocks /proc fs
+echo "host-proc: end the docker meta data collection\nSignalling the /proc fs" >  $signal_fifo
 
 # only /proc collector runs as root
 # TODO: only IO collector runs as root
 #sudo python3 ./procfs-stats.py  --sampling-interval 1 & $collector_pid=$! & docker wait $docker_id; kill -15  $collector_pid; kill -15 $docker_pid
 
-usr=`id -u`
-grp=`id -g`
+#usr=`id -u`
+#grp=`id -g`
 
-sudo sh ./procfs.sh $rclist $odir $wait_cid $usr $grp
+#sudo sh ./procfs.sh $rclist $odir $wait_cid $usr $grp
 #sh   -a ./monitor_procfs.sh $rclist $odir $wait_cid
-echo "Stopping the docker monitor $docker_pid"
-kill -15 $docker_pid
+#echo "Stopping the docker monitor $dstats_pid"
+#kill -15 $docker_pid
