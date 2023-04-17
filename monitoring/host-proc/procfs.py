@@ -1,5 +1,6 @@
 import os, sys, pathlib
 import threading, subprocess, signal
+from pathlib import Path
 
 from collections import defaultdict
 
@@ -91,9 +92,9 @@ class MetricsCollector:
         self.ps_pids_fname = os.environ["PIDLIST_FNAME"]
         self.ps_pids = []
 
-        self.docker_pid2veth_fname=os.environ["ID2VETH_FNAME"]
-        self.docker_id2veth={}
-        self.docker_pid2veth={}
+        self.docker_pid2veth_fname = os.environ["ID2VETH_FNAME"]
+        self.docker_id2veth = {}
+        self.docker_pid2veth = {}
 
         self.docker_pid2id = {}
 
@@ -103,7 +104,8 @@ class MetricsCollector:
         self.procfs_sample_cnt = 0
         self.got_signal = False
 
-        self.host_if=os.environ["LOCAL_IF"]
+        self.host_if = os.environ["LOCAL_IF"]
+        self.signal_fifo = os.environ["SIGNAL_FIFO"]
 
         # self.container_id = -1 self.container_name = -1 
         # self.cpu_usage = -1
@@ -191,7 +193,31 @@ class MetricsCollector:
         log.info("Files handles populated")
         signal_wls = f'docker exec {wls_cid} touch /wls/start.signal'
         log.info("Signalling WLS")
-        self.build_and_exec(signal_wls, "/dev/null") # revisit once Jordi's branch is merged
+        self.build_and_exec(signal_wls, "/dev/null") # revisit after Jordi's pending branch merge
+        log.info("Signalling dstats")
+        f = os.open(self.signal_fifo, os.O_WRONLY)
+        os.write(f, "host-proc: signal dstats\n".encode('utf-8'))
+        os.close(f)
+        self.procfs_scheduler.enter(self.procfs_sampling_interval, 1,
+                     self.procfs_reader, ())
+        self.procfs_scheduler.run()
+
+    # collect and record the basic info about the system and running dockers
+    def populate_docker_name2id(self):
+        #self.docker_ps_fname = f'{OPREFIX}-{docker_ps_fname}.{OEXT}'
+        with open(self.docker_ps_fname) as f:
+            for line in f:
+                l = line.split("#")
+                self.docker_name2id[l[1]] = l[0]
+                self.docker_ids.append(l[0])
+
+    # build the process pid to docker name map : will include non-docker wakunodes
+    def build_pid2name(self):
+        #self.ps_pids_fname = f'{OPREFIX}-{self.ps_pids_fname}.{OEXT}'
+        with open(self.ps_pids_fname) as f:
+            self.ps_pids = f.read().strip().split("\n")
+        #log.info(f'docker: waku pids : {str(self.ps_pids)}')
+        self.docker_pids = [pid for pid in self.ps_pids if self.pid_exists(pid)]
         self.procfs_scheduler.enter(self.procfs_sampling_interval, 1,
                      self.procfs_reader, ())
         self.procfs_scheduler.run()
@@ -311,6 +337,8 @@ def main(ctx: typer.Context,
             help="Specify the path for find the data files"),
         local_if: str = typer.Option("eth0",
             help="Specify the local interface to account non-docker nw stats"),
+        #signal_fifo: Path = typer.Option(
+        #    ..., exists=True, file_okay=True, dir_okay=False, writable=True, resolve_path=True),
         #container_size: int = typer.Option(1, callback=_csize_callback,
         #    help="Specify the number of wakunodes per container"),
         sampling_interval: int = typer.Option(1, callback=_sinterval_callback,

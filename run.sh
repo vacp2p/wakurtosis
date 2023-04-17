@@ -67,7 +67,9 @@ docker cp cgennet:/gennet/network_data ${dir}/config/topology_generated
 docker rm cgennet > /dev/null 2>&1
 ##################### END
 
-##################### HOST PROCFS MONITOR
+
+
+##################### HOST PROCFS MONITOR : PROLOGUE
 usr=`id -u`
 grp=`id -g`
 odir=./stats
@@ -78,10 +80,13 @@ then
     cd monitoring/host-proc
     mkdir -p $odir
     mkfifo $signal_fifo
+    chmod 0777 $signal_fifo
     sudo sh ./procfs.sh $rclist $odir $usr $grp $signal_fifo &
     cd -
 fi
 ##################### END
+
+
 
 ##################### KURTOSIS RUN
 # Create the new enclave and run the simulation
