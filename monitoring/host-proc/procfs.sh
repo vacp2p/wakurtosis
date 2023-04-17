@@ -18,6 +18,12 @@ export SIGNAL_FIFO=$signal_fifo
 
 #echo "export $DPS_FNAME $DINSPECT_FNAME $PIDLIST_FNAME $ID2VETH_FNAME $PROCOUT_FNAME $LOCAL_IF $WAIT_CID"
 
+
+# 10k * 10 /proc entries per process
+max_wakunodes=10000
+nfh=$((10*max_wakunodes))
+ulimit -n $nhf    # jack up the number of files handles for all the children
+
 echo "host-proc: starting the /proc fs monitor"
 python3 ./procfs.py --sampling-interval $sinterval --prefix $odir --wls-cid $WAIT_CID  > $proclog 2>&1 &
 procfs_pid=$!
