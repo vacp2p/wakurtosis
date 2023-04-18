@@ -57,15 +57,19 @@ echo "export DPS_FNAME=$dps DINSPECT_FNAME=$dinspect PIDLIST_FNAME=$pidlist ID2V
 
 #signal the host-proc: unblocks /proc fs
 echo "host-proc: collected all requisite docker/process meta-data\nSignalling the /proc fs"
-# *should* be non-blocking as attendant read is already issues
-echo "host:proc: signal /proc fs " >  $signal_fifo
+# *should* be non-blocking as attendant read is already issued
+echo "host-proc: signal /proc fs " >  $signal_fifo
 
 
-cat $signal_fifo  # blocks
-# will start collecting data *before* starting WLS so that we have an idle baseline
+# blocks
+cat $signal_fifo
 dstats=$odir/docker-stats.out
 echo "host-proc: starting the dstats monitor"
-echo '# docker stats --no-trunc --format  "{{.Container}} / {{.Name}} / {{.ID}} / {{.CPUPerc}} / {{.MemUsage}} / {{.MemPerc}} / {{.NetIO}} / {{.BlockIO}} / {{.PIDs}}"' > $dstats
+echo "# dstats started: $(date)" > $dstats
+echo "# images involed: $(docker images | grep waku | tr '\n' '; ' )"  >> $dstats
+echo '# docker stats --no-trunc --format  "{{.Container}} / {{.Name}} / {{.ID}} / {{.CPUPerc}} / {{.MemUsage}} / {{.MemPerc}} / {{.NetIO}} / {{.BlockIO}} / {{.PIDs}}"' >> $dstats
+# add date and the names/versions of waku images present
+
 docker stats --no-trunc --format  "{{.Container}} / {{.Name}} / {{.ID}} / {{.CPUPerc}} / {{.MemUsage}} / {{.MemPerc}} / {{.NetIO}} / {{.BlockIO}} / {{.PIDs}}" $(cat $dids)  >> $dstats &
 dstats_pid=$!
 
@@ -75,15 +79,3 @@ sleep 60        # make sure you collect the stats until last messages settle dow
 
 echo "host-proc: stopping the docker monitor $dstats_pid"
 kill -15 $dstats_pid
-
-# only /proc collector runs as root
-# TODO: only IO collector runs as root
-#sudo python3 ./procfs-stats.py  --sampling-interval 1 & $collector_pid=$! & docker wait $docker_id; kill -15  $collector_pid; kill -15 $docker_pid
-
-#usr=`id -u`
-#grp=`id -g`
-
-#sudo sh ./procfs.sh $rclist $odir $wait_cid $usr $grp
-#sh   -a ./monitor_procfs.sh $rclist $odir $wait_cid
-#echo "Stopping the docker monitor $dstats_pid"
-#kill -15 $docker_pid

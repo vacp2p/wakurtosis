@@ -134,7 +134,7 @@ class MetricsCollector:
             #        f'blkio.throttle.io_service_bytes'
             #     )) if self.csize == 1 else f'/proc/{pid}/io'
             self.pid2procfds[pid]["blk"] =  open(f'/proc/{pid}/io') # require SUDO
-        self.procfs_fd = open(self.procout_fname, "w")
+        self.procfs_fd = open(self.procout_fname, "a")
         t2 = time.time()
         log.info((f'Metrics: populate_file_handles: took {t2-t1:.5f} secs '
                   f'for 7 * {self.docker_npids} = {7*self.docker_npids} file handles'))

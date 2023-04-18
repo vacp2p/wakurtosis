@@ -24,6 +24,10 @@ max_wakunodes=10000
 nfh=$((10*max_wakunodes))
 ulimit -n $nhf    # jack-up the number of files handles for all the children
 
+# add date and the names/versions of waku images present
+echo "# /procfs started: $(date)" > $PROCOUT_FNAME
+echo "# /procfs images involved: $(docker images | grep waku | tr '\n' '; ' )"  >> $PROCOUT_FNAME
+
 echo "host-proc: starting the /proc fs monitor"
 python3 ./procfs.py --sampling-interval $sinterval --prefix $odir --wls-cid $WAIT_CID  > $proclog 2>&1 &
 procfs_pid=$!
