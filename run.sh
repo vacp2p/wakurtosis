@@ -68,8 +68,8 @@ docker cp gennet-container:/gennet/network_data ${dir}/config/topology_generated
 docker rm gennet-container > /dev/null 2>&1
 
 # Start process level monitoring (in background, will wait to WSL to be created)
-sudo -E python3 ./monitoring/monitor.py &
-monitor_pid=$!
+#sudo -E python3 ./monitoring/monitor.py &
+#monitor_pid=$!
 
 # Create the new enclave and run the simulation
 jobs=$(cat config/${wakurtosis_config_file} | jq -r ".kurtosis.jobs")
@@ -119,16 +119,16 @@ docker cp "$cid:/wls/messages.json" "./${enclave_name}_logs"
 docker cp "$cid:/wls/network_topology/network_data.json" "./${enclave_name}_logs"
 
 # Wait for metrics to finish
-echo -e "Waiting monitoring to finish ..."
-wait $monitor_pid
+#echo -e "Waiting monitoring to finish ..."
+#wait $monitor_pid
 
 # Run process level analysis
 python3 analysis.py 
 echo -e "Analysis results in ./${enclave_name}_logs"
 
 # Stop and delete the enclave
-echo "Stopping and destrying enclave $enclave_name ..."
-kurtosis enclave stop $enclave_name > /dev/null 2>&1
-kurtosis enclave rm -f $enclave_name > /dev/null 2>&1
+# echo "Stopping and destrying enclave $enclave_name ..."
+# kurtosis enclave stop $enclave_name > /dev/null 2>&1
+# kurtosis enclave rm -f $enclave_name > /dev/null 2>&1
 
 echo "Done."

@@ -27,6 +27,10 @@ def get_relay_line_info(log_line):
     return msg_topics, msg_topic, msg_hash, msg_peer_id
 
 
+def compute_injection_times(injected_msgs_dict):
+    return [msg['injection_time'] for msg in injected_msgs_dict.values() if msg['status'] == 200]
+
+
 def analyze_published(log_line, node_logs, msgs_dict, msg_publishTime):
     msg_topics, msg_topic, msg_hash, msg_peer_id = get_relay_line_info(log_line)
 

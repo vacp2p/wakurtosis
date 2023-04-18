@@ -13,7 +13,7 @@ from src import plotting
 
 if __name__ == "__main__":
     """ Parse args """
-    simulation_path, tomls_folder = arg_parser.parse_args()
+    simulation_path, tomls_folder, prom_port = arg_parser.parse_args()
 
     """ Load Topics Structure """
     topology_info = topology.load_topology(simulation_path + vars.G_TOPOLOGY_FILE_NAME)
@@ -32,11 +32,15 @@ if __name__ == "__main__":
     analysis.compute_message_delivery(msgs_dict, injected_msgs_dict)
     analysis.compute_message_latencies(msgs_dict)
     msg_propagation_times = analysis.compute_propagation_times(msgs_dict)
+    msg_injection_times = analysis.compute_injection_times(injected_msgs_dict)
+
     cpu_usage, memory_usage, bandwith_in, bandwith_out = prometheus.get_hardware_metrics(
         topology_info,
-        node_logs,
         min_tss,
-        max_tss)
+        max_tss, prom_port)
+
+    total_network_usage = {'rx_mbytes': bandwith_in, 'tx_mbytes': bandwith_out}
+    # plotting.plot_figure_ex(msg_propagation_times, cpu_usage, memory_usage, total_network_usage)
 
     """ Generate Figure """
     plotting.plot_figure(msg_propagation_times, cpu_usage, memory_usage, bandwith_in, bandwith_out)

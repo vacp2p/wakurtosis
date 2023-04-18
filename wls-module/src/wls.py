@@ -184,9 +184,9 @@ async def main():
     random_emitters = get_random_emitters(topology, wls_config)
 
     # Wait for signal to start
-    while not os.path.exists('/wls/start.signal'):
-        wls_logger.G_LOGGER.info('Waiting for signal to start ...')
-        asyncio.sleep(1)
+    # while not os.path.exists('/wls/start.signal'):
+    #     wls_logger.G_LOGGER.info('Waiting for signal to start ...')
+    #     asyncio.sleep(1)
 
     # Start the siulation
     msgs_dict = await start_traffic_injection_async(wls_config, random_emitters)
