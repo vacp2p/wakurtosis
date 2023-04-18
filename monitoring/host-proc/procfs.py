@@ -1,4 +1,4 @@
-import os, sys, pathlib
+import os, sys, pathlib, resource
 import threading, subprocess, signal
 from pathlib import Path
 
@@ -9,8 +9,6 @@ import sched, time
 import typer
 
 import logging as log
-
-import resource
 
 
 # TODO: return the %CPU utilisation instead?
@@ -82,24 +80,20 @@ class MetricsCollector:
         self.procfs_sampling_interval = sampling_interval
         self.pid2procfds = defaultdict(dict)
 
-        self.docker_pids = []
-        self.docker_npids = len(self.docker_pids)
-        self.docker_pid2name = {}
 
         self.docker_ps_fname =  os.environ["DPS_FNAME"]
-        self.docker_ids = []
-        self.docker_name2id = {}
-
         self.docker_inspect_fname =  os.environ["DINSPECT_FNAME"]
-
         self.ps_pids_fname = os.environ["PIDLIST_FNAME"]
+        self.docker_pid2veth_fname = os.environ["ID2VETH_FNAME"]
+        #self.docker_dids = []
+
+        self.docker_pids = []
+        self.docker_npids = len(self.docker_pids)
         self.ps_pids = []
 
-        self.docker_pid2veth_fname = os.environ["ID2VETH_FNAME"]
-        self.docker_id2veth = {}
-        self.docker_pid2veth = {}
-
-        self.docker_pid2id = {}
+        self.did2veth = {}
+        self.pid2veth = {}
+        self.pid2did = {}
 
         self.procout_fname = os.environ["PROCOUT_FNAME"]
         self.procfs_fd = ""
@@ -111,17 +105,6 @@ class MetricsCollector:
         self.signal_fifo = os.environ["SIGNAL_FIFO"]
 
         self.last_tstamp = 0
-
-        # self.container_id = -1 self.container_name = -1 
-        # self.cpu_usage = -1
-        # self.mem_usage_abs = -1 self.mem_usage_perc = -1 
-        # self.net_sends = -1 self.net_recvs = -1 
-        # self.block_reads = -1 self.block_writes = -1
-
-    # build, exec, and collect output
-    def build_and_exec(self, cmd, fname):
-        cmdline = f'exec {cmd} > {fname}'
-        subprocess.run(cmdline, shell=True)
 
     # check if a wakunode/pid exists
     def pid_exists(self, pid):
@@ -135,8 +118,8 @@ class MetricsCollector:
 
     # open the /proc files ahead to save up parsing, lookup, fd alloc etc.
     def populate_file_handles(self):
-        assert self.docker_pid2name != {} and self.docker_name2id != {} and self.docker_pid2id != {}
-        # number of waku nodes * 10 filehandles
+        # up the ulimit -n = number of waku nodes * 10 filehandles
+        t1 = time.time()
         resource.setrlimit(resource.RLIMIT_NOFILE, (self.docker_npids*10, self.docker_npids*10))
         self.pid2procfds[0]["cpu"] =  open(f'/proc/stat')
         for pid in self.docker_pids:
@@ -144,14 +127,17 @@ class MetricsCollector:
             self.pid2procfds[pid]["mem"] =  open(f'/proc/{pid}/status')
             self.pid2procfds[pid]["net1"] =  open(f'/proc/{pid}/net/dev')
             self.pid2procfds[pid]["net2"] =  open(f'/proc/{pid}/net/netstat')
-            self.pid2procfds[pid]["net3rx"] =  open(f'/sys/class/net/{self.docker_pid2veth[pid]}/statistics/rx_bytes')
-            self.pid2procfds[pid]["net3tx"] =  open(f'/sys/class/net/{self.docker_pid2veth[pid]}/statistics/tx_bytes')
+            self.pid2procfds[pid]["net3rx"] =  open(f'/sys/class/net/{self.pid2veth[pid]}/statistics/rx_bytes')
+            self.pid2procfds[pid]["net3tx"] =  open(f'/sys/class/net/{self.pid2veth[pid]}/statistics/tx_bytes')
             #blk = ((f'/sys/fs/cgroup/blkio/docker'
-            #        f'/{self.docker_pid2id[pid]}/'
+            #        f'/{self.pid2did[pid]}/'
             #        f'blkio.throttle.io_service_bytes'
             #     )) if self.csize == 1 else f'/proc/{pid}/io'
             self.pid2procfds[pid]["blk"] =  open(f'/proc/{pid}/io') # require SUDO
         self.procfs_fd = open(self.procout_fname, "w")
+        t2 = time.time()
+        log.info((f'Metrics: populate_file_handles: took {t2-t1:.5f} secs '
+                  f'for 7 * {self.docker_npids} = {7*self.docker_npids} file handles'))
 
     # close all the opened file handles
     def teardown_file_handles(self):
@@ -166,14 +152,14 @@ class MetricsCollector:
             self.pid2procfds[pid]["blk"].close()
         self.procfs_fd.close()
 
-    # the /proc reader : this is is in fast path
-    def procfs_reader(self):
+    # the /proc reader : the fast path
+    def procfs_collector(self):
         for pid in self.docker_pids:
-            veth = self.docker_pid2veth[pid]
+            veth = self.pid2veth[pid]
             sys_stat = get_cpu_system(self.pid2procfds[0]["cpu"])
             stat = get_cpu_process(self.pid2procfds[pid]["cpu"])
             mem = get_mem_metrics(self.pid2procfds[pid]["mem"])
-            net1 = get_net1_metrics(self.pid2procfds[pid]["net1"], self.host_if) # eth0 'in' docker?
+            net1 = get_net1_metrics(self.pid2procfds[pid]["net1"], self.host_if)
             net2 = get_net2_metrics(self.pid2procfds[pid]["net2"], veth) # SNMP MIB
             net3 = get_net3_metrics(self.pid2procfds[pid]["net3rx"],
                     self.pid2procfds[pid]["net3tx"], veth) # sysfs/cgroup stats
@@ -185,130 +171,85 @@ class MetricsCollector:
                   )
             self.procfs_fd.write(str(out))
         self.procfs_sample_cnt += 1     # schedule the next event ASAP
-        if not self.got_signal: # could be xpensive : branch
-            self.procfs_scheduler.enter(self.procfs_sampling_interval, 1, self.procfs_reader, ())
-        if not self.procfs_sample_cnt % 50: # could be xpensive : branch + mod
+        if not self.got_signal: # could be xpensive for n > 1000 : branch
+            self.procfs_scheduler.enter(self.procfs_sampling_interval, 1, self.procfs_collector, ())
+        if not self.procfs_sample_cnt % 50: # could be xpensive for n > 1000 : branch + mod
             tstamp = time.time()
+            n = self.docker_npids
             elapsed = tstamp - self.last_tstamp
-            log.info((f'Metrics: procfs_reader: collected {self.procfs_sample_cnt}: '
-                      f' mean for each round (of {self.docker_npids}) is ~ {elapsed/50} secs'))
+            log.info((f'Metrics: sample cnt {self.procfs_sample_cnt}: '
+                f'avg duration per sample (of {n} wakunodes) is ~ {elapsed/50:.5f} secs'))
             self.last_tstamp = tstamp
 
     # add headers and schedule /proc reader's first read
     def launch_procfs_monitor(self, wls_cid):
         t1 = time.time()
         self.populate_file_handles()    # including procout_fname
-        t2 = time.time()
-        n = self.docker_npids
-        log.info(f'Metrics: took {t2-t1} secs to populate 7 * {n} = {7*n} file handles')
         self.procfs_fd.write((f'# procfs_sampling interval = {self.procfs_sampling_interval} : '
                               f'{len(self.docker_pids)}\n'))
-        self.procfs_fd.write(f'# {", ".join([f"{pid} = {self.docker_pid2id[pid]}" for pid in self.docker_pid2id])} : {len(self.docker_pid2id.keys())}\n')
-        self.procfs_fd.write(f'# {", ".join([f"{pid} = {self.docker_pid2veth[pid]}" for pid in self.docker_pid2id])} : {len(self.docker_pid2veth.keys())}\n')
-        signal_wls = f'docker exec {wls_cid} touch /wls/start.signal'
+        self.procfs_fd.write(f'# {", ".join([f"{pid} = {self.pid2did[pid]}" for pid in self.pid2did])} : {len(self.pid2did.keys())}\n')
+        self.procfs_fd.write(f'# {", ".join([f"{pid} = {self.pid2veth[pid]}" for pid in self.pid2did])} : {len(self.pid2veth.keys())}\n')
         log.info("Metrics: launch_procfs_monitor: signalling WLS")
-        self.build_and_exec(signal_wls, "/dev/null") # revisit after Jordi's pending branch merge
+        signal_wls = f'docker exec {wls_cid} touch /wls/start.signal'
+        subprocess.run(signal_wls, shell=True) # revisit after Jordi's pending branch merge
         log.info("Metrics: launch_procfs_monitor: signalling dstats")
         f = os.open(self.signal_fifo, os.O_WRONLY)
         os.write(f, "host-proc: signal dstats\n".encode('utf-8'))
         os.close(f)
         self.last_tstamp = time.time()
         self.procfs_scheduler.enter(self.procfs_sampling_interval, 1,
-                     self.procfs_reader, ())
+                     self.procfs_collector, ())
         self.procfs_scheduler.run()
 
-    # collect and record the basic info about the system and running dockers
-    def populate_docker_name2id(self):
-        #self.docker_ps_fname = f'{OPREFIX}-{docker_ps_fname}.{OEXT}'
-        with open(self.docker_ps_fname) as f:
-            for line in f:
-                l = line.split("#")
-                self.docker_name2id[l[1]] = l[0]
-                self.docker_ids.append(l[0])
-
-
-    # build the process pid to docker name map : will include non-docker wakunodes
-    def build_pid2name(self):
-        #self.ps_pids_fname = f'{OPREFIX}-{self.ps_pids_fname}.{OEXT}'
+    # build the host pid to docker id map : will include non-docker wakunodes
+    def build_pid2did(self):
         with open(self.ps_pids_fname) as f:
             self.ps_pids = f.read().strip().split("\n")
-        #log.info(f'docker: waku pids : {str(self.ps_pids)}')
         self.docker_pids = [pid for pid in self.ps_pids if self.pid_exists(pid)]
         self.docker_npids = len(self.docker_pids)
-        #log.info((f'{self.docker_pids}:{len(self.docker_pids)} <- '
+        #log.debug((f'{self.docker_pids}:{len(self.docker_pids)} <- '
         #            f'{self.ps_pids}:{len(self.ps_pids)}'))
-        docker_shimpid2name = {}
-        with open(self.docker_inspect_fname) as f:
-            for line in f:
-                la = line.split("/")
-                docker_shimpid2name[la[0]] = la[1]
-        #log.debug(f'docker_shimpid2name - {docker_shimpid2name}')
         for pid in self.docker_pids:
-            get_shim_pid=f'pstree -sgA {pid}'
-            #get_shim_pid=((f'pstree -sgA {pid} | '
-            #               f'head -n 1 | '
-            #               f'grep -Po "shim\([0-9]+\)---[a-z]+\(\K[^)]*"'
-            #             ))
-            self.build_and_exec(get_shim_pid, f'pstree-{pid}')  # expensive?
-            with open(f'pstree-{pid}') as f:
-                pstree_line = f.readline().strip()
-                shim_str = pstree_line.split("shim")[1].split("wakunode")[1]
-                start, end  = shim_str.index('(') + 1, shim_str.index(')')
-                shim_pid = shim_str[start:end]
-                os.remove(f'pstree-{pid}')
-                if shim_pid == "":
-                    dname = f'thundering_typhoons{pid}'
-                    did = f'nondockerwakuPID{pid}'
-                    self.docker_pid2name[pid] = dname
-                    self.docker_name2id[dname] = did
-                    self.docker_pid2id[pid] = did
-                    self.docker_id2veth[did] = self.host_if
-                    self.docker_pid2veth[pid] = self.host_if
-                    continue
-                self.docker_pid2name[pid] = docker_shimpid2name[shim_pid]
+            did = ""
+            # TODO: may be re-assert that these pids are waku's?
+            with open(f'/proc/{pid}/mountinfo') as f: # or /proc/{pid}/cgroup
+                line = f.readline()
+                while line:
+                    if '/docker/containers/' in line:
+                        did = line.split('/docker/containers/')[1]
+                        did = did.split('/')[0]
+                        break
+                    line = f.readline()
+            if did == "":
+                did = f'nondockerwakuPID{pid}'
+                self.pid2did[pid] = did
+                self.did2veth[did] = self.host_if
+                self.pid2veth[pid] = self.host_if
+                continue
+            self.pid2did[pid] = did
 
-
-    # build the process pid to docker id map
-    def build_docker_pid2id(self):
-        self.docker_pid2id = {pid :
-                self.docker_name2id[self.docker_pid2name[pid]] for pid in self.docker_pids}
-
-    # build the pid to host side veth pair map
-    def build_docker_pid2veth(self):
+    # build the host pid to host side veth pair map
+    def build_pid2veth(self):
         with open(self.docker_pid2veth_fname) as f:
             for line in f.readlines():
                 la = line.strip().split(":")
-                self.docker_id2veth[la[0]]=la[1]
-        self.docker_pid2veth = {pid :
-                self.docker_id2veth[self.docker_pid2id[pid]] for pid in self.docker_pids}
+                self.did2veth[la[0]]=la[1]
+        self.pid2veth = {pid : self.did2veth[self.pid2did[pid]] for pid in self.docker_pids}
 
-    # build metadata for the runs: about docker, build name2id, pid2name and pid2id maps
+    # build metadata for the runs: pid2did, did2veth, pid2veth
     def process_metadata(self):
         t1 = time.time()
-        self.populate_docker_name2id()
+        self.build_pid2did()
         t2 = time.time()
-        log.info(f'Metrics: process_metadata: name2id took {t2-t1} secs')
-        self.build_pid2name()
+        self.build_pid2veth()
         t3 = time.time()
-        log.info(f'Metrics: process_metadata: pid2name took {t3-t2} secs')
-        n = len(self.docker_pids)
-        log.info(f'Metrics: process_metadata: waku pids : {n} : {str(self.docker_pids)}')
-        self.build_docker_pid2id()
-        t4 = time.time()
-        log.info(f'Metrics: process_metadata: pid2id took {t4-t3} secs')
-        self.build_docker_pid2veth()
-        t5 = time.time()
-        log.info(f'Metrics: process_metadata: took {t5-t1} secs')
+        log.info(f'Metrics: process_metadata: pid2did = {t2-t1:.5f} secs, pid2veth = {t3-t2:0.5f} secs')
+        log.info(f'Metrics: process_metadata: took {t3-t1:.5f} secs')
 
     # after metadata is collected, create the threads and launch data collection
     def spin_up(self, wls_cid):
         log.info("Metrics: spin_up: starting the procfs monitor...")
         self.launch_procfs_monitor(wls_cid)
-
-    # kill docker stats : always kill, never TERM/QUIT/INT
-    def terminate_docker_stats(self):
-        log.info(f'Stopping docker monitor : {self.docker_stats_pid}, {self.docker_stats_fname}')
-        os.kill(self.docker_stats_pid, signal.SIGKILL) # do not use TERM/QUIT/INT
 
     # the cleanup: close the file handles and kill the docker
     def clean_up(self):
@@ -331,7 +272,7 @@ class MetricsCollector:
 
 # ensure sampling_interval > 0
 def _sinterval_callback(ctx: typer, Context, sinterval: int):
-    if sinterval <= 0 :
+    if sinterval <= 0:
         raise ValueError(f"sampling_interval must be > 0")
     return sinterval
 
@@ -363,20 +304,15 @@ def main(ctx: typer.Context,
     log.info("Metrics: processing system and container metadata...")
     metrics.process_metadata()
 
+    num_wakus = len(metrics.docker_pids)
+    log.info(f'Metrics: total waku nodes present: {num_wakus}')
+    log.debug(f'Metrics: waku pids: {num_wakus}: {metrics.docker_pids}')
+
     log.info("Metrics: registering signal handlers...")
     metrics.register_signal_handlers()
 
     log.info("Metrics: starting the data collection")
     metrics.spin_up(wls_cid)
-
-    # get sim time info from config.json? or  ioctl/select from WLS? or docker wait?
-    #time.sleep(metrics.procfs_sampling_interval * 15)
-
-
-    #log.info("Metrics : Clean up")
-    #metrics.clean_up()
-
-    #log.info("Metrics : All done")
 
 
 if __name__ == "__main__":

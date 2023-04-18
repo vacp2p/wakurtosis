@@ -9,7 +9,7 @@ sinterval=1
 proclog=$odir/docker-proc-log.out
 
 # blocks until signalled
-echo "host-proc: waiting to be signalled @ $signal_fifo: /proc fs monitor"
+echo "host-proc: /proc fs monitor : waiting on $signal_fifo"
 cat  $signal_fifo
 
 export SIGNAL_FIFO=$signal_fifo
