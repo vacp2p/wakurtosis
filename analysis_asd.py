@@ -139,6 +139,97 @@ def plot_figure_ex(msg_propagation_times, cpu_usage, memory_usage, network_usage
 
     G_LOGGER.info('Nodes analysis figure saved in %s' %figure_path)
 
+
+def plot_stats(msg_propagation_times, cpu_usage, memory_usage, network_usage, disk_usage, injection_times, simulation_summary, simulation_config):
+
+    def style_violin(parts, ax):
+
+        # Change the extrema lines to dashed grey lines
+        for line in parts['cmaxes'].get_segments() + parts['cmins'].get_segments():
+            line_obj = plt.Line2D(line[:, 0], line[:, 1], color='grey', linestyle='dashed', linewidth=0.5)
+            ax.add_line(line_obj)
+
+        # Remove the original extrema lines
+        parts['cmaxes'].set_visible(False)
+        parts['cmins'].set_visible(False)
+
+        # Change the vertical lines to dashed grey lines
+        for line in parts['cbars'].get_segments():
+            line_obj = plt.Line2D(line[:, 0], line[:, 1], color='grey', linestyle='dashed', linewidth=0.5)
+            ax.add_line(line_obj)
+
+        # Remove the original vertical lines
+        parts['cbars'].set_visible(False)
+
+        cmean_colors = parts['cmeans'].get_color()
+        colors = [cmean_colors[0],'red',cmean_colors[0],cmean_colors[0]]
+        parts['cmeans'].set_color(colors)
+
+        # loop over the paths of the mean lines
+        xy = [[l.vertices[:,0].mean(),l.vertices[0,1]] for l in parts['cmeans'].get_paths()]
+        xy = np.array(xy)
+        ax.scatter(xy[:,0], xy[:,1],s=25, c="crimson", marker="o", zorder=3)
+
+        # make lines invisible
+        parts['cmeans'].set_visible(False)
+
+    fig, ((ax1, ax2, ax3), (ax4, ax5, ax6)) = plt.subplots(2, 3, figsize=(15, 15))
+
+    parts = ax1.violinplot(msg_propagation_times, showmeans=True)
+    ax1.set_title('Popagation Time (per message)')
+    ax1.set_ylabel('Propagation Time (ms)')
+    ax1.spines[['right', 'top']].set_visible(False)
+    ax1.axes.xaxis.set_visible(False)
+    style_violin(parts, ax1)
+
+    parts = ax2.violinplot(cpu_usage, showmeans=True)
+    ax2.set_title('Peak CPU Usage (per node)')
+    ax2.set_ylabel('CPU Usage (%)')
+    ax2.spines[['right', 'top']].set_visible(False)
+    ax2.axes.xaxis.set_visible(False)
+    style_violin(parts, ax2)
+
+    parts = ax3.violinplot(memory_usage, showmeans=True)
+    ax3.set_title('Peak Memory Usage (per node)')
+    ax3.set_ylabel('Memory (MBytes)')
+    ax3.spines[['right', 'top']].set_visible(False)
+    ax3.axes.xaxis.set_visible(False)
+    style_violin(parts, ax3)
+
+    parts = ax4.violinplot([network_usage['rx_mbytes'], network_usage['tx_mbytes']], showmeans=True)
+    ax4.set_title('Total Netowrk IO (per node)')
+    ax4.set_ylabel('Bandwidth (MBytes)')
+    ax4.spines[['right', 'top']].set_visible(False)
+    ax4.set_xticks([1, 2])
+    ax4.set_xticklabels(['Received (Rx)', 'Sent (Tx)'])
+    style_violin(parts, ax4)
+
+    parts = ax5.violinplot(injection_times, showmeans=True)
+    ax5.set_title('Injection Time (per message)')
+    ax5.set_ylabel('Milliseconds (ms)')
+    ax5.spines[['right', 'top']].set_visible(False)
+    ax5.axes.xaxis.set_visible(False)
+    style_violin(parts, ax5)
+
+    parts = ax6.violinplot([disk_usage['disk_read_mbytes'], disk_usage['disk_write_mbytes']], showmeans=True)
+    ax6.set_title('Peak Disk IO (per node)')
+    ax6.set_ylabel('Disk IO (MBytes)')
+    ax6.spines[['right', 'top']].set_visible(False)
+    ax6.set_xticks([1, 2])
+    ax6.set_xticklabels(['Read', 'Write'])
+    style_violin(parts, ax6)
+
+    fig.suptitle('Wakurtosis Simulation Analysis \n(%d nodes, %d topic(s), Rate: %d msg/s, Time: %.2f s. Sampling Rate: %.2f samples/s.)\n' %(simulation_summary['num_nodes'], \
+    simulation_summary['num_topics'], simulation_config['wsl']['message_rate'], simulation_summary['simulation_time_ms'] / 1000.0, \
+    simulation_summary['metrics']['esr']), fontsize=20)
+
+    plt.tight_layout()
+
+    figure_path = G_DEFAULT_NODES_FIG_FILENAME
+    plt.savefig(figure_path, format="pdf", bbox_inches="tight")
+
+    G_LOGGER.info('Nodes analysis figure saved in %s' %figure_path)
+
 def plot_figure(msg_propagation_times, cpu_usage, memory_usage, bandwith_in, bandwith_out):
 
     fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(1, 5, figsize=(15, 10))
@@ -186,8 +277,7 @@ def plot_figure(msg_propagation_times, cpu_usage, memory_usage, bandwith_in, ban
     G_LOGGER.info('Figure saved in %s' %figure_path)
 
 
-def fetch_cadvisor_stats_from_prometheus(container_ip, start_ts, end_ts, prometheus_port=52118):
-
+def connect_to_prometheus():
     prometheus = subprocess.check_output("kurtosis enclave inspect wakurtosis | grep '\\<prometheus\\>' | awk '{print $6}'", shell=True)
     url = f'http://{prometheus[:-1].decode("utf-8") }'
 
@@ -198,6 +288,11 @@ def fetch_cadvisor_stats_from_prometheus(container_ip, start_ts, end_ts, prometh
     except Exception as e:
         G_LOGGER.error('%s: %s' % (e.__doc__, e))
         return None
+
+    return prometheus
+
+
+def fetch_cadvisor_stats_from_prometheus(prometheus, container_ip, start_ts, end_ts):
 
     metrics = prometheus.get_label_values("__name__")
     # print(metrics)
@@ -210,7 +305,7 @@ def fetch_cadvisor_stats_from_prometheus(container_ip, start_ts, end_ts, prometh
     cpu = prometheus.custom_query_range(f"container_cpu_load_average_10s{{{kurtosis_ip_template} "
                                         f"= '{container_ip}'}}", start_time=start_timestamp,
                                         end_time=end_timestamp, step="1s")
-    cpu = [int(cpu[0]['values'][i][1]) for i in range(len(cpu[0]['values']))]
+    cpu = [float(cpu[0]['values'][i][1]) for i in range(len(cpu[0]['values']))]
 
     mem = prometheus.custom_query_range(f"container_memory_usage_bytes{{{kurtosis_ip_template} "
                                         f"= '{container_ip}'}}", start_time=start_timestamp,
@@ -471,13 +566,15 @@ def get_hardware_metrics(topology, node_logs, min_tss, max_tss):
     bandwith_out = []
     node_container_ips = [info["kurtosis_ip"] for info in topology["containers"].values()]
     pbar = tqdm(node_container_ips)
-    
+
+    prometheus = connect_to_prometheus()
+
     for container_ip in pbar:
         
         pbar.set_description(f'Fetching hardware stats from container {container_ip}')
         
         try:
-            container_stats = fetch_cadvisor_stats_from_prometheus(container_ip, min_tss, max_tss)
+            container_stats = fetch_cadvisor_stats_from_prometheus(prometheus, container_ip, min_tss, max_tss)
         except Exception as e:
             G_LOGGER.error('%s: %s' % (e.__doc__, e))
             continue 
@@ -627,6 +724,10 @@ def compute_process_level_metrics():
    
     return metrics_info, max_cpu_usage, max_memory_usage, total_network_usage, max_disk_usage, avg_samples_per_node
 
+# todo change timestamps
+# todo cpu load zero
+# todo merge branch
+
 
 def main():
 
@@ -656,7 +757,10 @@ def main():
     cpu_usage, memory_usage, bandwith_in, bandwith_out = get_hardware_metrics(topology, node_logs, min_tss, max_tss)
 
     # Generate Figure
-    plot_figure(msg_propagation_times, cpu_usage, memory_usage, bandwith_in, bandwith_out)
+    # plot_figure(msg_propagation_times, cpu_usage, memory_usage, bandwith_in, bandwith_out)
+    total_network_usage = {'rx_mbytes' : bandwith_in, 'tx_mbytes' : bandwith_out}
+    plot_figure_ex(msg_propagation_times, cpu_usage, memory_usage, total_network_usage, max_disk_usage,
+                   msg_injection_times, summary['general'], summary['parameters'])
     # Pull metrics from process level monitoring
     if os.path.exists(G_DEFAULT_METRICS_FILENAME):
         metrics_info, max_cpu_usage, max_memory_usage, total_network_usage, max_disk_usage, avg_samples_per_node = compute_process_level_metrics()
