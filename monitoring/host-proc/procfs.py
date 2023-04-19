@@ -1,14 +1,18 @@
-import os, sys, pathlib, resource
-import threading, subprocess, signal
-from pathlib import Path
-
-from collections import defaultdict
-
-#from procfs import Proc
-import sched, time
+import os
+import sys
+import pathlib
+import resource
+import threading
+import subprocess
+import signal
+import sched
+import time
 import typer
 
 import logging as log
+from pathlib import Path
+#from procfs import Proc
+from collections import defaultdict
 
 
 # TODO: return the %CPU utilisation instead?
@@ -45,7 +49,7 @@ def get_net1_metrics(f, host_if):
     if out == []:
         out = [line.strip().split() for line in rbuff if host_if in line]     # host
     out = out[0]
-    res = f'{out[0]} RxBytes {out[1]} RxPackers {out[2]} TxBytes {out[9]} TxPackets {out[10]}'
+    res = f'{out[0]} RxBytes {out[1]} RxPackets {out[2]} TxBytes {out[9]} TxPackets {out[10]}'
     return res
 
 # TODO: reconcile with net1 and net3
@@ -105,6 +109,7 @@ class MetricsCollector:
         self.signal_fifo = os.environ["SIGNAL_FIFO"]
 
         self.last_tstamp = 0
+        self.start_time = 0
 
     # check if a wakunode/pid exists
     def pid_exists(self, pid):
@@ -136,7 +141,7 @@ class MetricsCollector:
             self.pid2procfds[pid]["blk"] =  open(f'/proc/{pid}/io') # require SUDO
         self.procfs_fd = open(self.procout_fname, "a")
         t2 = time.time()
-        log.info((f'Metrics: populate_file_handles: took {t2-t1:.5f} secs '
+        log.info((f'Metrics: populate_file_handles took {t2-t1:.5f} secs '
                   f'for 7 * {self.docker_npids} = {7*self.docker_npids} file handles'))
 
     # close all the opened file handles
@@ -177,8 +182,9 @@ class MetricsCollector:
             tstamp = time.time()
             n = self.docker_npids
             elapsed = tstamp - self.last_tstamp
-            log.info((f'Metrics: sample cnt {self.procfs_sample_cnt}: '
-                f'avg duration per sample (of {n} wakunodes) is ~ {elapsed/50:.5f} secs'))
+            log.info((f'Metrics: sample cnt = {self.procfs_sample_cnt}: '
+                f'time took per sample (of {n} wakunodes) ~ '
+                f'{elapsed/50-self.procfs_sampling_interval:.5f} secs'))
             self.last_tstamp = tstamp
 
     # add headers and schedule /proc reader's first read
@@ -196,6 +202,7 @@ class MetricsCollector:
         f = os.open(self.signal_fifo, os.O_WRONLY)
         os.write(f, "host-proc: signal dstats\n".encode('utf-8'))
         os.close(f)
+        self.start_time = time.time()
         self.last_tstamp = time.time()
         self.procfs_scheduler.enter(self.procfs_sampling_interval, 1,
                      self.procfs_collector, ())
@@ -205,13 +212,19 @@ class MetricsCollector:
     def build_pid2did(self):
         with open(self.ps_pids_fname) as f:
             self.ps_pids = f.read().strip().split("\n")
-        self.docker_pids = [pid for pid in self.ps_pids if self.pid_exists(pid)]
-        self.docker_npids = len(self.docker_pids)
+        #self.docker_pids = [pid for pid in self.ps_pids if self.pid_exists(pid)]
         #log.debug((f'{self.docker_pids}:{len(self.docker_pids)} <- '
         #            f'{self.ps_pids}:{len(self.ps_pids)}'))
-        for pid in self.docker_pids:
+        for pid in self.ps_pids:
+            if not self.pid_exists(pid):  # assert that these pids are live
+                continue
+            with open(f'/proc/{pid}/cmdline') as f:
+                line = f.readline()
+                if "waku" not  in line: # assert that these pids are waku's
+                    log.info(f'non-waku pid {pid} = {line}')
+                    continue
             did = ""
-            # TODO: may be re-assert that these pids are waku's?
+            self.docker_pids.append(pid)
             with open(f'/proc/{pid}/mountinfo') as f: # or /proc/{pid}/cgroup
                 line = f.readline()
                 while line:
@@ -227,6 +240,7 @@ class MetricsCollector:
                 self.pid2veth[pid] = self.host_if
                 continue
             self.pid2did[pid] = did
+        self.docker_npids = len(self.docker_pids)
 
     # build the host pid to host side veth pair map
     def build_pid2veth(self):
@@ -244,7 +258,7 @@ class MetricsCollector:
         self.build_pid2veth()
         t3 = time.time()
         log.info(f'Metrics: process_metadata: pid2did = {t2-t1:.5f} secs, pid2veth = {t3-t2:0.5f} secs')
-        log.info(f'Metrics: process_metadata: took {t3-t1:.5f} secs')
+        log.info(f'Metrics: process_metadata took {t3-t1:.5f} secs')
 
     # after metadata is collected, create the threads and launch data collection
     def spin_up(self, wls_cid):
@@ -263,7 +277,10 @@ class MetricsCollector:
 
     # the signal handler: does not return
     def signal_handler(self, sig, frame):
-        log.info(f'Metrics: got signal: {sig} @ {self.procfs_sample_cnt}, cleaning up...')
+        stop_time = time.time()
+        dur = stop_time - self.start_time
+        log.info((f'Metrics: ran for {dur} secs, got {signal.Signals(sig).name} '
+                  f'@ sample cnt {self.procfs_sample_cnt}, cleaning up...'))
         self.got_signal = True
         time.sleep(self.procfs_sampling_interval)
         self.clean_up()
@@ -295,8 +312,6 @@ def main(ctx: typer.Context,
     format = "%(asctime)s: %(message)s"
     log.basicConfig(format=format, level=log.INFO,
                         datefmt="%H:%M:%S")
-
-    #pathlib.Path(ODIR).mkdir(parents=True, exist_ok=True)
 
     log.info("Metrics: setting up")
     metrics = MetricsCollector(prefix=prefix, sampling_interval=sampling_interval)
