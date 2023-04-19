@@ -9,14 +9,12 @@ if [ "$#" -eq 0 ]; then
 fi
 
 dir=$(pwd)
+
 # Parse args
-ARGS1=${1:-"cadvisor"} # mandatory
-ARGS2=${2:-"wakurtosis"}
-ARGS3=${3:-"config.json"}
-# Main .json configuration file
-metrics_infra=$ARGS1
-enclave_name=$ARGS2
-wakurtosis_config_file=$ARGS3
+metrics_infra=${1:-"cadvisor"}
+enclave_name=${2:-"wakurtosis"}
+wakurtosis_config_file=${3:-"config.json"}
+
 loglevel="error"
 echo "- Metrics Infra: " $metrics_infra
 echo "- Enclave name: " $enclave_name
@@ -124,7 +122,7 @@ if [ "$metrics_infra" = "host-proc" ];
 then
     echo "Starting the /proc fs and docker stat measurements"
     cd monitoring/host-proc
-    sh ./main.sh  $wls_cid $odir $signal_fifo &
+    sh ./dstats.sh  $wls_cid $odir $signal_fifo &
     cd -
 fi
 ##################### END
