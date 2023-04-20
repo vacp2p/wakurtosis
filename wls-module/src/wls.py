@@ -191,7 +191,7 @@ async def main():
     t1 = time.time()
     wls_logger.G_LOGGER.info(f'Got the signal to start: took {t1-t0} secs')
 
-    msgs_dict = start_traffic_injection(wls_config, random_emitters)
+    msgs_dict = await start_traffic_injection_async(wls_config, random_emitters)
 
     files.save_messages_to_json(msgs_dict)
 
