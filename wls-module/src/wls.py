@@ -2,6 +2,7 @@
 import argparse
 import hashlib
 import random
+import os
 import sys
 import time
 import tomllib
@@ -183,13 +184,14 @@ async def main():
 
     random_emitters = get_random_emitters(topology, wls_config)
 
-    # Wait for signal to start
-    # while not os.path.exists('/wls/start.signal'):
-    #     wls_logger.G_LOGGER.info('Waiting for signal to start ...')
-    #     asyncio.sleep(1)
+    signal_file, t0 = '/wls/start.signal', time.time()
+    wls_logger.G_LOGGER.info('Waiting for the signal to start ...')
+    while not os.path.exists(signal_file):
+        time.sleep(5)
+    t1 = time.time()
+    wls_logger.G_LOGGER.info(f'Got the signal to start: took {t1-t0} secs')
 
-    # Start the siulation
-    msgs_dict = await start_traffic_injection_async(wls_config, random_emitters)
+    msgs_dict = start_traffic_injection(wls_config, random_emitters)
 
     files.save_messages_to_json(msgs_dict)
 

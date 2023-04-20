@@ -5,7 +5,7 @@ import networkx as nx
 import numpy as np
 
 import random, math
-import sys, os
+import sys, os, shutil
 import json, ast
 from collections import defaultdict
 
@@ -120,6 +120,11 @@ def exists_or_nonempty(dirname):
     else:
         return False
 
+# remove mkdir
+def make_empty_dir(dirname):
+    if os.path.isdir(dirname):
+        shutil.rmtree(dirname)
+    os.makedirs(dirname, exist_ok=True)
 
 ### topics related fns #############################################################
 
@@ -489,7 +494,7 @@ def main(ctx: typer.Context,
     G = generate_network(ctx)
 
     # Do not complain if the folder already exists
-    os.makedirs(output_dir, exist_ok=True)
+    make_empty_dir(output_dir)
 
     # Generate file format specific data structs and write the files
     generate_and_write_files(ctx, G)
