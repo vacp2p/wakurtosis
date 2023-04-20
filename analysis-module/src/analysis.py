@@ -142,7 +142,7 @@ def analyze_containers(topology, simulation_path):
 
         log_parser.prepare_node_in_logs(node_pbar, topology, node_logs, container_name)
 
-        folder = glob.glob(f'{simulation_path}/{container_name}*')
+        folder = glob.glob(f'{simulation_path}/{container_name}--*')
         if len(folder) > 1:
             raise RuntimeError(f"Error: Multiple containers with same name: {folder}")
 
