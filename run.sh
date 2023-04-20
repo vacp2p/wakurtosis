@@ -196,6 +196,7 @@ fi
 # Copy simulation results
 # docker cp "$wls_cid:/wls/summary.json" "./${enclave_name}_logs" > /dev/null 2>&1
 docker cp "$wls_cid:/wls/messages.json" "./${enclave_name}_logs"
+docker cp "$wls_cid:/wls/network_topology/network_data.json" "./${enclave_name}_logs"
 
 echo "- Metrics Infra:  $metrics_infra" > ./${enclave_name}_logs/run_args
 echo "- Enclave name:  $enclave_name" >> ./${enclave_name}_logs/run_args
