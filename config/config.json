@@ -9,12 +9,12 @@
     "interconnection_batch": 10
   },
   "gennet": {
-    "num_nodes": 3,
+    "num_nodes": 2500,
     "fanout": 3,
     "num_topics": 1,
     "num_partitions": 1,
     "num_subnets": 1,
-    "container_size": "1",
+    "container_size": "10",
     "node_type_distribution": { "nwaku":100, "gowaku":0 },
     "node_config": {
       "nwaku": "rpc-admin = true\nkeep-alive = true\nmetrics-server = true\ndiscv5-discovery = true\n",
@@ -26,8 +26,8 @@
   },
   "wls": {
     "debug_level": "DEBUG",
-    "simulation_time": 60,
-    "message_rate": 10,
+    "simulation_time": 6000,
+    "message_rate": 100,
     "min_packet_size": 2,
     "max_packet_size": 1024,
     "inter_msg_type": "poisson",
@@ -39,7 +39,7 @@
     "container_str_pattern": "waku",
     "process_str_pattern": "waku",
     "sampling_interval_s": 1,
-    "probe_filename" : "./monitoring/probe.sh",
+    "probe_filename" : "./monitoring/probe_fast_3.sh",
     "metrics_filename" : "./monitoring/metrics.json"
    }
 }
