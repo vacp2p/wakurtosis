@@ -13,7 +13,7 @@ import logging as log
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-
+from matplotlib.backends.backend_pdf import PdfPages
 
 # check if the path exists and is of appropriate type
 def path_ok(path : Path, isDir=False):
@@ -74,6 +74,8 @@ class DStats:
     # make sure the df is all numeric
     def post_process(self):
         h2b = Human2ByteConverter()
+        for name in ["ContainerID", "ContainerName"]:
+            self.df[name] = self.df[name].map(lambda x: x.strip())
         for percent in ["CPUPerc", "MemPerc"]:
             self.df[percent] = self.df[percent].str.replace('%','').astype(float)
         for size in ["MemUse", "MemTotal", "NetRecv", "NetSent", "BlockR", "BlockW"]:
@@ -89,6 +91,36 @@ class DStats:
                                     "CPUPerc", "MemUse", "MemTotal", "MemPerc",
                                     "NetRecv", "NetSent", "BlockR","BlockW",  "PIDS"])
         self.post_process()
+
+    def violin_plots(self):
+        fig, axes = plt.subplots(2)
+        df = self.df
+        fig.set_figwidth(12)
+        fig.set_figheight(10)
+        fig.tight_layout(h_pad=5)
+        pp = PdfPages('test.pdf')
+
+        axes[0].set_title('Per Container CPU stats')
+        axes[0].yaxis.grid(True)
+        axes[0].set_xlabel('Container ID')
+        axes[0].set_ylabel('CPU Utilisation')
+        axes[0].violinplot(dataset =
+                [df[df.ContainerID == cid]["CPUPerc"].values for cid in self.waku_cids])
+
+        axes[1].set_title('Blended CPU stats')
+        axes[1].yaxis.grid(True)
+        axes[1].set_xlabel('')
+        axes[1].set_ylabel('CPU Utilisation')
+        axes[1].violinplot(dataset = [df["CPUPerc"].values])
+
+        #df["MemPerc"].plot()
+        #df["MemUse"].plot()
+        pp.savefig(plt.gcf())
+        pp.close()
+        plt.show()
+
+    def cluster_plots(self):
+        pass
 
     def get_df(self):
         return self.df
@@ -116,12 +148,9 @@ def dstats(dstats_fname: Path):
         sys.exit(0)
 
     dstats = DStats(dstats_fname)
+    dstats.violin_plots()
     df = dstats.get_df()
 
-    df["CPUPerc"].plot()
-    df["MemPerc"].plot()
-    df["MemUse"].plot()
-    plt.show()
     print(f'Got {dstats_fname}')
 
 # add jordi's log processing for settling time
