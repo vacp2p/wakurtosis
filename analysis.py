@@ -533,7 +533,12 @@ def load_process_level_metrics(metrics_file_path: str):
             
             info = metrics_obj['header']
             all_samples = metrics_obj['containers']
-            
+            nodes_cnt = 0
+
+            if len(all_samples) != info['num_containers']:
+                G_LOGGER.error('Number of containers in header does not match number of containers in samples')
+                return {}, None
+
             for container_id, container_data in all_samples.items():
 
                 # tomls file names are unique per node
@@ -559,10 +564,11 @@ def load_process_level_metrics(metrics_file_path: str):
                     if not node_id:
                         G_LOGGER.error('Couldn\'t find node id for PID %d in container %s' %(sample['PID'], container_id))
                         continue
-                    
+
                     if node_id in metrics_dict:
                         metrics_dict[node_id]['samples'].append(sample)
                     else:
+                        nodes_cnt += 1
                         metrics_dict[node_id] = {'samples' : [sample]}
             
     except Exception as e:
@@ -570,6 +576,9 @@ def load_process_level_metrics(metrics_file_path: str):
         sys.exit()
 
     G_LOGGER.info('Loaded metrics for %d nodes.' %len(metrics_dict))
+
+    # for node_id, node_data in metrics_dict.items():
+    #     G_LOGGER.info('Node %s has %d samples' %(node_id, len(node_data['samples'])))
 
     return metrics_dict, info
 
