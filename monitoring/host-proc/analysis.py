@@ -6,8 +6,15 @@ import os
 import stat
 from pathlib import Path
 
+import time
+import re
+
+import matplotlib.pyplot as plt
+
 import logging as log
 import pandas as pd
+import numpy as np
+
 
 # check if the path exists and is of appropriate type
 def path_ok(path : Path, isDir=False):
@@ -24,6 +31,50 @@ def path_ok(path : Path, isDir=False):
     # lay off permission checks; resolve them lazily with open
     return True
 
+
+# remove formatting artefacts
+def sanitise_dstats_file(fname):
+    regex = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+    with open(fname) as f:
+        cleaned_txt = regex.sub('', f.read())
+    with open(fname, 'w') as f:
+        f.write(cleaned_txt)
+
+
+let3 = {'GiB':1024*1024*1024, 'MiB':1024*1024, 'KiB':1024}
+let22 = {'GB':1024*1024*1024, 'MB':1024*1024, 'KB':1024}
+let21 = {'gB':1000*1000*1000, 'mB':1000*1000, 'kB':1000}
+let1 = {'B':1}
+
+# convert human readable sizes to bytes
+def size_convert(value):
+    k3, k2, k1 = value[-3:], value[-2:], value[-1:]
+    if k3 in let3:
+        return float(value[:-3])*let3[k3]
+    elif k2 in let22:
+        return float(value[:-2])*let22[k2]
+    elif k2 in let21:
+        return float(value[:-2])*let21[k2]
+    elif k1 in let1:
+      return float(value[:-1])
+    else:
+      return np.nan
+
+# make sure the df is all numeric
+def sanitise_dstats_df(df):
+    df['CPUPerc'] = df['CPUPerc'].str.replace('%','').astype(float)
+    df['MemPerc'] = df['MemPerc'].str.replace('%','').astype(float)
+    for size in ["MemUse", "MemTotal", "NetRecv", "NetSent", "BlockR", "BlockW"]:
+        df[size] = df[size].map(lambda x: size_convert(x.strip()))
+    return df
+
+
+def get_dstats_df(dstats_fname):
+    sanitise_dstats_file(dstats_fname)
+    df = pd.read_csv(dstats_fname, header=0,  comment='#', skipinitialspace = True, delimiter='/', usecols=["ContainerID", "ContainerName", "CPUPerc", "MemUse", "MemTotal", "MemPerc",  "NetRecv", "NetSent", "BlockR",  "BlockW",  "PIDS"])
+    return sanitise_dstats_df(df)
+
+
 # instantiate typer and set the commands
 app = typer.Typer()
 
@@ -38,15 +89,20 @@ def procfs(procfs_fname: Path):
     print(df.style)
     print(f'Got {procfs_fname}')
 
+
 # process / plot docker-dstats.out
 @app.command()
 def dstats(dstats_fname: Path):
     if not path_ok(dstats_fname):
         sys.exit(0)
-    df = pd.read_csv(dstats_fname, header=0,  comment='#', delimiter='/', usecols=["ContainerID", "ContainerName", "CPUPerc", "MemUse", "MemTotal", "MemPerc",  "NetRecv", "NetSent", "BlockR",  "BlockW",  "PIDS"])
-    print(df.shape)
-    print(df.columns)
-    print(df.style)
+
+    df = get_dstats_df(dstats_fname)
+    wakus = df["ContainerID"].unique()
+    print(f'unique: {len(wakus)}')
+    df["CPUPerc"].plot()
+    df["MemPerc"].plot()
+    df["MemUse"].plot()
+    plt.show()
     print(f'Got {dstats_fname}')
 
 # add jordi's log processing for settling time
