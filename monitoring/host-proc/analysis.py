@@ -32,47 +32,69 @@ def path_ok(path : Path, isDir=False):
     return True
 
 
-# remove formatting artefacts
-def sanitise_dstats_file(fname):
-    regex = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
-    with open(fname) as f:
-        cleaned_txt = regex.sub('', f.read())
-    with open(fname, 'w') as f:
-        f.write(cleaned_txt)
+class Singleton(type):
+    _instances = {}
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+        return cls._instances[cls]
 
-
-let3 = {'GiB':1024*1024*1024, 'MiB':1024*1024, 'KiB':1024}
-let22 = {'GB':1024*1024*1024, 'MB':1024*1024, 'KB':1024}
-let21 = {'gB':1000*1000*1000, 'mB':1000*1000, 'kB':1000}
-let1 = {'B':1}
 
 # convert human readable sizes to bytes
-def size_convert(value):
-    k3, k2, k1 = value[-3:], value[-2:], value[-1:]
-    if k3 in let3:
-        return float(value[:-3])*let3[k3]
-    elif k2 in let22:
-        return float(value[:-2])*let22[k2]
-    elif k2 in let21:
-        return float(value[:-2])*let21[k2]
-    elif k1 in let1:
-      return float(value[:-1])
-    else:
-      return np.nan
+class SizeConverter(metaclass=Singleton):
+    def __init__(self):
+        self.let3 =  {'GiB':1024*1024*1024, 'MiB':1024*1024, 'KiB':1024}
+        self.let22 = {'GB':1024*1024*1024, 'MB':1024*1024, 'KB':1024}
+        self.let21 = {'gB':1000*1000*1000, 'mB':1000*1000, 'kB':1000}
 
-# make sure the df is all numeric
-def sanitise_dstats_df(df):
-    df['CPUPerc'] = df['CPUPerc'].str.replace('%','').astype(float)
-    df['MemPerc'] = df['MemPerc'].str.replace('%','').astype(float)
-    for size in ["MemUse", "MemTotal", "NetRecv", "NetSent", "BlockR", "BlockW"]:
-        df[size] = df[size].map(lambda x: size_convert(x.strip()))
-    return df
+    def convert(self, value):
+        k3, k2, k1 = value[-3:], value[-2:], value[-1:]
+        if k3 in self.let3:
+            return float(value[:-3]) * self.let3[k3]
+        elif k2 in self.let22:
+            return float(value[:-2]) * self.let22[k2]
+        elif k2 in self.let21:
+            return float(value[:-2]) * self.let21[k2]
+        elif k1 == 'B':
+            return float(value[:-1])
+        else:
+            return np.nan
 
 
-def get_dstats_df(dstats_fname):
-    sanitise_dstats_file(dstats_fname)
-    df = pd.read_csv(dstats_fname, header=0,  comment='#', skipinitialspace = True, delimiter='/', usecols=["ContainerID", "ContainerName", "CPUPerc", "MemUse", "MemTotal", "MemPerc",  "NetRecv", "NetSent", "BlockR",  "BlockW",  "PIDS"])
-    return sanitise_dstats_df(df)
+# handle docker stats
+class DStats:
+    def __init__(self, fname):
+        self.fname = fname
+        self.df = ""
+        self.waku_cids = []
+        self.n = 0
+
+    # remove formatting artefacts
+    def pre_process(self):
+        regex = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+        with open(self.fname) as f:
+            cleaned_txt = regex.sub('', f.read())
+        with open(self.fname, 'w') as f:
+            f.write(cleaned_txt)
+
+    # make sure the df is all numeric
+    def post_process(self):
+        sc = SizeConverter()
+        for percent in ["CPUPerc", "MemPerc"]:
+            self.df[percent] = self.df[percent].str.replace('%','').astype(float)
+        for size in ["MemUse", "MemTotal", "NetRecv", "NetSent", "BlockR", "BlockW"]:
+            self.df[size] = self.df[size].map(lambda x: sc.convert(x.strip()))
+        self.waku_cids = self.df["ContainerID"].unique()
+        self.n = len(self.waku_cids)
+        return self.df
+
+    def get_df(self):
+        self.pre_process()
+        self.df = pd.read_csv(self.fname, header=0,  comment='#', skipinitialspace = True,
+                                delimiter='/', usecols=["ContainerID", "ContainerName",
+                                    "CPUPerc", "MemUse", "MemTotal", "MemPerc",
+                                    "NetRecv", "NetSent", "BlockR","BlockW",  "PIDS"])
+        return self.post_process()
 
 
 # instantiate typer and set the commands
@@ -96,9 +118,8 @@ def dstats(dstats_fname: Path):
     if not path_ok(dstats_fname):
         sys.exit(0)
 
-    df = get_dstats_df(dstats_fname)
-    wakus = df["ContainerID"].unique()
-    print(f'unique: {len(wakus)}')
+    df = DStats(dstats_fname).get_df()
+
     df["CPUPerc"].plot()
     df["MemPerc"].plot()
     df["MemUse"].plot()
