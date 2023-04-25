@@ -205,7 +205,7 @@ class MetricsCollector:
                 f'DockerVIF NetRXKey NetRX NETWXKey NetWX '
                 f'BLK READKEY BLKR WRITEKEY BLKW '
                 f'CPU-SYS cpu cpu0 cpu1 cpu2 cpu3 cpu4 cpu5 cpu6 cpu7 cpu8 cpu9 '
-                f'CPU-Process USRTIME SYSTIME\n'))
+                f'CPU-Process CPUUTIME CPUSTIME\n'))
         log.info("Metrics: launch_procfs_monitor: signalling WLS")
         signal_wls = f'docker exec {wls_cid} touch /wls/start.signal'
         subprocess.run(signal_wls, shell=True) # revisit after Jordi's pending branch merge
