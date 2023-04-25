@@ -195,6 +195,17 @@ class MetricsCollector:
                               f'{len(self.docker_pids)}\n'))
         self.procfs_fd.write(f'# {", ".join([f"{pid} = {self.pid2did[pid]}" for pid in self.pid2did])} : {len(self.pid2did.keys())}\n')
         self.procfs_fd.write(f'# {", ".join([f"{pid} = {self.pid2veth[pid]}" for pid in self.pid2did])} : {len(self.pid2veth.keys())}\n')
+        # write the df column names
+        self.procfs_fd.write((f'EpochId PID TimeStamp '
+                f'MEM VmPeakKey VmPeak VmPeakUnit VmSizeKey VmSize VmSizeUnit '
+                f'VmHWMKey VmHWM VmHWMUnit VmRSSKey VmRSS VmRSSUnit '
+                f'VmDataKey VmData VmDataUnit VmStkKey VmStk VmStkUnit '
+                f'NET HostVIF RxBytesKey RxBytes RxPacketsKey RxPackets '
+                f'TxBytesKey TxBytes TxPacketsKey TxPackets '
+                f'DockerVIF NetRXKey NetRX NETWXKey NetWX '
+                f'BLK READKEY BLKR WRITEKEY BLKW '
+                f'CPU-SYS cpu cpu0 cpu1 cpu2 cpu3 cpu4 cpu5 cpu6 cpu7 cpu8 cpu9 '
+                f'CPU-Process USRTIME SYSTIME\n'))
         log.info("Metrics: launch_procfs_monitor: signalling WLS")
         signal_wls = f'docker exec {wls_cid} touch /wls/start.signal'
         subprocess.run(signal_wls, shell=True) # revisit after Jordi's pending branch merge

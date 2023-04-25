@@ -32,7 +32,7 @@ app = typer.Typer()
 def procfs(procfs_fname: Path):
     if not path_ok(procfs_fname):
         sys.exit(0)
-    df = pd.read_csv(procfs_fname, header=1,  comment='#', delim_whitespace=True)
+    df = pd.read_csv(procfs_fname, header=0,  comment='#', delim_whitespace=True)
     print(df.shape)
     print(df.columns)
     print(df.style)
