@@ -15,6 +15,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
+import seaborn as sns
+
 # check if the path exists and is of appropriate type
 def path_ok(path : Path, isDir=False):
     if not path.exists():
@@ -61,6 +63,28 @@ class Human2ByteConverter(metaclass=Singleton):
 class DStats:
     def __init__(self, fname):
         self.fname, self.df, self.waku_cids, self.n = fname, "", [], 0
+        self.col2title = {  "ContainerID": "Docker ID",
+                            "ContainerName" : "Docker Name",
+                            "CPUPerc" : "CPU Utilisation",
+                            "MemUse" : "Memory Usage",
+                            "MemTotal" : "Total Memory",
+                            "MemPerc" : "Memory Utilisation",
+                            "NetRecv" : "Network Received",
+                            "NetSent" : "Network Sent",
+                            "BlockR" : "Block Reads",
+                            "BlockW" : "Block Writes",
+                            "PIDS" : "Docker PIDS"}
+        self.col2units = {  "ContainerID": "ID",
+                            "ContainerName" : "Name",
+                            "CPUPerc" : "Percentage (%)",
+                            "MemUse" : "MiB",
+                            "MemTotal" : "MiB",
+                            "MemPerc" : "Percentage (%)",
+                            "NetRecv" : "KiB",
+                            "NetSent" : "KiB",
+                            "BlockR" : "KiB",
+                            "BlockW" : "KiB",
+                            "PIDS" : "PIDS"}
         self.start_processing()
 
     # remove the formatting artefacts
@@ -73,15 +97,17 @@ class DStats:
 
     # make sure the df is all numeric
     def post_process(self):
-        h2b = Human2ByteConverter()
         for name in ["ContainerID", "ContainerName"]:
             self.df[name] = self.df[name].map(lambda x: x.strip())
+        self.waku_cids = self.df["ContainerID"].unique()
+        h2b, n = Human2ByteConverter(), len(self.waku_cids)
         for percent in ["CPUPerc", "MemPerc"]:
             self.df[percent] = self.df[percent].str.replace('%','').astype(float)
-        for size in ["MemUse", "MemTotal", "NetRecv", "NetSent", "BlockR", "BlockW"]:
-            self.df[size] = self.df[size].map(lambda x: h2b.convert(x.strip()))
-        self.waku_cids = self.df["ContainerID"].unique()
-        self.n = len(self.waku_cids)
+        for size in ["MemUse", "MemTotal"]:
+            self.df[size] = self.df[size].map(lambda x: h2b.convert(x.strip())/(1024*1024)) # MiBs
+        for size in ["NetRecv", "NetSent", "BlockR", "BlockW"]:
+            self.df[size] = self.df[size].map(lambda x: h2b.convert(x.strip())/1024) # KiBs
+        self.df.to_csv("processed.csv", sep='/')
 
     # build df from csv
     def start_processing(self):
@@ -92,32 +118,71 @@ class DStats:
                                     "NetRecv", "NetSent", "BlockR","BlockW",  "PIDS"])
         self.post_process()
 
-    def violin_plots(self):
-        fig, axes = plt.subplots(2)
-        df = self.df
+    def violin_plots_helper(self, col, diff=False):
+        #df = self.df
+
+        fig, axes = plt.subplots(2, 2, layout='constrained', sharey=True)
         fig.set_figwidth(12)
         fig.set_figheight(10)
-        fig.tight_layout(h_pad=5)
-        pp = PdfPages('test.pdf')
+        #fig.tight_layout(h_pad=5)
+        fig.suptitle(self.col2title[col])
+        fig.supylabel(self.col2units[col])
 
-        axes[0].set_title('Per Container CPU stats')
-        axes[0].yaxis.grid(True)
-        axes[0].set_xlabel('Container ID')
-        axes[0].set_ylabel('CPU Utilisation')
-        axes[0].violinplot(dataset =
-                [df[df.ContainerID == cid]["CPUPerc"].values for cid in self.waku_cids])
+        pp = PdfPages(f'out-{col}.pdf')
 
-        axes[1].set_title('Blended CPU stats')
-        axes[1].yaxis.grid(True)
-        axes[1].set_xlabel('')
-        axes[1].set_ylabel('CPU Utilisation')
-        axes[1].violinplot(dataset = [df["CPUPerc"].values])
+        axes[0,0].ticklabel_format(style='plain')
+        axes[0,0].yaxis.grid(True)
+        axes[0,0].set_xlabel('Container ID')
+        for cid in self.waku_cids:
+            df = self.df[self.df.ContainerID == cid][col]
+        if not diff:
+            axes[0,0].violinplot(dataset=[df.values], showmeans=True)
+        else:
+            axes[0,0].violinplot(dataset=[df.diff().values],
+                showmeans=True)
 
-        #df["MemPerc"].plot()
-        #df["MemUse"].plot()
+        axes[1,0].ticklabel_format(style='plain')
+        axes[1,0].yaxis.grid(True)
+        axes[1,0].set_xlabel('')
+        if not diff:
+            axes[1,0].violinplot(dataset=[self.df[col].values], showmeans=True)
+        else:
+            axes[1,0].violinplot(dataset=[self.df[col].diff().values], showmeans=True)
+
+        axes[0,1].ticklabel_format(style='plain')
+        axes[0,1].yaxis.grid(True)
+        axes[0,1].set_xlabel('Time')
+        for cid in self.waku_cids:
+            if not diff:
+                y = self.df[self.df.ContainerID == cid][col].values
+            else:
+                y = self.df[self.df.ContainerID == cid][col].diff().values
+            axes[0, 1].scatter(x=range(0, len(y)), y=y, marker='.')
+
+        axes[1,1].ticklabel_format(style='plain')
+        axes[1,1].yaxis.grid(True)
+        axes[1,1].set_xlabel('Time')
+
+        for cid in self.waku_cids:
+            if not diff:
+                y = self.df[self.df.ContainerID == cid][col].values
+                c = [1] * len(y)
+            else:
+                y = self.df[self.df.ContainerID == cid][col].diff().values
+                c = [1] * len(y)
+            axes[1, 1].scatter(x=range(0, len(y)), y=y, c=c,marker='.')
+
         pp.savefig(plt.gcf())
         pp.close()
         plt.show()
+
+    def violin_plots(self):
+        #self.violin_plots_helper("CPUPerc")
+        #self.violin_plots_helper("MemUse")
+        self.violin_plots_helper("NetSent")
+        self.violin_plots_helper("NetRecv")
+        self.violin_plots_helper("BlockR")
+        self.violin_plots_helper("BlockW")
 
     def cluster_plots(self):
         pass
