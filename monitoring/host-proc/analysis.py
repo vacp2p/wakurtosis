@@ -61,8 +61,8 @@ class Human2ByteConverter(metaclass=Singleton):
 
 # handle docker stats
 class DStats:
-    def __init__(self, fname):
-        self.fname, self.df, self.waku_cids, self.n = fname, "", [], 0
+    def __init__(self, fname, oprefix):
+        self.fname, self.df, self.waku_cids, self.n, self.prefix = fname, "", [], 0, oprefix
         self.col2title = {  "ContainerID": "Docker ID",
                             "ContainerName" : "Docker Name",
                             "CPUPerc" : "CPU Utilisation",
@@ -105,7 +105,9 @@ class DStats:
             self.df[percent] = self.df[percent].str.replace('%','').astype(float)
         for size in ["MemUse", "MemTotal"]:
             self.df[size] = self.df[size].map(lambda x: h2b.convert(x.strip())/(1024*1024)) # MiBs
-        for size in ["NetRecv", "NetSent", "BlockR", "BlockW"]:
+        for size in ["NetRecv", "NetSent"]:
+            self.df[size] = self.df[size].map(lambda x: h2b.convert(x.strip())/1024) # KiBs
+        for size in ["BlockR", "BlockW"]:
             self.df[size] = self.df[size].map(lambda x: h2b.convert(x.strip())/1024) # KiBs
         #self.df.to_csv("processed.csv", sep='/')
 
@@ -125,7 +127,7 @@ class DStats:
         fig.suptitle(self.col2title[col])
         fig.supylabel(self.col2units[col])
 
-        pp = PdfPages(f'out-{col}.pdf')
+        pp = PdfPages(f'{self.prefix}-{col}.pdf')
         cid_arr, all_arr = [], []
 
         # per docker violin plot
@@ -198,11 +200,12 @@ def procfs(procfs_fname: Path):
 
 # process / plot docker-dstats.out
 @app.command()
-def dstats(dstats_fname: Path):
+def dstats(dstats_fname: Path, prefix:str = typer.Option("out",
+            help="Specify the prefix for the plots")):
     if not path_ok(dstats_fname):
         sys.exit(0)
 
-    dstats = DStats(dstats_fname)
+    dstats = DStats(dstats_fname, prefix)
     dstats.violin_plots()
     df = dstats.get_df()
 
