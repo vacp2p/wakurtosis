@@ -107,7 +107,7 @@ class DStats:
             self.df[size] = self.df[size].map(lambda x: h2b.convert(x.strip())/(1024*1024)) # MiBs
         for size in ["NetRecv", "NetSent", "BlockR", "BlockW"]:
             self.df[size] = self.df[size].map(lambda x: h2b.convert(x.strip())/1024) # KiBs
-        self.df.to_csv("processed.csv", sep='/')
+        #self.df.to_csv("processed.csv", sep='/')
 
     # build df from csv
     def start_processing(self):
@@ -119,57 +119,47 @@ class DStats:
         self.post_process()
 
     def violin_plots_helper(self, col, diff=False):
-        #df = self.df
-
         fig, axes = plt.subplots(2, 2, layout='constrained', sharey=True)
         fig.set_figwidth(12)
         fig.set_figheight(10)
-        #fig.tight_layout(h_pad=5)
         fig.suptitle(self.col2title[col])
         fig.supylabel(self.col2units[col])
 
         pp = PdfPages(f'out-{col}.pdf')
+        cid_arr, all_arr = [], []
 
+        # per docker violin plot
         axes[0,0].ticklabel_format(style='plain')
         axes[0,0].yaxis.grid(True)
         axes[0,0].set_xlabel('Container ID')
         for cid in self.waku_cids:
-            df = self.df[self.df.ContainerID == cid][col]
-        if not diff:
-            axes[0,0].violinplot(dataset=[df.values], showmeans=True)
-        else:
-            axes[0,0].violinplot(dataset=[df.diff().values],
-                showmeans=True)
+            if diff:
+                tmp = self.df[self.df.ContainerID == cid][col].diff().dropna().values
+            else:
+                tmp = self.df[self.df.ContainerID == cid][col].values
+            cid_arr.append(tmp)
+            all_arr = np.concatenate((all_arr, tmp), axis=0)
+        axes[0,0].violinplot(dataset=cid_arr, showmeans=True)
 
+        # blended  violin plot
         axes[1,0].ticklabel_format(style='plain')
         axes[1,0].yaxis.grid(True)
         axes[1,0].set_xlabel('')
-        if not diff:
-            axes[1,0].violinplot(dataset=[self.df[col].values], showmeans=True)
-        else:
-            axes[1,0].violinplot(dataset=[self.df[col].diff().values], showmeans=True)
+        axes[1,0].violinplot(dataset=all_arr, showmeans=True)
 
+        # per docker scatter plot
         axes[0,1].ticklabel_format(style='plain')
         axes[0,1].yaxis.grid(True)
         axes[0,1].set_xlabel('Time')
-        for cid in self.waku_cids:
-            if not diff:
-                y = self.df[self.df.ContainerID == cid][col].values
-            else:
-                y = self.df[self.df.ContainerID == cid][col].diff().values
+        for y in cid_arr:
             axes[0, 1].scatter(x=range(0, len(y)), y=y, marker='.')
 
+        # blended scatter plot
         axes[1,1].ticklabel_format(style='plain')
         axes[1,1].yaxis.grid(True)
         axes[1,1].set_xlabel('Time')
-
-        for cid in self.waku_cids:
-            if not diff:
-                y = self.df[self.df.ContainerID == cid][col].values
-                c = [1] * len(y)
-            else:
-                y = self.df[self.df.ContainerID == cid][col].diff().values
-                c = [1] * len(y)
+        for y in cid_arr:
+            c = [2] * len(y)
             axes[1, 1].scatter(x=range(0, len(y)), y=y, c=c,marker='.')
 
         pp.savefig(plt.gcf())
@@ -177,12 +167,12 @@ class DStats:
         plt.show()
 
     def violin_plots(self):
-        #self.violin_plots_helper("CPUPerc")
-        #self.violin_plots_helper("MemUse")
-        self.violin_plots_helper("NetSent")
-        self.violin_plots_helper("NetRecv")
-        self.violin_plots_helper("BlockR")
-        self.violin_plots_helper("BlockW")
+        self.violin_plots_helper("CPUPerc")
+        self.violin_plots_helper("MemUse")
+        self.violin_plots_helper("NetSent", True)
+        self.violin_plots_helper("NetRecv", True)
+        self.violin_plots_helper("BlockR", True)
+        self.violin_plots_helper("BlockW", True)
 
     def cluster_plots(self):
         pass
