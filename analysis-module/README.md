@@ -8,4 +8,4 @@ Mount:
 
 Example:
 
-- docker run <image name> --net="host" -v wakurtosis_logs:/simulation_data/ topology_generated:/tomls/ -p <prometheus_port>
+- docker run --network "host" -v $(pwd)/wakurtosis_logs:/simulation_data/ -v $(pwd)/config/topology_generated:/tomls/ --add-host=host.docker.internal:host-gateway <image> -p <prometheus_port>
