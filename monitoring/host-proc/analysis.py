@@ -120,7 +120,7 @@ class DStats:
                                     "NetRecv", "NetSent", "BlockR","BlockW",  "PIDS"])
         self.post_process()
 
-    def violin_plots_helper(self, col, diff=False):
+    def violin_plots_helper(self, col, cdf=True):
         fig, axes = plt.subplots(2, 2, layout='constrained', sharey=True)
         fig.set_figwidth(12)
         fig.set_figheight(10)
@@ -135,15 +135,15 @@ class DStats:
         axes[0,0].yaxis.grid(True)
         axes[0,0].set_xlabel('Container ID')
         for cid in self.waku_cids:
-            if diff:
-                tmp = self.df[self.df.ContainerID == cid][col].diff().dropna().values
-            else:
+            if cdf:
                 tmp = self.df[self.df.ContainerID == cid][col].values
+            else:
+                tmp = self.df[self.df.ContainerID == cid][col].diff().dropna().values
             cid_arr.append(tmp)
             all_arr = np.concatenate((all_arr, tmp), axis=0)
         axes[0,0].violinplot(dataset=cid_arr, showmeans=True)
 
-        # blended  violin plot
+        # pooled  violin plot
         axes[1,0].ticklabel_format(style='plain')
         axes[1,0].yaxis.grid(True)
         axes[1,0].set_xlabel('')
@@ -156,7 +156,7 @@ class DStats:
         for y in cid_arr:
             axes[0, 1].scatter(x=range(0, len(y)), y=y, marker='.')
 
-        # blended scatter plot
+        # pooled scatter plot
         axes[1,1].ticklabel_format(style='plain')
         axes[1,1].yaxis.grid(True)
         axes[1,1].set_xlabel('Time')
@@ -168,13 +168,13 @@ class DStats:
         pp.close()
         plt.show()
 
-    def violin_plots(self):
+    def violin_plots(self, cdf):
         self.violin_plots_helper("CPUPerc")
         self.violin_plots_helper("MemUse")
-        self.violin_plots_helper("NetSent", True)
-        self.violin_plots_helper("NetRecv", True)
-        self.violin_plots_helper("BlockR", True)
-        self.violin_plots_helper("BlockW", True)
+        self.violin_plots_helper("NetSent", cdf)
+        self.violin_plots_helper("NetRecv", cdf)
+        self.violin_plots_helper("BlockR", cdf)
+        self.violin_plots_helper("BlockW", cdf)
 
     def cluster_plots(self):
         pass
@@ -200,13 +200,15 @@ def procfs(procfs_fname: Path):
 
 # process / plot docker-dstats.out
 @app.command()
-def dstats(dstats_fname: Path, prefix:str = typer.Option("out",
-            help="Specify the prefix for the plots")):
+def dstats(dstats_fname: Path,
+            prefix:str = typer.Option("out", help="Specify the prefix for the plots"),
+            cdf: bool = typer.Option(True, help="Specify the prefix for the plots")):
     if not path_ok(dstats_fname):
         sys.exit(0)
 
     dstats = DStats(dstats_fname, prefix)
-    dstats.violin_plots()
+    dstats.violin_plots(cdf)
+
     df = dstats.get_df()
 
     print(f'Got {dstats_fname}')
