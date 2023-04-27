@@ -29,5 +29,13 @@
     "inter_msg_type": "poisson",
     "dist_type": "gaussian",
     "emitters_fraction": 1.0
-  }
+  },
+  "monitoring": {
+    "wsl_pattern": "wls",
+    "container_str_pattern": "waku",
+    "process_str_pattern": "waku",
+    "sampling_interval_s": 1,
+    "probe_filename" : "./monitoring/probe.sh",
+    "metrics_filename" : "./monitoring/metrics.json"
+   }
 }
