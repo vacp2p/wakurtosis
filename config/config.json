@@ -15,7 +15,7 @@
     "num_partitions": 1,
     "num_subnets": 1,
     "container_size": "1",
-    "node_type_distribution": { "nwaku:relay":100, "gowaku:rln:dnsdisc:dns":0 },
+    "node_type_distribution": { "nwaku:relay:rpc:metrics":100, "gowaku:rln:dnsdisc:dns":0 },
     "network_type": "newmanwattsstrogatz",
     "output_dir": "network_data",
     "benchmark": "False"
