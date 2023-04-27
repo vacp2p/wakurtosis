@@ -10,5 +10,5 @@
 rpc=true
 rpc-address="127.0.0.1"
 rpc-port=8545
-rpc-admin=false
+rpc-admin=true
 rpc-private=false
