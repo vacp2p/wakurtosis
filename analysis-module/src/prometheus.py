@@ -11,7 +11,7 @@ from src import analysis_logger
 def connect_to_prometheus(port):
     #prometheus = subprocess.check_output("kurtosis enclave inspect wakurtosis | grep '\\<prometheus\\>' | awk '{print $6}'", shell=True)
     #url = f'http://{prometheus[:-1].decode("utf-8") }'
-    url = f"http://127.0.0.1:{port}"
+    url = f"http://host.docker.internal:{port}"
     try:
         analysis_logger.G_LOGGER.debug('Connecting to Prometheus server in %s' %url)
         prometheus = PrometheusConnect(url, disable_ssl=True)
