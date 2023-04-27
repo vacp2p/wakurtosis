@@ -117,6 +117,14 @@ wls_cid="$service_name--$service_uuid"
 ##################### END
 
 
+##################### CADVISOR MONITOR: EPILOGUE
+if [ "$metrics_infra" = "cadvisor" ];
+then
+    echo "Signaling WLS"
+    docker exec $wls_cid touch /wls/start.signal
+fi
+##################### END
+
 
 ##################### HOST PROCFS MONITOR: EPILOGUE
 if [ "$metrics_infra" = "host-proc" ];
