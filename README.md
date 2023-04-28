@@ -9,7 +9,7 @@ More info about Kurtosis: https://docs.kurtosis.com/
 
 #### Before using this repository note that: 
 
-- **You are using Kurtosis version 0.67.3**. This is important, as they are working on it and changes can be huge depending on different versions. You can find all Kurtosis versions [here](https://github.com/kurtosis-tech/kurtosis-cli-release-artifacts/releases).
+- **You are using Kurtosis version 0.70.2**. This is important, as they are working on it and changes can be huge depending on different versions. You can find all Kurtosis versions [here](https://github.com/kurtosis-tech/kurtosis-cli-release-artifacts/releases).
 - The topology files that will be used by default are defined in `config/topology_generated/`. This topology is created with the [gennet](gennet-module/Readme.md) module.
 - Kurtosis can set up services in a parallel manner, defined in the `config.json` file (see below).
 - Only `kurtosis` and `docker` are needed to run this.

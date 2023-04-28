@@ -89,6 +89,7 @@ GENNET_NOMOS_IMAGE_VALUE = "nomos"
 
 PEER_ID_KEY = "peer_id"
 IP_KEY = "ip_address"
+KURTOSIS_IP_KEY = "kurtosis_ip"
 PORTS_KEY = "ports"
 
 # WLS Configuration

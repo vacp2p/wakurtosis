@@ -6,6 +6,8 @@ import os
 import sys
 import time
 import tomllib
+import asyncio
+import os
 
 # Project Imports
 from src.utils import wls_logger
@@ -85,20 +87,6 @@ def _is_simulation_finished(start_time, wls_config, msgs_dict):
     return False
 
 
-def _time_to_send_next_message(last_msg_time, next_time_to_msg):
-    # Send message
-    # BUG: There is a constant discrepancy.
-    # The average number of messages sent by time interval is slightly less than expected
-    msg_elapsed = time.time() - last_msg_time
-
-    if msg_elapsed <= next_time_to_msg:
-        return False
-
-    wls_logger.G_LOGGER.debug(f"Time Δ: {(msg_elapsed - next_time_to_msg) * 1000.0:6f}ms.")
-
-    return True
-
-
 def _select_emitter_with_topic(random_emitters):
     # Pick an emitter at random from the emitters list
     random_emitter, random_emitter_info = random.choice(list(random_emitters.items()))
@@ -114,33 +102,37 @@ def _select_emitter_with_topic(random_emitters):
     return emitter_address, emitter_topic
 
 
-def _inject_message(emitter_address, emitter_topic, msgs_dict, wls_config):
+async def _inject_message_async(emitter_address, emitter_topic, msgs_dict, msgs_dict_lock, wls_config):
     payload, size = payloads.make_payload_dist(dist_type=wls_config['dist_type'].lower(),
                                                min_size=wls_config['min_packet_size'],
                                                max_size=wls_config['max_packet_size'])
 
-    response, elapsed, waku_msg, ts = waku_messaging.send_msg_to_node(emitter_address,
+    response, elapsed, waku_msg, ts = await waku_messaging.send_msg_to_node_async(emitter_address,
                                                                       topic=emitter_topic,
                                                                       payload=payload,
                                                                       nonce=len(msgs_dict))
 
-    if response['result']:
-        msg_hash = hashlib.sha256(waku_msg.encode('utf-8')).hexdigest()
+    msg_hash = hashlib.sha256(waku_msg.encode('utf-8')).hexdigest()
+    async with msgs_dict_lock:
+        
         if msg_hash in msgs_dict:
             wls_logger.G_LOGGER.error(f"Hash collision. {msg_hash} already exists in dictionary")
             return
-
-        msgs_dict[msg_hash] = {'ts': ts, 'injection_point': emitter_address,
+        
+        # Update the messages dictionary
+        msgs_dict[msg_hash] = {'ts': ts, 'injection_point': emitter_address, 'status' : response,
                                'nonce': len(msgs_dict), 'topic': emitter_topic,
-                               'payload': payload, 'payload_size': size}
+                               'payload': payload, 'payload_size': size, 'injection_time': elapsed}
 
 
-def start_traffic_injection(wls_config, random_emitters):
+async def start_traffic_injection_async(wls_config, random_emitters):
     """ Start simulation """
     start_time = time.time()
-    last_msg_time = 0
     next_time_to_msg = 0
     msgs_dict = {}
+    msgs_dict_lock = asyncio.Lock()
+    tasks = []
+    nonce = 0
 
     wls_logger.G_LOGGER.info(f"Starting a simulation of {wls_config['simulation_time']} seconds...")
 
@@ -148,25 +140,29 @@ def start_traffic_injection(wls_config, random_emitters):
         if _is_simulation_finished(start_time, wls_config, msgs_dict):
             break
 
-        if not _time_to_send_next_message(last_msg_time, next_time_to_msg):
-            continue
-
         emitter_address, emitter_topic = _select_emitter_with_topic(random_emitters)
 
-        _inject_message(emitter_address, emitter_topic, msgs_dict, wls_config)
+        task = asyncio.create_task(_inject_message_async(emitter_address, emitter_topic, msgs_dict, msgs_dict_lock, wls_config))
+        tasks.append(task)
+
+        nonce += 1
 
         # Compute the time to next message
         next_time_to_msg = waku_messaging.get_next_time_to_msg(wls_config['inter_msg_type'],
-                                                               wls_config['message_rate'],
-                                                               wls_config['simulation_time'])
-        wls_logger.G_LOGGER.debug('Next message will happen in %d ms.' % (next_time_to_msg * 1000.0))
+                                                            wls_config['message_rate'],
+                                                            wls_config['simulation_time'])
 
-        last_msg_time = time.time()
+        # Wait for the specified time before sending the next message
+        wls_logger.G_LOGGER.info('Next message will be injected in %d ms.' % (next_time_to_msg * 1000.0))
+        await asyncio.sleep(next_time_to_msg)
 
+    # Wait for all the tasks to complete
+    await asyncio.gather(*tasks)
+    
     return msgs_dict
 
 
-def main():
+async def main():
     args = parse_cli(sys.argv[1:])
 
     config_file = args.config_file
@@ -195,10 +191,14 @@ def main():
     t1 = time.time()
     wls_logger.G_LOGGER.info(f'Got the signal to start: took {t1-t0} secs')
 
-    msgs_dict = start_traffic_injection(wls_config, random_emitters)
+    msgs_dict = await start_traffic_injection_async(wls_config, random_emitters)
 
     files.save_messages_to_json(msgs_dict)
 
+    # Delete de signal file just in case
+    if os.path.exists('/wls/start.signal'):
+        os.remove('/wls/start.signal')
+
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
