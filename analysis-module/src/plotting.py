@@ -1,4 +1,5 @@
 # Python Imports
+import numpy as np
 import matplotlib.pyplot as plt
 
 # Project Imports
@@ -49,8 +50,8 @@ def plot_figure(msg_propagation_times, cpu_usage, memory_usage, bandwith_in, ban
     analysis_logger.G_LOGGER.info(f'Figure saved in {figure_path}')
 
 
-def plot_figure_ex(msg_propagation_times, cpu_usage, memory_usage, network_usage, disk_usage, injection_times,
-                   simulation_summary, simulation_config):
+def plot_figure_ex(msg_propagation_times, cpu_usage, memory_usage, network_usage, disk_usage, injection_times):
+                   #simulation_summary, simulation_config):
     def style_violin(parts, ax):
 
         # Change the extrema lines to dashed grey lines
@@ -127,14 +128,14 @@ def plot_figure_ex(msg_propagation_times, cpu_usage, memory_usage, network_usage
     ax6.set_xticks([1, 2])
     ax6.set_xticklabels(['Read', 'Write'])
     style_violin(parts, ax6)
-
+    """
     fig.suptitle(
         'Wakurtosis Simulation Node Level Analysis\n(%d nodes, %d topic(s), Rate: %d msg/s, Time: %.2f s. Sampling Rate: %.2f samples/s.)\n' % (
         simulation_summary['num_nodes'], \
         simulation_summary['num_topics'], simulation_config['wls']['message_rate'],
         simulation_summary['simulation_time_ms'] / 1000.0, \
         simulation_summary['metrics']['esr']), fontsize=20)
-
+    """
     plt.tight_layout()
 
     figure_path = f'{vars.G_DEFAULT_SIMULATION_PATH}/{vars.G_DEFAULT_FIG_FILENAME}'
