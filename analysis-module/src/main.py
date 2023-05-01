@@ -34,16 +34,22 @@ if __name__ == "__main__":
     msg_propagation_times = analysis.compute_propagation_times(msgs_dict)
     msg_injection_times = analysis.compute_injection_times(injected_msgs_dict)
 
-    cpu_usage, memory_usage, bandwith_in, bandwith_out = prometheus.get_hardware_metrics(
+    cpu_usage, memory_usage, bandwith_in, bandwith_out, max_disk_usage = prometheus.get_hardware_metrics(
         topology_info,
         min_tss,
         max_tss, prom_port)
 
     total_network_usage = {'rx_mbytes': bandwith_in, 'tx_mbytes': bandwith_out}
+
+    # summary = build_summary(metrics_info, topology, msgs_dict, node_logs, [], min_tss, max_tss, avg_samples_per_node)
+
     # plotting.plot_figure_ex(msg_propagation_times, cpu_usage, memory_usage, total_network_usage)
 
     """ Generate Figure """
-    plotting.plot_figure(msg_propagation_times, cpu_usage, memory_usage, bandwith_in, bandwith_out)
+    # msg_propagation_times, cpu_usage, memory_usage, network_usage, disk_usage, injection_times,
+    #                    simulation_summary, simulation_config)
+    plotting.plot_figure_ex(msg_propagation_times, cpu_usage, memory_usage, total_network_usage, max_disk_usage,
+                            msg_injection_times)
 
     """ We are done """
     analysis_logger.G_LOGGER.info('Ended')

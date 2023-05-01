@@ -29,13 +29,15 @@ def get_hardware_metrics(topology, min_tss, max_tss, prom_port):
     memory_usage = []
     bandwith_in = []
     bandwith_out = []
+    max_disk_usage = {'disk_read_mbytes': [], 'disk_write_mbytes': []}
+
+
     node_container_ips = [info["kurtosis_ip"] for info in topology["containers"].values()]
     pbar = tqdm(node_container_ips)
 
     prometheus = connect_to_prometheus(prom_port)
 
     for container_ip in pbar:
-
         pbar.set_description(f'Fetching hardware stats from container {container_ip}')
 
         try:
@@ -49,8 +51,10 @@ def get_hardware_metrics(topology, min_tss, max_tss, prom_port):
         memory_usage.append(max(container_stats['memory_usage']))
         bandwith_in.append(max(container_stats['bandwidth_in']))
         bandwith_out.append(max(container_stats['bandwidth_out']))
+        max_disk_usage['disk_read_mbytes'].append(max(container_stats['disk_read']))
+        max_disk_usage['disk_write_mbytes'].append(max(container_stats['disk_write']))
 
-    return cpu_usage, memory_usage, bandwith_in, bandwith_out
+    return cpu_usage, memory_usage, bandwith_in, bandwith_out, max_disk_usage
 
 
 def fetch_cadvisor_stats_from_prometheus(prom, container_ip, start_ts, end_ts):
@@ -58,10 +62,10 @@ def fetch_cadvisor_stats_from_prometheus(prom, container_ip, start_ts, end_ts):
     # print(metrics)
     start_timestamp = datetime.utcfromtimestamp(start_ts / 1e9)
     end_timestamp = datetime.fromtimestamp(end_ts / 1e9)
-
+    print(container_ip)
     # container_network_transmit_bytes_total{container_label_com_kurtosistech_private_ip = "212.209.64.2"}
     kurtosis_ip_template = "container_label_com_kurtosistech_private_ip"
-
+    print(F"FROM {start_ts} to {end_ts}")
     cpu = prom.custom_query_range(f"container_cpu_load_average_10s{{{kurtosis_ip_template} "
                                         f"= '{container_ip}'}}", start_time=start_timestamp,
                                   end_time=end_timestamp, step="1s")
@@ -70,16 +74,29 @@ def fetch_cadvisor_stats_from_prometheus(prom, container_ip, start_ts, end_ts):
     mem = prom.custom_query_range(f"container_memory_usage_bytes{{{kurtosis_ip_template} "
                                         f"= '{container_ip}'}}", start_time=start_timestamp,
                                   end_time=end_timestamp, step="1s")
-    mem = [int(mem[0]['values'][i][1]) for i in range(len(mem[0]['values']))]
+    mem = [int(mem[0]['values'][i][1])/(1024*1024) for i in range(len(mem[0]['values']))]
 
     net_in = prom.custom_query_range(f"container_network_receive_bytes_total{{{kurtosis_ip_template}"
                                            f"= '{container_ip}'}}", start_time=start_timestamp,
                                      end_time=end_timestamp, step="1s")
-    net_in = [int(net_in[0]['values'][i][1]) for i in range(len(net_in[0]['values']))]
+    net_in = [int(net_in[0]['values'][i][1])/(1024*1024) for i in range(len(net_in[0]['values']))]
 
     net_out = prom.custom_query_range(f"container_network_transmit_bytes_total{{{kurtosis_ip_template} "
                                             f"= '{container_ip}'}}", start_time=start_timestamp,
                                       end_time=end_timestamp, step="1s")
-    net_out = [int(net_out[0]['values'][i][1]) for i in range(len(net_out[0]['values']))]
+    net_out = [int(net_out[0]['values'][i][1])/(1024*1024) for i in range(len(net_out[0]['values']))]
 
-    return {'cpu_usage': cpu, 'memory_usage': mem, 'bandwidth_in': net_in, 'bandwidth_out': net_out}
+    disk_r = prom.custom_query_range(f"container_fs_usage_bytes{{{kurtosis_ip_template} "
+                                            f"= '{container_ip}'}}", start_time=start_timestamp,
+                                      end_time=end_timestamp, step="1s")
+    print(disk_r)
+    disk_r = [int(disk_r[0]['values'][i][1])/(1024*1024) for i in range(len(disk_r[0]['values']))]
+
+    disk_w = prom.custom_query_range(f"container_fs_usage_bytes{{{kurtosis_ip_template} "
+                                            f"= '{container_ip}'}}", start_time=start_timestamp,
+                                      end_time=end_timestamp, step="1s")
+    disk_w = [int(disk_w[0]['values'][i][1])/(1024*1024) for i in range(len(disk_w[0]['values']))]
+
+    print("finished")
+    return {'cpu_usage': cpu, 'memory_usage': mem, 'bandwidth_in': net_in, 'bandwidth_out': net_out,
+            'disk_read': disk_r, 'disk_write': disk_w}
