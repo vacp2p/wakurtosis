@@ -23,6 +23,9 @@ cd wls-module
 docker build -t wls:0.0.1 .
 cd ..
 
+cd analysis-module
+docker build -t analysis .
+cd ..
 
 git clone git@github.com:waku-org/go-waku.git
 cd go-waku
