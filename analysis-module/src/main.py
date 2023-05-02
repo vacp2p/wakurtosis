@@ -16,8 +16,10 @@ if __name__ == "__main__":
     simulation_path, tomls_folder, prom_port = arg_parser.parse_args()
 
     """ Load Topics Structure """
-    topology_info = topology.load_topology(simulation_path + vars.G_TOPOLOGY_FILE_NAME)
+    topology_info = topology.load_json(simulation_path + vars.G_TOPOLOGY_FILE_NAME)
     topology.load_topics_into_topology(topology_info, tomls_folder)
+
+    simulation_config = topology.load_json(simulation_path + "config/config.json")
 
     """ Load Simulation Messages """
     injected_msgs_dict = log_parser.load_messages(simulation_path)
@@ -49,7 +51,7 @@ if __name__ == "__main__":
     # msg_propagation_times, cpu_usage, memory_usage, network_usage, disk_usage, injection_times,
     #                    simulation_summary, simulation_config)
     plotting.plot_figure_ex(msg_propagation_times, cpu_usage, memory_usage, total_network_usage, max_disk_usage,
-                            msg_injection_times)
+                            msg_injection_times, simulation_config)
 
     """ We are done """
     analysis_logger.G_LOGGER.info('Ended')
