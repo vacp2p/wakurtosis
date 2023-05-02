@@ -72,8 +72,9 @@ class Human2BytesConverter(metaclass=Singleton):
 
 # handle docker stats
 class DStats:
-    def __init__(self, fname, oprefix):
-        self.fname, self.df, self.waku_cids, self.n, self.prefix = fname, "", [], 0, oprefix
+    def __init__(self, log_dir, oprefix):
+        self.fname, self.prefix = f'{log_dir}/host-proc-stats/docker-stats.out', oprefix
+        self.df, self.waku_cids, self.n =  "", [], 0
         self.col2title = {  "ContainerID": "Docker ID",
                             "ContainerName" : "Docker Name",
                             "CPUPerc" : "CPU Utilisation",
@@ -124,6 +125,7 @@ class DStats:
 
     # build df from csv
     def start_processing(self):
+        log.info(f'processing {self.fname}...')
         self.pre_process()
         self.df = pd.read_csv(self.fname, header=0,  comment='#', skipinitialspace = True,
                                 delimiter='/', usecols=["ContainerID", "ContainerName",
@@ -195,22 +197,20 @@ class DStats:
 
 
 # add jordi's log processing for settling time
-def compute_settling_time(log_dir: Path):
-    #if not path_ok(log_dir, True):
-    #    sys.exit(0)
+def compute_settling_time(log_dir: Path, oprefix):
+    if not path_ok(log_dir, True):
+        sys.exit(0)
 
-    """ Parse args """
-    simulation_path, tomls_folder = log_dir, f'{log_dir}/config/topology_generated/'
-
+    ldir = str(log_dir)
     """ Load Topics Structure """
-    topology_info = topology.load_topology(f'{log_dir}/{vars.G_TOPOLOGY_FILE_NAME}')
-    topology.load_topics_into_topology(topology_info, tomls_folder)
+    topology_info = topology.load_topology(f'{ldir}/{vars.G_TOPOLOGY_FILE_NAME}')
+    topology.load_topics_into_topology(topology_info, f'{ldir}/config/topology_generated/')
 
     """ Load Simulation Messages """
-    injected_msgs_dict = log_parser.load_messages(simulation_path)
-    print(topology_info, simulation_path)
+    injected_msgs_dict = log_parser.load_messages(ldir)
+    print(topology_info, ldir)
     node_logs, msgs_dict, min_tss, max_tss = analysis.analyze_containers(topology_info,
-                                                                         simulation_path)
+                                                                         ldir)
 
     """ Compute simulation time window """
     simulation_time_ms = round((max_tss - min_tss) / 1000000)
@@ -221,7 +221,7 @@ def compute_settling_time(log_dir: Path):
     analysis.compute_message_latencies(msgs_dict)
     msg_propagation_times = analysis.compute_propagation_times(msgs_dict)
     msg_injection_times = analysis.compute_injection_times(injected_msgs_dict)
-    print(f'Got {log_dir}')
+    print(f'Got {ldir}')
 
 # instantiate typer and set the commands
 app = typer.Typer()
@@ -240,15 +240,15 @@ def procfs(procfs_fname: Path):
 
 # process / plot docker-dstats.out
 @app.command()
-def dstats(dstats_fname: Path, log_dir: str,
+def dstats(log_dir: Path,
             prefix:str = typer.Option("out", help="Specify the prefix for the plot pdfs"),
             cdf: bool = typer.Option(True, help="Specify the prefix for the plots")):
-    if not path_ok(dstats_fname):
+    if not path_ok(log_dir, True):
         sys.exit(0)
 
-    dstats = DStats(dstats_fname, prefix)
-    #dstats.violin_plots(cdf)
-    compute_settling_time(log_dir)
+    dstats = DStats(log_dir, prefix)
+    dstats.violin_plots(cdf)
+    compute_settling_time(log_dir, prefix)
     df = dstats.get_df()
 
     print(f'Got {dstats_fname}')
