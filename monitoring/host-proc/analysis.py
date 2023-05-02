@@ -73,7 +73,8 @@ class Human2BytesConverter(metaclass=Singleton):
 # handle docker stats
 class DStats(metaclass=Singleton):
     def __init__(self, log_dir, oprefix):
-        self.fname, self.prefix = f'{log_dir}/host-proc-stats/docker-stats.out', oprefix
+        self.log_dir, self.oprefix = log_dir, oprefix
+        self.fname = f'{log_dir}/host-proc-stats/docker-stats.out'
         self.df, self.waku_cids, self.n =  "", [], 0
         self.col2title = {  "ContainerID": "Docker ID",
                             "ContainerName" : "Docker Name",
@@ -97,7 +98,7 @@ class DStats(metaclass=Singleton):
                             "BlockR" : "KiB",
                             "BlockW" : "KiB",
                             "PIDS" : "PIDS"}
-        self.start_processing()
+        self.process_dstats_data()
 
     # remove the formatting artefacts
     def pre_process(self):
@@ -123,10 +124,10 @@ class DStats(metaclass=Singleton):
             self.df[size] = self.df[size].map(lambda x: h2b.convert(x.strip())/1024) # KiBs
         for size in ["BlockR", "BlockW"]:
             self.df[size] = self.df[size].map(lambda x: h2b.convert(x.strip())/1024) # KiBs
-        #self.df.to_csv("processed.csv", sep='/')
+        #self.df.to_csv("processed-dstats.csv", sep='/')
 
     # build df from csv
-    def start_processing(self):
+    def process_dstats_data(self):
         log.info(f'processing {self.fname}...')
         self.pre_process()
         self.df = pd.read_csv(self.fname, header=0,  comment='#', skipinitialspace = True,
@@ -142,7 +143,7 @@ class DStats(metaclass=Singleton):
         fig.suptitle(self.col2title[col])
         fig.supylabel(self.col2units[col])
 
-        pp = PdfPages(f'{self.prefix}-{col}.pdf')
+        pp = PdfPages(f'{self.oprefix}-{col}.pdf')
         cid_arr, all_arr = [], []
 
         # per docker violin plot
@@ -202,8 +203,8 @@ class SettlingTime(metaclass=Singleton):
         self.log_dir, self.prefix = log_dir, oprefix
 
     # jordi's log processing
-    def compute_settling_time(self, log_dir: Path, oprefix):
-        ldir = str(log_dir)
+    def compute_settling_time(self):
+        ldir = str(self.log_dir)
 
         topology_info = topology.load_topology(f'{ldir}/{vars.G_TOPOLOGY_FILE_NAME}')
         topology.load_topics_into_topology(topology_info, f'{ldir}/config/topology_generated/')
@@ -226,39 +227,65 @@ class SettlingTime(metaclass=Singleton):
 
 class ProcFS(metaclass=Singleton):
     def __init__(self, log_dir, oprefix):
-        self.log_dir, self.prefix = log_dir, oprefix
+        self.log_dir, self.oprefix = log_dir, oprefix
+        self.fname = f'{log_dir}/host-proc-stats/docker-proc.out'
+        self.df, self.n = "", 0
+        self.process_procfs_data()
+
+    def process_procfs_data(self):
+        if not path_ok(Path(self.fname)):
+            sys.exit(0)
+        self.df = pd.read_csv(self.fname, header=0,  comment='#',
+                delim_whitespace=True,
+                usecols= ['EpochId', 'PID', 'TimeStamp',
+                    'VmPeak', 'VmPeakUnit', 'VmSize', 'VmSizeUnit', 'VmHWM', 'VmHWMUnit',
+                    'VmRSS', 'VmRSSUnit', 'VmData','VmDataUnit', 'VmStk', 'VmStkUnit',
+                    'HostVIF', 'RxBytes', 'RxPackets', 'TxBytes', 'TxPackets',
+                    'DockerVIF', 'NetRX', 'NetWX',
+                    'BLKR', 'BLKW',
+                    'CPU-SYS', 'cpu', 'cpu0', 'cpu1', 'cpu2', 'cpu3',
+                    'cpu4', 'cpu5', 'cpu6', 'cpu7', 'cpu8', 'cpu9', 'CPUUTIME', 'CPUSTIME'])
+        self.df.to_csv("processed-procfs.csv", sep=' ')
+
+    def get_df(self):
+        return self.df
+
 
 # instantiate typer and set the commands
 app = typer.Typer()
 
 # process / plot docker-procfs.out
 @app.command()
-def procfs(plog_dir: Path):
-    if not path_ok(procfs_fname, True):
+def procfs(log_dir: Path,
+            oprefix:str = typer.Option("out", help="Specify the prefix for the plot pdfs"),
+            cdf: bool = typer.Option(True, help="Specify the prefix for the plots")):
+    if not path_ok(log_dir, True):
         sys.exit(0)
-    df = pd.read_csv(procfs_fname, header=0,  comment='#', delim_whitespace=True, usecols= ['EpochId', 'PID', 'TimeStamp',  'VmPeak', 'VmPeakUnit', 'VmSize', 'VmSizeUnit', 'VmHWM', 'VmHWMUnit', 'VmRSS', 'VmRSSUnit', 'VmData','VmDataUnit', 'VmStk', 'VmStkUnit', 'HostVIF', 'RxBytes', 'RxPackets', 'TxBytes', 'TxPackets', 'DockerVIF', 'NetRX', 'NetWX', 'BLKR', 'BLKW', 'CPU-SYS', 'cpu', 'cpu0', 'cpu1', 'cpu2', 'cpu3', 'cpu4', 'cpu5', 'cpu6', 'cpu7', 'cpu8', 'cpu9', 'CPUUTIME', 'CPUSTIME'])
+
+    procfs = ProcFS(log_dir, oprefix)
+    df = procfs.get_df()
     print(df.shape)
     print(df.columns)
     print(df.style)
-    print(f'Got {procfs_fname}')
+    print(f'Got {log_dir}')
 
 
 # process / plot docker-dstats.out
 @app.command()
 def dstats(log_dir: Path,
-            prefix:str = typer.Option("out", help="Specify the prefix for the plot pdfs"),
+            oprefix:str = typer.Option("out", help="Specify the prefix for the plot pdfs"),
             cdf: bool = typer.Option(True, help="Specify the prefix for the plots")):
     if not path_ok(log_dir, True):
         sys.exit(0)
 
-    dstats = DStats(log_dir, prefix)
-    stime = SettlingTime(log_dir, prefix)
+    dstats = DStats(log_dir, oprefix)
+    stime = SettlingTime(log_dir, oprefix)
 
-    stime.compute_settling_time(log_dir, prefix)
+    #stime.compute_settling_time()
     dstats.violin_plots(cdf)
     df = dstats.get_df()
 
-    print(f'Got {dstats_fname}')
+    print(f'Got {log_dir}')
 
 
 
