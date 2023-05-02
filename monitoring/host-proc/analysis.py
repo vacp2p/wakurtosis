@@ -69,13 +69,41 @@ class Human2BytesConverter(metaclass=Singleton):
                 return float(value[:-i]) * self.letters[i][k]
         return np.nan
 
-
-# handle docker stats
-class DStats(metaclass=Singleton):
+class Plots(metaclass=Singleton):
     def __init__(self, log_dir, oprefix):
         self.log_dir, self.oprefix = log_dir, oprefix
-        self.fname = f'{log_dir}/host-proc-stats/docker-stats.out'
-        self.df, self.waku_cids, self.n =  "", [], 0
+        self.df, self.n = "", 0
+
+    # jordi's log processing
+    def compute_settling_time(self):
+        ldir = str(self.log_dir)
+
+        topology_info = topology.load_topology(f'{ldir}/{vars.G_TOPOLOGY_FILE_NAME}')
+        topology.load_topics_into_topology(topology_info, f'{ldir}/config/topology_generated/')
+        injected_msgs_dict = log_parser.load_messages(ldir)
+        print(topology_info, ldir)
+        node_logs, msgs_dict, min_tss, max_tss = analysis.analyze_containers(topology_info,
+                                                                         ldir)
+
+        """ Compute simulation time window """
+        simulation_time_ms = round((max_tss - min_tss) / 1000000)
+        analysis_logger.G_LOGGER.info(f'Simulation started at {min_tss}, ended at {max_tss}. '
+                                  f'Effective simulation time was {simulation_time_ms} ms.')
+
+        analysis.compute_message_delivery(msgs_dict, injected_msgs_dict)
+        analysis.compute_message_latencies(msgs_dict)
+        msg_propagation_times = analysis.compute_propagation_times(msgs_dict)
+        msg_injection_times = analysis.compute_injection_times(injected_msgs_dict)
+        print(f'Got {ldir}')
+
+    def get_df(self):
+        return self.df
+
+# handle docker stats
+class DStats(Plots, metaclass=Singleton):
+    def __init__(self, log_dir, oprefix):
+        Plots.__init__(self, log_dir, oprefix)
+        self.fname, self.waku_cids = f'{log_dir}/host-proc-stats/docker-stats.out', []
         self.col2title = {  "ContainerID": "Docker ID",
                             "ContainerName" : "Docker Name",
                             "CPUPerc" : "CPU Utilisation",
@@ -136,6 +164,8 @@ class DStats(metaclass=Singleton):
                                     "NetRecv", "NetSent", "BlockR","BlockW",  "PIDS"])
         self.post_process()
 
+    # TODO: make a Plot base class : violin_plot_helper, cluster_plot_helper
+    # get_df and derive the rest from it
     def violin_plots_helper(self, col, cdf=True):
         fig, axes = plt.subplots(2, 2, layout='constrained', sharey=True)
         fig.set_figwidth(12)
@@ -195,41 +225,12 @@ class DStats(metaclass=Singleton):
     def cluster_plots(self):
         pass
 
-    def get_df(self):
-        return self.df
 
-class SettlingTime(metaclass=Singleton):
+
+class ProcFS(Plots, metaclass=Singleton):
     def __init__(self, log_dir, oprefix):
-        self.log_dir, self.prefix = log_dir, oprefix
-
-    # jordi's log processing
-    def compute_settling_time(self):
-        ldir = str(self.log_dir)
-
-        topology_info = topology.load_topology(f'{ldir}/{vars.G_TOPOLOGY_FILE_NAME}')
-        topology.load_topics_into_topology(topology_info, f'{ldir}/config/topology_generated/')
-        injected_msgs_dict = log_parser.load_messages(ldir)
-        print(topology_info, ldir)
-        node_logs, msgs_dict, min_tss, max_tss = analysis.analyze_containers(topology_info,
-                                                                         ldir)
-
-        """ Compute simulation time window """
-        simulation_time_ms = round((max_tss - min_tss) / 1000000)
-        analysis_logger.G_LOGGER.info(f'Simulation started at {min_tss}, ended at {max_tss}. '
-                                  f'Effective simulation time was {simulation_time_ms} ms.')
-
-        analysis.compute_message_delivery(msgs_dict, injected_msgs_dict)
-        analysis.compute_message_latencies(msgs_dict)
-        msg_propagation_times = analysis.compute_propagation_times(msgs_dict)
-        msg_injection_times = analysis.compute_injection_times(injected_msgs_dict)
-        print(f'Got {ldir}')
-
-
-class ProcFS(metaclass=Singleton):
-    def __init__(self, log_dir, oprefix):
-        self.log_dir, self.oprefix = log_dir, oprefix
+        Plots.__init__(self, log_dir, oprefix)
         self.fname = f'{log_dir}/host-proc-stats/docker-proc.out'
-        self.df, self.n = "", 0
         self.process_procfs_data()
 
     def process_procfs_data(self):
@@ -247,9 +248,6 @@ class ProcFS(metaclass=Singleton):
                     'cpu4', 'cpu5', 'cpu6', 'cpu7', 'cpu8', 'cpu9', 'CPUUTIME', 'CPUSTIME'])
         self.df.to_csv("processed-procfs.csv", sep=' ')
 
-    def get_df(self):
-        return self.df
-
 
 # instantiate typer and set the commands
 app = typer.Typer()
@@ -263,6 +261,7 @@ def procfs(log_dir: Path,
         sys.exit(0)
 
     procfs = ProcFS(log_dir, oprefix)
+    procfs.compute_settling_time()
     df = procfs.get_df()
     print(df.shape)
     print(df.columns)
@@ -279,10 +278,10 @@ def dstats(log_dir: Path,
         sys.exit(0)
 
     dstats = DStats(log_dir, oprefix)
-    stime = SettlingTime(log_dir, oprefix)
+    #stime = SettlingTime(log_dir, oprefix)
 
-    #stime.compute_settling_time()
     dstats.violin_plots(cdf)
+    dstats.compute_settling_time()
     df = dstats.get_df()
 
     print(f'Got {log_dir}')
