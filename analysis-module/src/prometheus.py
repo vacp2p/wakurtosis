@@ -86,13 +86,13 @@ def fetch_cadvisor_stats_from_prometheus(prom, container_ip, start_ts, end_ts):
                                       end_time=end_timestamp, step="1s")
     net_out = [int(net_out[0]['values'][i][1])/(1024*1024) for i in range(len(net_out[0]['values']))]
 
-    disk_r = prom.custom_query_range(f"container_fs_usage_bytes{{{kurtosis_ip_template} "
+    disk_r = prom.custom_query_range(f"container_fs_reads_bytes_total{{{kurtosis_ip_template} "
                                             f"= '{container_ip}'}}", start_time=start_timestamp,
                                       end_time=end_timestamp, step="1s")
     print(disk_r)
     disk_r = [int(disk_r[0]['values'][i][1])/(1024*1024) for i in range(len(disk_r[0]['values']))]
 
-    disk_w = prom.custom_query_range(f"container_fs_usage_bytes{{{kurtosis_ip_template} "
+    disk_w = prom.custom_query_range(f"container_fs_writes_bytes_total{{{kurtosis_ip_template} "
                                             f"= '{container_ip}'}}", start_time=start_timestamp,
                                       end_time=end_timestamp, step="1s")
     disk_w = [int(disk_w[0]['values'][i][1])/(1024*1024) for i in range(len(disk_w[0]['values']))]
