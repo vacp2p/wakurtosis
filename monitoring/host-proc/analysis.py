@@ -69,11 +69,13 @@ class Human2BytesConverter(metaclass=Singleton):
                 return float(value[:-i]) * self.letters[i][k]
         return np.nan
 
+# Base class for plots and common API
 class Plots(metaclass=Singleton):
     def __init__(self, log_dir, oprefix):
         #TODO: add waku_cids to Plots
         self.log_dir, self.oprefix = log_dir, oprefix
         self.df, self.n = "", 0
+        self.col2title, self.col2units = {}, {}
 
     # jordi's log processing
     def compute_settling_time(self):
@@ -97,8 +99,59 @@ class Plots(metaclass=Singleton):
         msg_injection_times = analysis.compute_injection_times(injected_msgs_dict)
         print(f'Got {ldir}')
 
+        # TODO: add violin_plot_helper, cluster_plot_helper to Plot
+    #       -> need to compute waku_cids for ProcFS
+    def violin_plots_helper(self, col, cdf=True):
+        fig, axes = plt.subplots(2, 2, layout='constrained', sharey=True)
+        fig.set_figwidth(12)
+        fig.set_figheight(10)
+        fig.suptitle(self.col2title[col])
+        fig.supylabel(self.col2units[col])
+
+        pp = PdfPages(f'{self.oprefix}-{col}.pdf')
+        cid_arr, all_arr = [], []
+
+        # per docker violin plot
+        axes[0,0].ticklabel_format(style='plain')
+        axes[0,0].yaxis.grid(True)
+        axes[0,0].set_xlabel('Container ID')
+        for cid in self.waku_cids:
+            if cdf:
+                tmp = self.df[self.df.ContainerID == cid][col].values
+            else:
+                tmp = self.df[self.df.ContainerID == cid][col].diff().dropna().values
+            cid_arr.append(tmp)
+            all_arr = np.concatenate((all_arr, tmp), axis=0)
+        axes[0,0].violinplot(dataset=cid_arr, showmeans=True)
+
+        # pooled  violin plot
+        axes[1,0].ticklabel_format(style='plain')
+        axes[1,0].yaxis.grid(True)
+        axes[1,0].set_xlabel('')
+        axes[1,0].violinplot(dataset=all_arr, showmeans=True)
+
+        # per docker scatter plot
+        axes[0,1].ticklabel_format(style='plain')
+        axes[0,1].yaxis.grid(True)
+        axes[0,1].set_xlabel('Time')
+        for y in cid_arr:
+            axes[0, 1].scatter(x=range(0, len(y)), y=y, marker='.')
+
+        # pooled scatter plot
+        axes[1,1].ticklabel_format(style='plain')
+        axes[1,1].yaxis.grid(True)
+        axes[1,1].set_xlabel('Time')
+        for y in cid_arr:
+            c = [2] * len(y)
+            axes[1, 1].scatter(x=range(0, len(y)), y=y, c=c,marker='.')
+
+        pp.savefig(plt.gcf())
+        pp.close()
+        plt.show()
+
     def get_df(self):
         return self.df
+
 
 # handle docker stats
 class DStats(Plots, metaclass=Singleton):
@@ -165,56 +218,6 @@ class DStats(Plots, metaclass=Singleton):
                                     "NetRecv", "NetSent", "BlockR","BlockW",  "PIDS"])
         self.post_process()
 
-    # TODO: add violin_plot_helper, cluster_plot_helper to Plot
-    #       -> need to compute waku_cids for ProcFS
-    def violin_plots_helper(self, col, cdf=True):
-        fig, axes = plt.subplots(2, 2, layout='constrained', sharey=True)
-        fig.set_figwidth(12)
-        fig.set_figheight(10)
-        fig.suptitle(self.col2title[col])
-        fig.supylabel(self.col2units[col])
-
-        pp = PdfPages(f'{self.oprefix}-{col}.pdf')
-        cid_arr, all_arr = [], []
-
-        # per docker violin plot
-        axes[0,0].ticklabel_format(style='plain')
-        axes[0,0].yaxis.grid(True)
-        axes[0,0].set_xlabel('Container ID')
-        for cid in self.waku_cids:
-            if cdf:
-                tmp = self.df[self.df.ContainerID == cid][col].values
-            else:
-                tmp = self.df[self.df.ContainerID == cid][col].diff().dropna().values
-            cid_arr.append(tmp)
-            all_arr = np.concatenate((all_arr, tmp), axis=0)
-        axes[0,0].violinplot(dataset=cid_arr, showmeans=True)
-
-        # pooled  violin plot
-        axes[1,0].ticklabel_format(style='plain')
-        axes[1,0].yaxis.grid(True)
-        axes[1,0].set_xlabel('')
-        axes[1,0].violinplot(dataset=all_arr, showmeans=True)
-
-        # per docker scatter plot
-        axes[0,1].ticklabel_format(style='plain')
-        axes[0,1].yaxis.grid(True)
-        axes[0,1].set_xlabel('Time')
-        for y in cid_arr:
-            axes[0, 1].scatter(x=range(0, len(y)), y=y, marker='.')
-
-        # pooled scatter plot
-        axes[1,1].ticklabel_format(style='plain')
-        axes[1,1].yaxis.grid(True)
-        axes[1,1].set_xlabel('Time')
-        for y in cid_arr:
-            c = [2] * len(y)
-            axes[1, 1].scatter(x=range(0, len(y)), y=y, c=c,marker='.')
-
-        pp.savefig(plt.gcf())
-        pp.close()
-        plt.show()
-
     def violin_plots(self, cdf):
         self.violin_plots_helper("CPUPerc")
         self.violin_plots_helper("MemUse")
@@ -250,6 +253,15 @@ class ProcFS(Plots, metaclass=Singleton):
                     'cpu4', 'cpu5', 'cpu6', 'cpu7', 'cpu8', 'cpu9', 'CPUUTIME', 'CPUSTIME'])
         self.df.to_csv("processed-procfs.csv", sep=' ')
 
+    def violin_plots(self, cdf):
+        pass
+        #self.violin_plots_helper("CPUPerc")
+        #self.violin_plots_helper("MemUse")
+        #self.violin_plots_helper("NetSent", cdf)
+        #self.violin_plots_helper("NetRecv", cdf)
+        #self.violin_plots_helper("BlockR", cdf)
+        #self.violin_plots_helper("BlockW", cdf)
+
 
 # instantiate typer and set the commands
 app = typer.Typer()
@@ -263,11 +275,10 @@ def procfs(log_dir: Path,
         sys.exit(0)
 
     procfs = ProcFS(log_dir, oprefix)
+    procfs.violin_plots(cdf)
     procfs.compute_settling_time()
     df = procfs.get_df()
-    print(df.shape)
-    print(df.columns)
-    print(df.style)
+
     print(f'Got {log_dir}')
 
 
@@ -280,8 +291,6 @@ def dstats(log_dir: Path,
         sys.exit(0)
 
     dstats = DStats(log_dir, oprefix)
-    #stime = SettlingTime(log_dir, oprefix)
-
     dstats.violin_plots(cdf)
     dstats.compute_settling_time()
     df = dstats.get_df()
