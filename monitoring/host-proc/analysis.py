@@ -71,6 +71,7 @@ class Human2BytesConverter(metaclass=Singleton):
 
 class Plots(metaclass=Singleton):
     def __init__(self, log_dir, oprefix):
+        #TODO: add waku_cids to Plots
         self.log_dir, self.oprefix = log_dir, oprefix
         self.df, self.n = "", 0
 
@@ -164,8 +165,8 @@ class DStats(Plots, metaclass=Singleton):
                                     "NetRecv", "NetSent", "BlockR","BlockW",  "PIDS"])
         self.post_process()
 
-    # TODO: make a Plot base class : violin_plot_helper, cluster_plot_helper
-    # get_df and derive the rest from it
+    # TODO: add violin_plot_helper, cluster_plot_helper to Plot
+    #       -> need to compute waku_cids for ProcFS
     def violin_plots_helper(self, col, cdf=True):
         fig, axes = plt.subplots(2, 2, layout='constrained', sharey=True)
         fig.set_figwidth(12)
@@ -236,6 +237,7 @@ class ProcFS(Plots, metaclass=Singleton):
     def process_procfs_data(self):
         if not path_ok(Path(self.fname)):
             sys.exit(0)
+        # TODO: read the comments and build waku_cids
         self.df = pd.read_csv(self.fname, header=0,  comment='#',
                 delim_whitespace=True,
                 usecols= ['EpochId', 'PID', 'TimeStamp',
