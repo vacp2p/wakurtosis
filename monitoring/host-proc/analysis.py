@@ -101,6 +101,8 @@ class DStats:
 
     # remove the formatting artefacts
     def pre_process(self):
+        if not path_ok(Path(self.fname)):
+            sys.exit(0)
         regex = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
         with open(self.fname) as f:
             cleaned_txt = regex.sub('', f.read())
@@ -227,8 +229,8 @@ app = typer.Typer()
 
 # process / plot docker-procfs.out
 @app.command()
-def procfs(procfs_fname: Path):
-    if not path_ok(procfs_fname):
+def procfs(plog_dir: Path):
+    if not path_ok(procfs_fname, True):
         sys.exit(0)
     df = pd.read_csv(procfs_fname, header=0,  comment='#', delim_whitespace=True, usecols= ['EpochId', 'PID', 'TimeStamp',  'VmPeak', 'VmPeakUnit', 'VmSize', 'VmSizeUnit', 'VmHWM', 'VmHWMUnit', 'VmRSS', 'VmRSSUnit', 'VmData','VmDataUnit', 'VmStk', 'VmStkUnit', 'HostVIF', 'RxBytes', 'RxPackets', 'TxBytes', 'TxPackets', 'DockerVIF', 'NetRX', 'NetWX', 'BLKR', 'BLKW', 'CPU-SYS', 'cpu', 'cpu0', 'cpu1', 'cpu2', 'cpu3', 'cpu4', 'cpu5', 'cpu6', 'cpu7', 'cpu8', 'cpu9', 'CPUUTIME', 'CPUSTIME'])
     print(df.shape)
@@ -246,9 +248,10 @@ def dstats(log_dir: Path,
         sys.exit(0)
 
     dstats = DStats(log_dir, prefix)
-    dstats.violin_plots(cdf)
     stime = SettlingTime(log_dir, prefix)
+
     stime.compute_settling_time(log_dir, prefix)
+    dstats.violin_plots(cdf)
     df = dstats.get_df()
 
     print(f'Got {dstats_fname}')
