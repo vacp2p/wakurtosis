@@ -195,33 +195,32 @@ class DStats:
     def get_df(self):
         return self.df
 
+class SettlingTime:
+    def __init__(self, log_dir, oprefix):
+        self.log_dir, self.prefix = log_dir, oprefix
 
-# add jordi's log processing for settling time
-def compute_settling_time(log_dir: Path, oprefix):
-    if not path_ok(log_dir, True):
-        sys.exit(0)
+    # jordi's log processing
+    def compute_settling_time(self, log_dir: Path, oprefix):
+        ldir = str(log_dir)
 
-    ldir = str(log_dir)
-    """ Load Topics Structure """
-    topology_info = topology.load_topology(f'{ldir}/{vars.G_TOPOLOGY_FILE_NAME}')
-    topology.load_topics_into_topology(topology_info, f'{ldir}/config/topology_generated/')
-
-    """ Load Simulation Messages """
-    injected_msgs_dict = log_parser.load_messages(ldir)
-    print(topology_info, ldir)
-    node_logs, msgs_dict, min_tss, max_tss = analysis.analyze_containers(topology_info,
+        topology_info = topology.load_topology(f'{ldir}/{vars.G_TOPOLOGY_FILE_NAME}')
+        topology.load_topics_into_topology(topology_info, f'{ldir}/config/topology_generated/')
+        injected_msgs_dict = log_parser.load_messages(ldir)
+        print(topology_info, ldir)
+        node_logs, msgs_dict, min_tss, max_tss = analysis.analyze_containers(topology_info,
                                                                          ldir)
 
-    """ Compute simulation time window """
-    simulation_time_ms = round((max_tss - min_tss) / 1000000)
-    analysis_logger.G_LOGGER.info(f'Simulation started at {min_tss}, ended at {max_tss}. '
+        """ Compute simulation time window """
+        simulation_time_ms = round((max_tss - min_tss) / 1000000)
+        analysis_logger.G_LOGGER.info(f'Simulation started at {min_tss}, ended at {max_tss}. '
                                   f'Effective simulation time was {simulation_time_ms} ms.')
 
-    analysis.compute_message_delivery(msgs_dict, injected_msgs_dict)
-    analysis.compute_message_latencies(msgs_dict)
-    msg_propagation_times = analysis.compute_propagation_times(msgs_dict)
-    msg_injection_times = analysis.compute_injection_times(injected_msgs_dict)
-    print(f'Got {ldir}')
+        analysis.compute_message_delivery(msgs_dict, injected_msgs_dict)
+        analysis.compute_message_latencies(msgs_dict)
+        msg_propagation_times = analysis.compute_propagation_times(msgs_dict)
+        msg_injection_times = analysis.compute_injection_times(injected_msgs_dict)
+        print(f'Got {ldir}')
+
 
 # instantiate typer and set the commands
 app = typer.Typer()
@@ -248,7 +247,8 @@ def dstats(log_dir: Path,
 
     dstats = DStats(log_dir, prefix)
     dstats.violin_plots(cdf)
-    compute_settling_time(log_dir, prefix)
+    stime = SettlingTime(log_dir, prefix)
+    stime.compute_settling_time(log_dir, prefix)
     df = dstats.get_df()
 
     print(f'Got {dstats_fname}')
