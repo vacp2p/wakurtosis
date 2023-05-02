@@ -71,7 +71,7 @@ class Human2BytesConverter(metaclass=Singleton):
 
 
 # handle docker stats
-class DStats:
+class DStats(metaclass=Singleton):
     def __init__(self, log_dir, oprefix):
         self.fname, self.prefix = f'{log_dir}/host-proc-stats/docker-stats.out', oprefix
         self.df, self.waku_cids, self.n =  "", [], 0
@@ -197,7 +197,7 @@ class DStats:
     def get_df(self):
         return self.df
 
-class SettlingTime:
+class SettlingTime(metaclass=Singleton):
     def __init__(self, log_dir, oprefix):
         self.log_dir, self.prefix = log_dir, oprefix
 
@@ -223,6 +223,10 @@ class SettlingTime:
         msg_injection_times = analysis.compute_injection_times(injected_msgs_dict)
         print(f'Got {ldir}')
 
+
+class ProcFS(metaclass=Singleton):
+    def __init__(self, log_dir, oprefix):
+        self.log_dir, self.prefix = log_dir, oprefix
 
 # instantiate typer and set the commands
 app = typer.Typer()
