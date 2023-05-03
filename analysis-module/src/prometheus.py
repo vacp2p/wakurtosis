@@ -39,9 +39,8 @@ def get_hardware_metrics(topology, min_tss, max_tss, prom_port):
             container_stats = fetch_cadvisor_stats_from_prometheus(prometheus, container_ip, min_tss, max_tss)
         except Exception as e:
             analysis_logger.G_LOGGER.error('%s: %s' % (e.__doc__, e))
-            continue
 
-            # NOTE: Here we could also choose a different statistic such as mean or average instead of max
+        # NOTE: Here we could also choose a different statistic such as mean or average instead of max
         cpu_usage.append(max(container_stats['cpu_usage']))
         memory_usage.append(max(container_stats['memory_usage']))
         bandwith_in.append(max(container_stats['bandwidth_in']))
@@ -59,20 +58,22 @@ def fetch_cadvisor_stats_from_prometheus(prom, container_ip, start_ts, end_ts):
     end_timestamp = datetime.fromtimestamp(end_ts / 1e9)
 
     cpu = fetch_metric(prom, "container_cpu_load_average_10s", container_ip, start_timestamp, end_timestamp)
-    mem = fetch_metric(prom, "container_memory_usage_bytes", container_ip, start_timestamp, end_timestamp)
-    net_in = fetch_metric(prom, "container_network_receive_bytes_total", container_ip, start_timestamp, end_timestamp)
-    net_out = fetch_metric(prom, "container_network_transmit_bytes_total", container_ip, start_timestamp, end_timestamp)
-    disk_r = fetch_metric(prom, "container_fs_reads_bytes_total", container_ip, start_timestamp, end_timestamp)
-    disk_w = fetch_metric(prom, "container_fs_writes_bytes_total", container_ip, start_timestamp, end_timestamp)
+    mem = fetch_metric(prom, "container_memory_usage_bytes", container_ip, start_timestamp, end_timestamp, True)
+    net_in = fetch_metric(prom, "container_network_receive_bytes_total", container_ip, start_timestamp, end_timestamp, True)
+    net_out = fetch_metric(prom, "container_network_transmit_bytes_total", container_ip, start_timestamp, end_timestamp, True)
+    disk_r = fetch_metric(prom, "container_fs_reads_bytes_total", container_ip, start_timestamp, end_timestamp, True)
+    disk_w = fetch_metric(prom, "container_fs_writes_bytes_total", container_ip, start_timestamp, end_timestamp, True)
 
     return {'cpu_usage': cpu, 'memory_usage': mem, 'bandwidth_in': net_in, 'bandwidth_out': net_out,
             'disk_read': disk_r, 'disk_write': disk_w}
 
 
-def fetch_metric(prom, metric, ip, start_timestamp, end_timestamp):
+def fetch_metric(prom, metric, ip, start_timestamp, end_timestamp, to_mbytes=False):
     metric_result = prom.custom_query_range(f"{metric}{{container_label_com_kurtosistech_private_ip = '{ip}'}}",
                                   start_time=start_timestamp, end_time=end_timestamp, step="1s")
     print(metric_result)
     metric_values = [float(metric_result[0]['values'][i][1]) for i in range(len(metric_result[0]['values']))]
+    if to_mbytes:
+        metric_values = [value/(1024*1024) for value in metric_values]
 
     return metric_values
