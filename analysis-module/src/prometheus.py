@@ -39,6 +39,7 @@ def get_hardware_metrics(topology, min_tss, max_tss, prom_port):
             container_stats = fetch_cadvisor_stats_from_prometheus(prometheus, container_ip, min_tss, max_tss)
         except Exception as e:
             analysis_logger.G_LOGGER.error('%s: %s' % (e.__doc__, e))
+            continue
 
         # NOTE: Here we could also choose a different statistic such as mean or average instead of max
         cpu_usage.append(max(container_stats['cpu_usage']))
