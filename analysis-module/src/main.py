@@ -43,13 +43,7 @@ if __name__ == "__main__":
 
     total_network_usage = {'rx_mbytes': bandwith_in, 'tx_mbytes': bandwith_out}
 
-    # summary = build_summary(metrics_info, topology, msgs_dict, node_logs, [], min_tss, max_tss, avg_samples_per_node)
-
-    # plotting.plot_figure_ex(msg_propagation_times, cpu_usage, memory_usage, total_network_usage)
-
     """ Generate Figure """
-    # msg_propagation_times, cpu_usage, memory_usage, network_usage, disk_usage, injection_times,
-    #                    simulation_summary, simulation_config)
     plotting.plot_figure_ex(msg_propagation_times, cpu_usage, memory_usage, total_network_usage, max_disk_usage,
                             msg_injection_times, simulation_config)
 
