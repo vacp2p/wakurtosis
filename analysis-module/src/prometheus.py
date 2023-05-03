@@ -9,13 +9,10 @@ from src import analysis_logger
 
 
 def connect_to_prometheus(port):
-    #prometheus = subprocess.check_output("kurtosis enclave inspect wakurtosis | grep '\\<prometheus\\>' | awk '{print $6}'", shell=True)
-    #url = f'http://{prometheus[:-1].decode("utf-8") }'
     url = f"http://host.docker.internal:{port}"
     try:
         analysis_logger.G_LOGGER.debug('Connecting to Prometheus server in %s' %url)
         prometheus = PrometheusConnect(url, disable_ssl=True)
-        # print(prometheus)
     except Exception as e:
         analysis_logger.G_LOGGER.error('%s: %s' % (e.__doc__, e))
         return None
@@ -31,7 +28,6 @@ def get_hardware_metrics(topology, min_tss, max_tss, prom_port):
     bandwith_out = []
     max_disk_usage = {'disk_read_mbytes': [], 'disk_write_mbytes': []}
 
-
     node_container_ips = [info["kurtosis_ip"] for info in topology["containers"].values()]
     pbar = tqdm(node_container_ips)
 
@@ -39,7 +35,6 @@ def get_hardware_metrics(topology, min_tss, max_tss, prom_port):
 
     for container_ip in pbar:
         pbar.set_description(f'Fetching hardware stats from container {container_ip}')
-
         try:
             container_stats = fetch_cadvisor_stats_from_prometheus(prometheus, container_ip, min_tss, max_tss)
         except Exception as e:
@@ -58,45 +53,26 @@ def get_hardware_metrics(topology, min_tss, max_tss, prom_port):
 
 
 def fetch_cadvisor_stats_from_prometheus(prom, container_ip, start_ts, end_ts):
-    metrics = prom.get_label_values("__name__")
-    # print(metrics)
+    # Prometheus query example:
+    # container_network_transmit_bytes_total{container_label_com_kurtosistech_private_ip = "212.209.64.2"}
     start_timestamp = datetime.utcfromtimestamp(start_ts / 1e9)
     end_timestamp = datetime.fromtimestamp(end_ts / 1e9)
-    print(container_ip)
-    # container_network_transmit_bytes_total{container_label_com_kurtosistech_private_ip = "212.209.64.2"}
-    kurtosis_ip_template = "container_label_com_kurtosistech_private_ip"
-    print(F"FROM {start_ts} to {end_ts}")
-    cpu = prom.custom_query_range(f"container_cpu_load_average_10s{{{kurtosis_ip_template} "
-                                        f"= '{container_ip}'}}", start_time=start_timestamp,
-                                  end_time=end_timestamp, step="1s")
-    cpu = [float(cpu[0]['values'][i][1]) for i in range(len(cpu[0]['values']))]
 
-    mem = prom.custom_query_range(f"container_memory_usage_bytes{{{kurtosis_ip_template} "
-                                        f"= '{container_ip}'}}", start_time=start_timestamp,
-                                  end_time=end_timestamp, step="1s")
-    mem = [int(mem[0]['values'][i][1])/(1024*1024) for i in range(len(mem[0]['values']))]
+    cpu = fetch_metric(prom, "container_cpu_load_average_10s", container_ip, start_timestamp, end_timestamp)
+    mem = fetch_metric(prom, "container_memory_usage_bytes", container_ip, start_timestamp, end_timestamp)
+    net_in = fetch_metric(prom, "container_network_receive_bytes_total", container_ip, start_timestamp, end_timestamp)
+    net_out = fetch_metric(prom, "container_network_transmit_bytes_total", container_ip, start_timestamp, end_timestamp)
+    disk_r = fetch_metric(prom, "container_fs_reads_bytes_total", container_ip, start_timestamp, end_timestamp)
+    disk_w = fetch_metric(prom, "container_fs_writes_bytes_total", container_ip, start_timestamp, end_timestamp)
 
-    net_in = prom.custom_query_range(f"container_network_receive_bytes_total{{{kurtosis_ip_template}"
-                                           f"= '{container_ip}'}}", start_time=start_timestamp,
-                                     end_time=end_timestamp, step="1s")
-    net_in = [int(net_in[0]['values'][i][1])/(1024*1024) for i in range(len(net_in[0]['values']))]
-
-    net_out = prom.custom_query_range(f"container_network_transmit_bytes_total{{{kurtosis_ip_template} "
-                                            f"= '{container_ip}'}}", start_time=start_timestamp,
-                                      end_time=end_timestamp, step="1s")
-    net_out = [int(net_out[0]['values'][i][1])/(1024*1024) for i in range(len(net_out[0]['values']))]
-
-    disk_r = prom.custom_query_range(f"container_fs_reads_bytes_total{{{kurtosis_ip_template} "
-                                            f"= '{container_ip}'}}", start_time=start_timestamp,
-                                      end_time=end_timestamp, step="1s")
-    print(disk_r)
-    disk_r = [int(disk_r[0]['values'][i][1])/(1024*1024) for i in range(len(disk_r[0]['values']))]
-
-    disk_w = prom.custom_query_range(f"container_fs_writes_bytes_total{{{kurtosis_ip_template} "
-                                            f"= '{container_ip}'}}", start_time=start_timestamp,
-                                      end_time=end_timestamp, step="1s")
-    disk_w = [int(disk_w[0]['values'][i][1])/(1024*1024) for i in range(len(disk_w[0]['values']))]
-
-    print("finished")
     return {'cpu_usage': cpu, 'memory_usage': mem, 'bandwidth_in': net_in, 'bandwidth_out': net_out,
             'disk_read': disk_r, 'disk_write': disk_w}
+
+
+def fetch_metric(prom, metric, ip, start_timestamp, end_timestamp):
+    metric_result = prom.custom_query_range(f"{metric}{{container_label_com_kurtosistech_private_ip = '{ip}'}}",
+                                  start_time=start_timestamp, end_time=end_timestamp, step="1s")
+    print(metric_result)
+    metric_values = [float(metric_result[0]['values'][i][1]) for i in range(len(metric_result[0]['values']))]
+
+    return metric_values
