@@ -178,7 +178,7 @@ async def main():
     # Set RPNG seed from config
     random.seed(config['general']['prng_seed'])
 
-    topology = files.load_json(topology_file)
+    topology = files.load_topology(topology_file)
 
     load_topics_into_topology(topology)
 
