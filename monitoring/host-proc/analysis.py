@@ -72,9 +72,8 @@ class Human2BytesConverter(metaclass=Singleton):
 # Base class for plots and common API
 class Plots(metaclass=Singleton):
     def __init__(self, log_dir, oprefix):
-        #TODO: add waku_cids to Plots
         self.log_dir, self.oprefix = log_dir, oprefix
-        self.df, self.n = "", 0
+        self.df, self.n, self.waku_cids = "", 0, []
         self.col2title, self.col2units = {}, {}
 
     # jordi's log processing
@@ -99,8 +98,13 @@ class Plots(metaclass=Singleton):
         msg_injection_times = analysis.compute_injection_times(injected_msgs_dict)
         print(f'Got {ldir}')
 
-        # TODO: add violin_plot_helper, cluster_plot_helper to Plot
-    #       -> need to compute waku_cids for ProcFS
+
+    def get_cid(self):
+        return self.df.ContainerID
+
+    def set_wakucids(self):
+        self.waku_cids = self.df["ContainerID"].unique()
+
     def violin_plots_helper(self, col, cdf=True):
         fig, axes = plt.subplots(2, 2, layout='constrained', sharey=True)
         fig.set_figwidth(12)
@@ -115,13 +119,21 @@ class Plots(metaclass=Singleton):
         axes[0,0].ticklabel_format(style='plain')
         axes[0,0].yaxis.grid(True)
         axes[0,0].set_xlabel('Container ID')
-        for cid in self.waku_cids:
+        """for cid in self.waku_cids:
             if cdf:
                 tmp = self.df[self.df.ContainerID == cid][col].values
             else:
                 tmp = self.df[self.df.ContainerID == cid][col].diff().dropna().values
             cid_arr.append(tmp)
+            all_arr = np.concatenate((all_arr, tmp), axis=0)"""
+        for cid in self.waku_cids:
+            if cdf:
+                tmp = self.df[self.get_cid() == cid][col].values
+            else:
+                tmp = self.df[self.get_cid() == cid][col].diff().dropna().values
+            cid_arr.append(tmp)
             all_arr = np.concatenate((all_arr, tmp), axis=0)
+
         axes[0,0].violinplot(dataset=cid_arr, showmeans=True)
 
         # pooled  violin plot
@@ -152,12 +164,15 @@ class Plots(metaclass=Singleton):
     def get_df(self):
         return self.df
 
+    def cluster_plots_helper(self, col):
+        pass
+
 
 # handle docker stats
 class DStats(Plots, metaclass=Singleton):
     def __init__(self, log_dir, oprefix):
         Plots.__init__(self, log_dir, oprefix)
-        self.fname, self.waku_cids = f'{log_dir}/host-proc-stats/docker-stats.out', []
+        self.fname = f'{log_dir}/host-proc-stats/docker-stats.out'
         self.col2title = {  "ContainerID": "Docker ID",
                             "ContainerName" : "Docker Name",
                             "CPUPerc" : "CPU Utilisation",
@@ -196,7 +211,6 @@ class DStats(Plots, metaclass=Singleton):
     def post_process(self):
         for name in ["ContainerID", "ContainerName"]:
             self.df[name] = self.df[name].map(lambda x: x.strip())
-        self.waku_cids = self.df["ContainerID"].unique()
         h2b, n = Human2BytesConverter(), len(self.waku_cids)
         for percent in ["CPUPerc", "MemPerc"]:
             self.df[percent] = self.df[percent].str.replace('%','').astype(float)
@@ -206,7 +220,8 @@ class DStats(Plots, metaclass=Singleton):
             self.df[size] = self.df[size].map(lambda x: h2b.convert(x.strip())/1024) # KiBs
         for size in ["BlockR", "BlockW"]:
             self.df[size] = self.df[size].map(lambda x: h2b.convert(x.strip())/1024) # KiBs
-        #self.df.to_csv("processed-dstats.csv", sep='/')
+        self.df.to_csv("processed-dstats.csv", sep='/')
+        self.set_wakucids()
 
     # build df from csv
     def process_dstats_data(self):
@@ -226,24 +241,56 @@ class DStats(Plots, metaclass=Singleton):
         self.violin_plots_helper("BlockR", cdf)
         self.violin_plots_helper("BlockW", cdf)
 
-    def cluster_plots(self):
-        pass
-
-
 
 class ProcFS(Plots, metaclass=Singleton):
     def __init__(self, log_dir, oprefix):
         Plots.__init__(self, log_dir, oprefix)
         self.fname = f'{log_dir}/host-proc-stats/docker-proc.out'
+        # TODO: define these
+        self.col2title = { 'VmPeak' : 'Peak Virtual Memory Usage',
+                           'VmSize' : 'Current Virtual Memory Usage',
+                           'VmHWM'  : 'Current Physical Memory Usage',
+                            'VmRSS' : 'Peak Physical Memory Usage',
+                            'VmData': 'Size of Data Segment',
+                            'VmStk' : 'Size of Stack Segment',
+                         'RxBytes'   : 'Received Bytes',
+                         'RxPackets' : 'Received Packets',
+                         'TxBytes'   : 'Transmitted Bytes',
+                         'TxPackets' : 'Transmitted Packets',
+                        'NetRX'      : 'NetRX',
+                        'NetWX'      : 'NetWX',
+                        'BLKR'       : 'Block Reads',
+                        'BLKW'       : 'Block Writes'
+                        }
+        self.col2units = { 'VmPeak' : 'KBis',
+                           'VmSize' : 'KBis',
+                           'VmHWM'  : 'KBis',
+                            'VmRSS' : 'KBis',
+                            'VmData': 'KBis',
+                            'VmStk' : 'KBis',
+                         'RxBytes'   : 'Bytes',
+                         'RxPackets' : 'Packets',
+                         'TxBytes'   : 'Bytes',
+                         'TxPackets' : 'Packets',
+                        'NetRX'      : 'Bytes',
+                        'NetWX'      : 'Bytes',
+                        'BLKR'       : 'Bytes',
+                        'BLKW'       : 'Bytes'
+                        }
+                    #'CPU-SYS', 'cpu', 'cpu0', 'cpu1', 'cpu2', 'cpu3',
+                    #'cpu4', 'cpu5', 'cpu6', 'cpu7', 'cpu8', 'cpu9', 'CPUUTIME', 'CPUSTIME'
         self.process_procfs_data()
+
+    def pid2cid(pid):
+        pass
 
     def process_procfs_data(self):
         if not path_ok(Path(self.fname)):
             sys.exit(0)
-        # TODO: read the comments and build waku_cids
+
         self.df = pd.read_csv(self.fname, header=0,  comment='#',
                 delim_whitespace=True,
-                usecols= ['EpochId', 'PID', 'TimeStamp',
+                usecols= ['EpochId', 'PID', 'TimeStamp', 'ContainerID',
                     'VmPeak', 'VmPeakUnit', 'VmSize', 'VmSizeUnit', 'VmHWM', 'VmHWMUnit',
                     'VmRSS', 'VmRSSUnit', 'VmData','VmDataUnit', 'VmStk', 'VmStkUnit',
                     'HostVIF', 'RxBytes', 'RxPackets', 'TxBytes', 'TxPackets',
@@ -251,7 +298,21 @@ class ProcFS(Plots, metaclass=Singleton):
                     'BLKR', 'BLKW',
                     'CPU-SYS', 'cpu', 'cpu0', 'cpu1', 'cpu2', 'cpu3',
                     'cpu4', 'cpu5', 'cpu6', 'cpu7', 'cpu8', 'cpu9', 'CPUUTIME', 'CPUSTIME'])
+        self.post_process()
         self.df.to_csv("processed-procfs.csv", sep=' ')
+
+    def post_process(self):
+        pass
+        '''for name in  ['EpochId', 'PID', 'TimeStamp', 'ContainerID',
+                    'VmPeak', 'VmPeakUnit', 'VmSize', 'VmSizeUnit', 'VmHWM', 'VmHWMUnit',
+                    'VmRSS', 'VmRSSUnit', 'VmData','VmDataUnit', 'VmStk', 'VmStkUnit',
+                    'HostVIF', 'RxBytes', 'RxPackets', 'TxBytes', 'TxPackets',
+                    'DockerVIF', 'NetRX', 'NetWX',
+                    'BLKR', 'BLKW']:
+                    #'CPU-SYS', 'cpu', 'cpu0', 'cpu1', 'cpu2', 'cpu3',
+                    #'cpu4', 'cpu5', 'cpu6', 'cpu7', 'cpu8', 'cpu9', 'CPUUTIME', 'CPUSTIME']:
+            self.df[name] = self.df[name].map(lambda x: x.strip())
+            '''
 
     def violin_plots(self, cdf):
         pass
@@ -260,7 +321,7 @@ class ProcFS(Plots, metaclass=Singleton):
         #self.violin_plots_helper("NetSent", cdf)
         #self.violin_plots_helper("NetRecv", cdf)
         #self.violin_plots_helper("BlockR", cdf)
-        #self.violin_plots_helper("BlockW", cdf)
+        self.violin_plots_helper("BLKW", cdf)
 
 
 # instantiate typer and set the commands
@@ -276,7 +337,7 @@ def procfs(log_dir: Path,
 
     procfs = ProcFS(log_dir, oprefix)
     procfs.violin_plots(cdf)
-    procfs.compute_settling_time()
+    #procfs.compute_settling_time()
     df = procfs.get_df()
 
     print(f'Got {log_dir}')
