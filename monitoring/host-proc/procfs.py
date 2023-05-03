@@ -170,7 +170,7 @@ class MetricsCollector:
                     self.pid2procfds[pid]["net3tx"], veth) # sysfs/cgroup stats
             blk = get_blk_metrics(self.pid2procfds[pid]["blk"]) # Read, Write
             out = ( f'SAMPLE_{self.procfs_sample_cnt} '
-                    f'{pid} {time.time()} '
+                    f'{pid} {time.time()} {self.pid2did[pid]} '
                     f'MEM {mem} NET {net1} {net2} {net3} '
                     f'BLK {blk} CPU-SYS {sys_stat} CPU-process {stat}\n'
                   )
@@ -196,7 +196,7 @@ class MetricsCollector:
         self.procfs_fd.write(f'# {", ".join([f"{pid} = {self.pid2did[pid]}" for pid in self.pid2did])} : {len(self.pid2did.keys())}\n')
         self.procfs_fd.write(f'# {", ".join([f"{pid} = {self.pid2veth[pid]}" for pid in self.pid2did])} : {len(self.pid2veth.keys())}\n')
         # write the df column names
-        self.procfs_fd.write((f'EpochId PID TimeStamp '
+        self.procfs_fd.write((f'EpochId PID TimeStamp ContainerID '
                 f'MEM VmPeakKey VmPeak VmPeakUnit VmSizeKey VmSize VmSizeUnit '
                 f'VmHWMKey VmHWM VmHWMUnit VmRSSKey VmRSS VmRSSUnit '
                 f'VmDataKey VmData VmDataUnit VmStkKey VmStk VmStkUnit '
