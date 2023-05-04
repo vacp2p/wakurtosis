@@ -75,6 +75,7 @@ class Plots(metaclass=Singleton):
         self.log_dir, self.oprefix = log_dir, oprefix
         self.df, self.n, self.waku_cids = "", 0, []
         self.col2title, self.col2units = {}, {}
+        self.msg_settling_times, self.msg_injection_times = {}, {}
 
     # jordi's log processing
     def compute_settling_time(self):
@@ -83,7 +84,6 @@ class Plots(metaclass=Singleton):
         topology_info = topology.load_topology(f'{ldir}/{vars.G_TOPOLOGY_FILE_NAME}')
         topology.load_topics_into_topology(topology_info, f'{ldir}/config/topology_generated/')
         injected_msgs_dict = log_parser.load_messages(ldir)
-        print(topology_info, ldir)
         node_logs, msgs_dict, min_tss, max_tss = analysis.analyze_containers(topology_info,
                                                                          ldir)
 
@@ -94,10 +94,9 @@ class Plots(metaclass=Singleton):
 
         analysis.compute_message_delivery(msgs_dict, injected_msgs_dict)
         analysis.compute_message_latencies(msgs_dict)
-        msg_propagation_times = analysis.compute_propagation_times(msgs_dict)
-        msg_injection_times = analysis.compute_injection_times(injected_msgs_dict)
-        print(f'Got {ldir}')
-
+        self.msg_propagation_times = analysis.compute_propagation_times(msgs_dict)
+        self.msg_injection_times = analysis.compute_injection_times(injected_msgs_dict)
+        print("message propagation_times: ", self.msg_propagation_times)
 
     def get_cid(self):
         return self.df.ContainerID
@@ -119,13 +118,6 @@ class Plots(metaclass=Singleton):
         axes[0,0].ticklabel_format(style='plain')
         axes[0,0].yaxis.grid(True)
         axes[0,0].set_xlabel('Container ID')
-        """for cid in self.waku_cids:
-            if cdf:
-                tmp = self.df[self.df.ContainerID == cid][col].values
-            else:
-                tmp = self.df[self.df.ContainerID == cid][col].diff().dropna().values
-            cid_arr.append(tmp)
-            all_arr = np.concatenate((all_arr, tmp), axis=0)"""
         for cid in self.waku_cids:
             if cdf:
                 tmp = self.df[self.get_cid() == cid][col].values
@@ -157,6 +149,27 @@ class Plots(metaclass=Singleton):
             c = [2] * len(y)
             axes[1, 1].scatter(x=range(0, len(y)), y=y, c=c,marker='.')
 
+        pp.savefig(plt.gcf())
+        pp.close()
+        plt.show()
+
+    def plot_settling_time(self):
+        fig, axes = plt.subplots(2, 2, layout='constrained', sharey=True)
+        fig.set_figwidth(12)
+        fig.set_figheight(10)
+        fig.suptitle("Settling Time")
+        fig.supylabel("msecs")
+
+        pp = PdfPages(f'{self.oprefix}-settling-time.pdf')
+        cid_arr, all_arr = [], []
+
+        #fig, axes = plt.subplots(2, 2, layout='constrained', sharey=True)
+        axes[0,0].violinplot(self.msg_propagation_times, showmedians=True)
+        axes[0,0].set_title(
+            f'Message propagation times\n(sample size: {len(self.msg_propagation_times)} messages)')
+        axes[0,0].set_ylabel('Propagation Time (ms)')
+        axes[0,0].spines[['right', 'top']].set_visible(False)
+        axes[0,0].axes.xaxis.set_visible(False)
         pp.savefig(plt.gcf())
         pp.close()
         plt.show()
@@ -246,7 +259,7 @@ class ProcFS(Plots, metaclass=Singleton):
     def __init__(self, log_dir, oprefix):
         Plots.__init__(self, log_dir, oprefix)
         self.fname = f'{log_dir}/host-proc-stats/docker-proc.out'
-        # TODO: define these
+        # TODO: define CPU stuff
         self.col2title = { 'VmPeak' : 'Peak Virtual Memory Usage',
                            'VmSize' : 'Current Virtual Memory Usage',
                            'VmHWM'  : 'Current Physical Memory Usage',
@@ -302,6 +315,7 @@ class ProcFS(Plots, metaclass=Singleton):
         self.df.to_csv("processed-procfs.csv", sep=' ')
 
     def post_process(self):
+        # TODO: compute CPU utilisation and add a column
         pass
         '''for name in  ['EpochId', 'PID', 'TimeStamp', 'ContainerID',
                     'VmPeak', 'VmPeakUnit', 'VmSize', 'VmSizeUnit', 'VmHWM', 'VmHWMUnit',
@@ -352,8 +366,9 @@ def dstats(log_dir: Path,
         sys.exit(0)
 
     dstats = DStats(log_dir, oprefix)
-    dstats.violin_plots(cdf)
+    #dstats.violin_plots(cdf)
     dstats.compute_settling_time()
+    dstats.plot_settling_time()
     df = dstats.get_df()
 
     print(f'Got {log_dir}')
