@@ -202,6 +202,7 @@ class MetricsCollector:
                 f'VmDataKey VmData VmDataUnit VmStkKey VmStk VmStkUnit '
                 f'NET HostVIF RxBytesKey RxBytes RxPacketsKey RxPackets '
                 f'TxBytesKey TxBytes TxPacketsKey TxPackets '
+                f'VETH InOctetsKey InOctets OutOctetsKey OutOctets '
                 f'DockerVIF NetRXKey NetRX NETWXKey NetWX '
                 f'BLK READKEY BLKR WRITEKEY BLKW '
                 f'CPU-SYS cpu cpu0 cpu1 cpu2 cpu3 cpu4 cpu5 cpu6 cpu7 cpu8 cpu9 '
