@@ -289,10 +289,14 @@ def gather_probes(containers_data, probes_ids, num_threads=16):
     return all_containers_metrics
 
 def save_metrics_to_disk(metrics, filename):
+    # Get the parent directory of the file
+    parent_directory = os.path.dirname(filename)
 
-    # with open(filename, 'wb') as f:  # Use 'wb' mode for writing binary data
-    #     pickle.dump(metrics, f)
-    
+    # Create the parent directory if it does not exist
+    if not os.path.exists(parent_directory):
+        os.makedirs(parent_directory)
+
+    # Save the metrics to the file
     with open(filename, 'w') as f:
         json.dump(metrics, f, indent=4)
 
