@@ -16,8 +16,6 @@ import concurrent.futures
 G_APP_NAME = 'WLS-MONITOR'
 G_LOG_LEVEL = 'INFO'
 G_DEFAULT_CONFIG_FILE = './config/config.json'
-# G_DEFAULT_SIMULATION_PATH = './wakurtosis_logs'
-# G_DEFAULT_METRICS_FILENAME = './monitoring/metrics.json'
 
 G_LOGGER = None
 
