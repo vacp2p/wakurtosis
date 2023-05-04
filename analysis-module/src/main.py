@@ -46,12 +46,6 @@ if __name__ == "__main__":
 
     prometheus.get_hardware_metrics(metrics, topology_info, min_tss, max_tss, prom_port)
 
-    # total_network_usage = {'rx_mbytes': bandwith_in, 'tx_mbytes': bandwith_out}
-
-    # each metric would have:
-    # list of values or list of list values
-    # title
-    # y lavel
     """ Generate Figure """
     plotting.plot_figure_ex(metrics, simulation_config)
 
