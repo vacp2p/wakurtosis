@@ -76,7 +76,8 @@ def fetch_cadvisor_stats_from_prometheus(metrics, prom, container_ip, start_ts, 
 
     for metric in metrics["to_query"].values():
         if type(metric["metric_name"]) is list:
-            metric["values"] = [[] for _ in range(len(metric["metric_name"]))]
+            if "values" not in metric.keys():
+                metric["values"] = [[] for _ in range(len(metric["metric_name"]))]
             for i, submetric in enumerate(metric["metric_name"]):
                 values = fetch_metric(prom, submetric, container_ip, start_timestamp, end_timestamp,
                                       metric["toMB"])
