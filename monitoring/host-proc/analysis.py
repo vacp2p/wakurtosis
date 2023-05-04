@@ -279,22 +279,22 @@ class ProcFS(Plots, metaclass=Singleton):
                         'BLKR'       : 'Block Reads',
                         'BLKW'       : 'Block Writes'
                         }
-        self.col2units = { 'VmPeak' : 'KBis',
-                           'VmSize' : 'KBis',
-                           'VmHWM'  : 'KBis',
-                            'VmRSS' : 'KBis',
-                            'VmData': 'KBis',
-                            'VmStk' : 'KBis',
-                         'RxBytes'   : 'Bytes',
+        self.col2units = { 'VmPeak' : 'MiB',
+                           'VmSize' : 'MiB',
+                           'VmHWM'  : 'MiB',
+                            'VmRSS' : 'MiB',
+                            'VmData': 'MiB',
+                            'VmStk' : 'MiB',
+                         'RxBytes'   : 'MiB',
                          'RxPackets' : 'Packets',
-                         'TxBytes'   : 'Bytes',
+                         'TxBytes'   : 'MiB',
                          'TxPackets' : 'Packets',
-                        'NetRX'      : 'Bytes',
-                        'NetWX'      : 'Bytes',
-                        'InOctets'   : 'Bytes',
-                        'OutOctets'  : 'Bytes',
-                        'BLKR'       : 'Bytes',
-                        'BLKW'       : 'Bytes'
+                        'NetRX'      : 'MiB',
+                        'NetWX'      : 'MiB',
+                        'InOctets'   : 'MiB',
+                        'OutOctets'  : 'MiB',
+                        'BLKR'       : 'MiB',
+                        'BLKW'       : 'MiB'
                         }
                     #'CPU-SYS', 'cpu', 'cpu0', 'cpu1', 'cpu2', 'cpu3',
                     #'cpu4', 'cpu5', 'cpu6', 'cpu7', 'cpu8', 'cpu9', 'CPUUTIME', 'CPUSTIME'
@@ -331,10 +331,10 @@ class ProcFS(Plots, metaclass=Singleton):
     def post_process(self):
         self.set_wakucids()
         #h2b = Human2BytesConverter()
-        for size in ['VmPeak', 'VmSize', 'VmHWM','VmRSS', 'VmData','VmStk']
-            self.df[size] = self.df[size].map(lambda x: x.strip()/(1024)) # MiBs
-        for size in ['RxBytes', 'TxBytes', 'InOctets','OutOctets', 'NetRX','NetWX']
-            self.df[size] = self.df[size].map(lambda x: x.strip()/(1024*0124)) # MiBs
+        for size in ['VmPeak', 'VmSize', 'VmHWM','VmRSS', 'VmData','VmStk']:
+            self.df[size] = self.df[size].map(lambda x: x/1024) # MiBs
+        for size in ['RxBytes', 'TxBytes', 'InOctets','OutOctets', 'NetRX','NetWX']:
+            self.df[size] = self.df[size].map(lambda x: x/(1024*1024)) # MiBs
 
         # TODO: compute CPU utilisation and add it as a column
         '''for name in  ['EpochId', 'PID', 'TimeStamp', 'ContainerID',
@@ -356,9 +356,9 @@ class ProcFS(Plots, metaclass=Singleton):
         self.violin_plots_helper("VmData")
         self.violin_plots_helper("VmStk")
         self.violin_plots_helper("RxBytes")
+        self.violin_plots_helper("TxBytes")
         self.violin_plots_helper("NetRX")
         self.violin_plots_helper("NetWX")
-        self.violin_plots_helper("TxBytes")
         self.violin_plots_helper("InOctets")
         self.violin_plots_helper("OutOctets")
         self.violin_plots_helper("BLKR")
