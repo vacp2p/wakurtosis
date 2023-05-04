@@ -96,13 +96,33 @@ class Plots(metaclass=Singleton):
         analysis.compute_message_latencies(msgs_dict)
         self.msg_propagation_times = analysis.compute_propagation_times(msgs_dict)
         self.msg_injection_times = analysis.compute_injection_times(injected_msgs_dict)
-        print("message propagation_times: ", self.msg_propagation_times)
+        #print("message propagation_times: ", self.msg_propagation_times)
 
     def get_cid(self):
         return self.df.ContainerID
 
     def set_wakucids(self):
         self.waku_cids = self.df["ContainerID"].unique()
+
+    def plot_settling_time(self):
+        fig, axes = plt.subplots(1, 2, layout='constrained', sharey=True)
+        fig.set_figwidth(12)
+        fig.set_figheight(10)
+        fig.suptitle(f'Settling Time: {len(self.msg_propagation_times)} messages')
+        fig.supylabel("msecs")
+
+        pp = PdfPages(f'{self.oprefix}-settling-time.pdf')
+        #axes[0].violinplot([0], showmedians=True)
+        axes[0].set_xticks([x + 1 for x in range(len(self.waku_cids))])
+        axes[0].set_xlabel('TODO: Per-container settling time')
+
+        #fig, axes = plt.subplots(2, 2, layout='constrained', sharey=True)
+        axes[1].violinplot(self.msg_propagation_times, showmedians=True)
+        #axes[0].spines[['right', 'top']].set_visible(False)
+        axes[1].axes.xaxis.set_visible(False)
+        pp.savefig(plt.gcf())
+        pp.close()
+        plt.show()
 
     def violin_plots_helper(self, col, cdf=True):
         fig, axes = plt.subplots(2, 2, layout='constrained', sharey=True)
@@ -112,7 +132,7 @@ class Plots(metaclass=Singleton):
         fig.supylabel(self.col2units[col])
 
         pp = PdfPages(f'{self.oprefix}-{col}.pdf')
-        cid_arr, all_arr = [], []
+        per_cid_arr, all_arr = [], []
 
         # per docker violin plot
         axes[0,0].ticklabel_format(style='plain')
@@ -123,53 +143,34 @@ class Plots(metaclass=Singleton):
                 tmp = self.df[self.get_cid() == cid][col].values
             else:
                 tmp = self.df[self.get_cid() == cid][col].diff().dropna().values
-            cid_arr.append(tmp)
+            per_cid_arr.append(tmp)
             all_arr = np.concatenate((all_arr, tmp), axis=0)
 
-        axes[0,0].violinplot(dataset=cid_arr, showmeans=True)
+        axes[0,0].violinplot(dataset=per_cid_arr, showmeans=True)
+        axes[0,0].set_xticks([x + 1 for x in range(len(self.waku_cids))])
 
         # pooled  violin plot
         axes[1,0].ticklabel_format(style='plain')
         axes[1,0].yaxis.grid(True)
         axes[1,0].set_xlabel('')
         axes[1,0].violinplot(dataset=all_arr, showmeans=True)
+        axes[1,0].axes.xaxis.set_visible(False)
 
         # per docker scatter plot
         axes[0,1].ticklabel_format(style='plain')
         axes[0,1].yaxis.grid(True)
         axes[0,1].set_xlabel('Time')
-        for y in cid_arr:
+        for y in per_cid_arr:
             axes[0, 1].scatter(x=range(0, len(y)), y=y, marker='.')
 
         # pooled scatter plot
         axes[1,1].ticklabel_format(style='plain')
         axes[1,1].yaxis.grid(True)
         axes[1,1].set_xlabel('Time')
-        for y in cid_arr:
+        for y in per_cid_arr:
             c = [2] * len(y)
             axes[1, 1].scatter(x=range(0, len(y)), y=y, c=c,marker='.')
 
-        pp.savefig(plt.gcf())
-        pp.close()
-        plt.show()
-
-    def plot_settling_time(self):
-        fig, axes = plt.subplots(2, 2, layout='constrained', sharey=True)
-        fig.set_figwidth(12)
-        fig.set_figheight(10)
-        fig.suptitle("Settling Time")
-        fig.supylabel("msecs")
-
-        pp = PdfPages(f'{self.oprefix}-settling-time.pdf')
-        cid_arr, all_arr = [], []
-
-        #fig, axes = plt.subplots(2, 2, layout='constrained', sharey=True)
-        axes[0,0].violinplot(self.msg_propagation_times, showmedians=True)
-        axes[0,0].set_title(
-            f'Message propagation times\n(sample size: {len(self.msg_propagation_times)} messages)')
-        axes[0,0].set_ylabel('Propagation Time (ms)')
-        axes[0,0].spines[['right', 'top']].set_visible(False)
-        axes[0,0].axes.xaxis.set_visible(False)
         pp.savefig(plt.gcf())
         pp.close()
         plt.show()
@@ -350,8 +351,9 @@ def procfs(log_dir: Path,
         sys.exit(0)
 
     procfs = ProcFS(log_dir, oprefix)
-    procfs.violin_plots(cdf)
-    #procfs.compute_settling_time()
+    procfs.compute_settling_time()
+    #procfs.violin_plots(cdf)
+    procfs.plot_settling_time()
     df = procfs.get_df()
 
     print(f'Got {log_dir}')
@@ -366,8 +368,8 @@ def dstats(log_dir: Path,
         sys.exit(0)
 
     dstats = DStats(log_dir, oprefix)
-    #dstats.violin_plots(cdf)
     dstats.compute_settling_time()
+    dstats.violin_plots(cdf)
     dstats.plot_settling_time()
     df = dstats.get_df()
 
