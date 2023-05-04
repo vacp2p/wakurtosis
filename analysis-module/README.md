@@ -8,4 +8,4 @@ Mount:
 
 Example:
 
-- docker run --network "host" -v $(pwd)/wakurtosis_logs:/simulation_data/ --add-host=host.docker.internal:host-gateway <image> -p <prometheus_port>
+- docker run --network "host" -v $(pwd)/wakurtosis_logs:/simulation_data/ --add-host=host.docker.internal:host-gateway <image> <script> -p <prometheus_port>
