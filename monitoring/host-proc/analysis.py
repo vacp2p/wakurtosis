@@ -69,6 +69,7 @@ class Human2BytesConverter(metaclass=Singleton):
                 return float(value[:-i]) * self.letters[i][k]
         return np.nan
 
+
 # Base class for plots and common API
 class Plots(metaclass=Singleton):
     def __init__(self, log_dir, oprefix):
@@ -78,20 +79,15 @@ class Plots(metaclass=Singleton):
         self.msg_settling_times, self.msg_injection_times = {}, {}
 
     # jordi's log processing
-    def compute_settling_time(self):
+    def compute_settling_times(self):
         ldir = str(self.log_dir)
-
         topology_info = topology.load_topology(f'{ldir}/{vars.G_TOPOLOGY_FILE_NAME}')
         topology.load_topics_into_topology(topology_info, f'{ldir}/config/topology_generated/')
         injected_msgs_dict = log_parser.load_messages(ldir)
-        node_logs, msgs_dict, min_tss, max_tss = analysis.analyze_containers(topology_info,
-                                                                         ldir)
-
-        """ Compute simulation time window """
+        node_logs, msgs_dict, min_tss, max_tss = analysis.analyze_containers(topology_info, ldir)
         simulation_time_ms = round((max_tss - min_tss) / 1000000)
-        log.info(f'Simulation started at {min_tss}, ended at {max_tss}. '
-                                  f'Effective simulation time was {simulation_time_ms} ms.')
-
+        log.info((f'Simulation started at {min_tss}, ended at {max_tss}. '
+                  f'Effective simulation time was {simulation_time_ms} ms.'))
         analysis.compute_message_delivery(msgs_dict, injected_msgs_dict)
         analysis.compute_message_latencies(msgs_dict)
         self.msg_propagation_times = analysis.compute_propagation_times(msgs_dict)
@@ -104,7 +100,7 @@ class Plots(metaclass=Singleton):
     def set_wakucids(self):
         self.waku_cids = self.df["ContainerID"].unique()
 
-    def plot_settling_time(self):
+    def plot_settling_times(self):
         fig, axes = plt.subplots(1, 2, layout='constrained', sharey=True)
         fig.set_figwidth(12)
         fig.set_figheight(10)
@@ -113,8 +109,10 @@ class Plots(metaclass=Singleton):
 
         pp = PdfPages(f'{self.oprefix}-settling-time.pdf')
         #axes[0].violinplot([0], showmedians=True)
+        # TODO: add docker id as legend to xticks 
         axes[0].set_xticks([x + 1 for x in range(len(self.waku_cids))])
-        axes[0].set_xlabel('TODO: Per-container settling time')
+        #axes[0].set_xticks(ticks=[x + 1 for x in range(len(self.waku_cids))], labels=self.df["ContainerID"].unique())
+        axes[0].set_xlabel('TODO: revisit after Jordi added per-container settling times')
 
         #fig, axes = plt.subplots(2, 2, layout='constrained', sharey=True)
         axes[1].violinplot(self.msg_propagation_times, showmedians=True)
@@ -148,6 +146,7 @@ class Plots(metaclass=Singleton):
             all_arr = np.concatenate((all_arr, tmp), axis=0)
 
         axes[0,0].violinplot(dataset=per_cid_arr, showmeans=True)
+        # TODO: add docker id as legend to xticks 
         axes[0,0].set_xticks([x + 1 for x in range(len(self.waku_cids))])
 
         # pooled  violin plot
@@ -235,7 +234,7 @@ class DStats(Plots, metaclass=Singleton):
             self.df[size] = self.df[size].map(lambda x: h2b.convert(x.strip())/(1024*1024)) # MiBs
         for size in ["BlockR", "BlockW"]:
             self.df[size] = self.df[size].map(lambda x: h2b.convert(x.strip())/(1024*1024)) # MiBs
-        self.df.to_csv("cleaned-dstats.csv", sep='/')
+        self.df.to_csv(f'{self.oprefix}-cleaned.csv', sep='/')
         self.set_wakucids()
 
     # build df from csv
@@ -325,8 +324,7 @@ class ProcFS(Plots, metaclass=Singleton):
         #print(self.df.columns)
         #print(self.df.shape)
         self.post_process()
-        self.df.to_csv("cleaned-procfs.csv", sep='/')
-        #sys.exit(0)
+        self.df.to_csv(f'{self.oprefix}-cleaned.csv', sep='/')
 
     def post_process(self):
         self.set_wakucids()
@@ -377,9 +375,9 @@ def procfs(log_dir: Path,
         sys.exit(0)
 
     procfs = ProcFS(log_dir, oprefix)
-    procfs.compute_settling_time()
+    procfs.compute_settling_times()
     procfs.violin_plots(cdf)
-    procfs.plot_settling_time()
+    procfs.plot_settling_times()
     df = procfs.get_df()
 
     print(f'Got {log_dir}')
@@ -394,9 +392,9 @@ def dstats(log_dir: Path,
         sys.exit(0)
 
     dstats = DStats(log_dir, oprefix)
-    dstats.compute_settling_time()
+    dstats.compute_settling_times()
     dstats.violin_plots(cdf)
-    dstats.plot_settling_time()
+    dstats.plot_settling_times()
     df = dstats.get_df()
 
     print(f'Got {log_dir}')
