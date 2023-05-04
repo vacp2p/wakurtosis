@@ -16,16 +16,16 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
 from tqdm_loggable.auto import tqdm
-import seaborn as sns
+#import seaborn as sns
 
 from src import vars
-from src import arg_parser
+#from src import arg_parser
 from src import topology
 from src import log_parser
 from src import analysis
 #from src import prometheus
-from src import analysis_logger
-from src import plotting
+#from src import analysis_logger
+#from src import plotting
 
 
 # check if the path exists and is of appropriate type
@@ -89,7 +89,7 @@ class Plots(metaclass=Singleton):
 
         """ Compute simulation time window """
         simulation_time_ms = round((max_tss - min_tss) / 1000000)
-        analysis_logger.G_LOGGER.info(f'Simulation started at {min_tss}, ended at {max_tss}. '
+        log.info(f'Simulation started at {min_tss}, ended at {max_tss}. '
                                   f'Effective simulation time was {simulation_time_ms} ms.')
 
         analysis.compute_message_delivery(msgs_dict, injected_msgs_dict)
@@ -143,6 +143,7 @@ class Plots(metaclass=Singleton):
                 tmp = self.df[self.get_cid() == cid][col].values
             else:
                 tmp = self.df[self.get_cid() == cid][col].diff().dropna().values
+            #print(f'{cid}-{col}: ', tmp)
             per_cid_arr.append(tmp)
             all_arr = np.concatenate((all_arr, tmp), axis=0)
 
@@ -204,10 +205,10 @@ class DStats(Plots, metaclass=Singleton):
                             "MemUse" : "MiB",
                             "MemTotal" : "MiB",
                             "MemPerc" : "Percentage (%)",
-                            "NetRecv" : "KiB",
-                            "NetSent" : "KiB",
-                            "BlockR" : "KiB",
-                            "BlockW" : "KiB",
+                            "NetRecv" : "MiB",
+                            "NetSent" : "MiB",
+                            "BlockR" : "MiB",
+                            "BlockW" : "MiB",
                             "PIDS" : "PIDS"}
         self.process_dstats_data()
 
@@ -231,10 +232,10 @@ class DStats(Plots, metaclass=Singleton):
         for size in ["MemUse", "MemTotal"]:
             self.df[size] = self.df[size].map(lambda x: h2b.convert(x.strip())/(1024*1024)) # MiBs
         for size in ["NetRecv", "NetSent"]:
-            self.df[size] = self.df[size].map(lambda x: h2b.convert(x.strip())/1024) # KiBs
+            self.df[size] = self.df[size].map(lambda x: h2b.convert(x.strip())/(1024*1024)) # MiBs
         for size in ["BlockR", "BlockW"]:
-            self.df[size] = self.df[size].map(lambda x: h2b.convert(x.strip())/1024) # KiBs
-        self.df.to_csv("processed-dstats.csv", sep='/')
+            self.df[size] = self.df[size].map(lambda x: h2b.convert(x.strip())/(1024*1024)) # MiBs
+        self.df.to_csv("cleaned-dstats.csv", sep='/')
         self.set_wakucids()
 
     # build df from csv
@@ -261,18 +262,20 @@ class ProcFS(Plots, metaclass=Singleton):
         Plots.__init__(self, log_dir, oprefix)
         self.fname = f'{log_dir}/host-proc-stats/docker-proc.out'
         # TODO: define CPU stuff
-        self.col2title = { 'VmPeak' : 'Peak Virtual Memory Usage',
-                           'VmSize' : 'Current Virtual Memory Usage',
-                           'VmHWM'  : 'Current Physical Memory Usage',
-                            'VmRSS' : 'Peak Physical Memory Usage',
-                            'VmData': 'Size of Data Segment',
-                            'VmStk' : 'Size of Stack Segment',
-                         'RxBytes'   : 'Received Bytes',
-                         'RxPackets' : 'Received Packets',
-                         'TxBytes'   : 'Transmitted Bytes',
-                         'TxPackets' : 'Transmitted Packets',
-                        'NetRX'      : 'NetRX',
-                        'NetWX'      : 'NetWX',
+        self.col2title = { 'VmPeak' : 'Memory: Peak Virtual Memory Usage',
+                            'VmSize' : 'Memory: Current Virtual Memory Usage',
+                            'VmHWM'  : 'Memory: Current Physical Memory Usage',
+                            'VmRSS' : 'Memory: Peak Physical Memory Usage',
+                            'VmData': 'Memory: Size of Data Segment',
+                            'VmStk' : 'Memory: Size of Stack Segment',
+                            'RxBytes'   : 'Network: Received Bytes',
+                            'RxPackets' : 'Network: Received Packets',
+                            'TxBytes'   : 'Network: Transmitted Bytes',
+                            'TxPackets' : 'Network: Transmitted Packets',
+                            'NetRX'      : 'Network: NetRX',
+                            'NetWX'      : 'Network: NetWX',
+                            'InOctets'   : 'Network: InOctets',
+                            'OutOctets'  : 'Network: OutOctets',
                         'BLKR'       : 'Block Reads',
                         'BLKW'       : 'Block Writes'
                         }
@@ -288,6 +291,8 @@ class ProcFS(Plots, metaclass=Singleton):
                          'TxPackets' : 'Packets',
                         'NetRX'      : 'Bytes',
                         'NetWX'      : 'Bytes',
+                        'InOctets'   : 'Bytes',
+                        'OutOctets'  : 'Bytes',
                         'BLKR'       : 'Bytes',
                         'BLKW'       : 'Bytes'
                         }
@@ -302,22 +307,36 @@ class ProcFS(Plots, metaclass=Singleton):
         if not path_ok(Path(self.fname)):
             sys.exit(0)
 
-        self.df = pd.read_csv(self.fname, header=0,  comment='#',
-                delim_whitespace=True,
+        self.df = pd.read_csv(self.fname, header=0,  comment='#', skipinitialspace = True,
+        #self.df = pd.read_fwf(self.fname, header=0,  comment='#', skipinitialspace = True)
+                delimiter=r"\s+",
+                #delimiter=r"\s+"),
                 usecols= ['EpochId', 'PID', 'TimeStamp', 'ContainerID',
                     'VmPeak', 'VmPeakUnit', 'VmSize', 'VmSizeUnit', 'VmHWM', 'VmHWMUnit',
                     'VmRSS', 'VmRSSUnit', 'VmData','VmDataUnit', 'VmStk', 'VmStkUnit',
                     'HostVIF', 'RxBytes', 'RxPackets', 'TxBytes', 'TxPackets',
+                    'VETH', 'InOctets', 'OutOctets',
                     'DockerVIF', 'NetRX', 'NetWX',
+                 'VETH',  'InOctets', 'OutOctets',
                     'BLKR', 'BLKW',
                     'CPU-SYS', 'cpu', 'cpu0', 'cpu1', 'cpu2', 'cpu3',
-                    'cpu4', 'cpu5', 'cpu6', 'cpu7', 'cpu8', 'cpu9', 'CPUUTIME', 'CPUSTIME'])
+                   'cpu4', 'cpu5', 'cpu6', 'cpu7', 'cpu8', 'cpu9', 'CPUUTIME', 'CPUSTIME'])
+        #print(self.df[['BLKR']].to_string(index=False))
+        #print(self.df.columns)
+        #print(self.df.shape)
         self.post_process()
-        self.df.to_csv("processed-procfs.csv", sep=' ')
+        self.df.to_csv("cleaned-procfs.csv", sep='/')
+        #sys.exit(0)
 
     def post_process(self):
-        # TODO: compute CPU utilisation and add a column
-        pass
+        self.set_wakucids()
+        #h2b = Human2BytesConverter()
+        for size in ['VmPeak', 'VmSize', 'VmHWM','VmRSS', 'VmData','VmStk']
+            self.df[size] = self.df[size].map(lambda x: x.strip()/(1024)) # MiBs
+        for size in ['RxBytes', 'TxBytes', 'InOctets','OutOctets', 'NetRX','NetWX']
+            self.df[size] = self.df[size].map(lambda x: x.strip()/(1024*0124)) # MiBs
+
+        # TODO: compute CPU utilisation and add it as a column
         '''for name in  ['EpochId', 'PID', 'TimeStamp', 'ContainerID',
                     'VmPeak', 'VmPeakUnit', 'VmSize', 'VmSizeUnit', 'VmHWM', 'VmHWMUnit',
                     'VmRSS', 'VmRSSUnit', 'VmData','VmDataUnit', 'VmStk', 'VmStkUnit',
@@ -330,13 +349,20 @@ class ProcFS(Plots, metaclass=Singleton):
             '''
 
     def violin_plots(self, cdf):
-        pass
-        #self.violin_plots_helper("CPUPerc")
-        #self.violin_plots_helper("MemUse")
-        #self.violin_plots_helper("NetSent", cdf)
-        #self.violin_plots_helper("NetRecv", cdf)
-        #self.violin_plots_helper("BlockR", cdf)
-        self.violin_plots_helper("BLKW", cdf)
+        self.violin_plots_helper("VmPeak")
+        self.violin_plots_helper("VmRSS")
+        self.violin_plots_helper("VmSize")
+        self.violin_plots_helper("VmHWM")
+        self.violin_plots_helper("VmData")
+        self.violin_plots_helper("VmStk")
+        self.violin_plots_helper("RxBytes")
+        self.violin_plots_helper("NetRX")
+        self.violin_plots_helper("NetWX")
+        self.violin_plots_helper("TxBytes")
+        self.violin_plots_helper("InOctets")
+        self.violin_plots_helper("OutOctets")
+        self.violin_plots_helper("BLKR")
+        self.violin_plots_helper("BLKW")
 
 
 # instantiate typer and set the commands
@@ -352,7 +378,7 @@ def procfs(log_dir: Path,
 
     procfs = ProcFS(log_dir, oprefix)
     procfs.compute_settling_time()
-    #procfs.violin_plots(cdf)
+    procfs.violin_plots(cdf)
     procfs.plot_settling_time()
     df = procfs.get_df()
 
