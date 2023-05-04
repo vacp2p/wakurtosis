@@ -151,3 +151,11 @@ def analyze_containers(topology, simulation_path):
         file.close()
 
     return node_logs, msgs_dict, min_tss, max_tss
+
+
+def inject_metric_in_dict(metrics, key_name, title, y_label, metric_name, values):
+    metrics[key_name] = {}
+    metrics[key_name]["title"] = title
+    metrics[key_name]["y_label"] = y_label
+    metrics[key_name]["metric_name"] = metric_name
+    metrics[key_name]["values"] = values
