@@ -68,12 +68,13 @@ docker rm cgennet > /dev/null 2>&1
 
 
 ##################### HOST PROCFS MONITOR : PROLOGUE
-usr=`id -u`
-grp=`id -g`
-odir=./stats
-signal_fifo=/tmp/hostproc-signal.fifo   # do not create fifo under ./stats, or inside the repo
 if [ "$metrics_infra" = "host-proc" ];
 then
+    usr=`id -u`
+    grp=`id -g`
+    odir=./stats
+    signal_fifo=/tmp/hostproc-signal.fifo   # do not create fifo under ./stats, or inside the repo
+
     rclist=$odir/docker-rc-list.out
     cd monitoring/host-proc
     mkdir -p $odir
@@ -141,10 +142,10 @@ fi
 ##################### DOCKER PROCFS MONITOR
 if [ "$metrics_infra" = "container-proc" ];
 then
-    echo "Jordi's measurement infra goes here"
+    echo "Starting monitoring with probes in the containers"
     # Start process level monitoring (in background, will wait to WSL to be created)
-    #sudo -E python3 ./monitoring/monitor.py & ? 
-    #monitor_pid=$! ?
+    sudo -E python3 ./monitoring/container-proc/monitor.py &
+    monitor_pid=$!
 fi
 ##################### END
 
@@ -177,7 +178,7 @@ echo "Simulation took $DIFF1 + $DIFF2 = $(( $END2 - $START)) secs"
 ##################### END
 
 # give time for the messages to settle down before we collect logs
-sleep 60
+# sleep 60
 
 ##################### GATHER CONFIG, LOGS & METRICS
 # dump logs
@@ -196,9 +197,8 @@ fi
 
 if [ "$metrics_infra" = "container-proc" ];
 then
-    echo "Jordi's data copy goes here"
-    #echo -e "Waiting monitoring to finish ..." ?
-    #wait $monitor_pid ?
+    echo -e "Waiting monitoring to finish ..."
+    wait $monitor_pid
 fi
 
 # Copy simulation results
