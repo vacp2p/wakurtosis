@@ -9,7 +9,7 @@
     "interconnection_batch": 10
   },
   "gennet": {
-    "num_nodes": 3,
+    "num_nodes": 10,
     "fanout": 3,
     "num_topics": 1,
     "num_partitions": 1,
@@ -35,7 +35,7 @@
     "container_str_pattern": "waku",
     "process_str_pattern": "waku",
     "sampling_interval_s": 1,
-    "probe_filename" : "./monitoring/probe.sh",
-    "metrics_filename" : "./monitoring/metrics.json"
+    "probe_filename" : "./monitoring/container-proc/probe_fast_3.sh",
+    "metrics_filename" : "./monitoring/container-proc/metrics.json"
    }
 }
