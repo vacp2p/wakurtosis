@@ -111,7 +111,7 @@ async def find_processes(container_name_or_id, process_name):
 
     return process_info
 
-def inject_probes(script_tar_data, containers_data_list, sampling_interval, num_threads=16):
+def inject_probes(script_name, script_tar_data, containers_data_list, sampling_interval, num_threads=16):
     
     start_time = time.time()
     
@@ -128,9 +128,9 @@ def inject_probes(script_tar_data, containers_data_list, sampling_interval, num_
 
             # Copy the probe script file to the container
             container.put_archive('/tmp', script_tar_data.getvalue())
-            
+
             # Start the probe script in the container
-            command = f'/bin/sh /tmp/probe.sh {sampling_interval} {" ".join(map(str, pids))}'
+            command = f'/bin/sh /tmp/{script_name} {sampling_interval} {" ".join(map(str, pids))}'
 
             container.exec_run(cmd=command, stdout=False, stderr=False, detach=True, tty=False)
             pid_tar_stream, _ = container.get_archive('/tmp/pid.tmp')
@@ -147,7 +147,7 @@ def inject_probes(script_tar_data, containers_data_list, sampling_interval, num_
                     probe_pids.append(process_pid)
         
         except Exception as e:
-            G_LOGGER.error(f"An error occurred while executing the script in container {container.id}: {e}", file=sys.stderr)
+            G_LOGGER.error(f"An error occurred while executing the script in container {container.id}: {e}")
 
     with ThreadPoolExecutor(max_workers=num_threads) as executor:
         
@@ -170,6 +170,7 @@ def parse_net_stats(output):
     total_sent = 0
 
     for match in matches:
+        
         interface_name = match.group(1)
         stats_values = match.group(2).split()
 
@@ -231,21 +232,32 @@ def gather_probes(containers_data, probes_ids, num_threads=16):
         try:
             metrics_tar_stream, _ = container.get_archive('/tmp/metrics.json')
             with io.BytesIO() as metrics_data:
+                
                 for chunk in metrics_tar_stream:
                     metrics_data.write(chunk)
                 metrics_data.seek(0)
 
-                
                 with tarfile.open(fileobj=metrics_data) as metrics_tar:
                     metrics_json_file = metrics_tar.extractfile('metrics.json')
 
+                    # Save metrics.json to the local path
+                    # local_file_path = os.path.join('./monitoring/', f"{container.id}_metrics.json")
+                    # with open(local_file_path, "wb") as local_file:
+                    #     local_file.write(metrics_json_file.read())
+
+                    # Reset the file pointer to the beginning
+                    # metrics_json_file.seek(0)
+
+                    # Parse NetStats
                     container_metrics = []
+                    max_nonce = 0
                     for line in metrics_json_file:
                         line = line.decode('utf-8').strip()
                         try:
                             json_line = json.loads(line)
                             json_line['NetStats'] = parse_net_stats(json_line['NetStats'])
                             container_metrics.append(json_line)
+                            max_nonce = max(max_nonce, json_line['Nonce'])
                         except json.JSONDecodeError as e:
                             G_LOGGER.error(f"Error parsing JSON line: {line}\nError: {e}")
                     
@@ -254,6 +266,7 @@ def gather_probes(containers_data, probes_ids, num_threads=16):
                     
                     # Convert the container image name to string
                     container_data['container_image_name'] = str(container_data['container_image_name'])
+                    container_data['max_nonce'] = max_nonce
                     
                     all_containers_metrics[container.id] = {'info' : container_data, 'samples' : container_metrics}
 
@@ -272,6 +285,8 @@ def gather_probes(containers_data, probes_ids, num_threads=16):
                 G_LOGGER.error(f"An exception occurred: {future.exception()}")
 
     G_LOGGER.info('Gather probe from %d containers took %d ms.' % (len(probes_ids), (time.time() - start_time) * 1000))
+
+    print('all_containers_metrics: %d' % len(all_containers_metrics))
 
     return all_containers_metrics
 
@@ -311,8 +326,6 @@ def main():
 
     G_LOGGER.info('Loaded configuration from %s' %G_DEFAULT_CONFIG_FILE)
 
-    start_ts = time.time_ns()
-    
     # Prepare the sampling probe we are going to inject into the containers
     script_tar_data = io.BytesIO()
     with tarfile.open(fileobj=script_tar_data, mode='w') as tar:
@@ -359,11 +372,14 @@ def main():
     G_LOGGER.info('Injecting probes into %d containers' % len(node_containers))
         
     # Start the script in the target containers 
-    probes_ids = inject_probes(script_tar_data, containers_data, config_obj['sampling_interval_s'])
+    probes_ids = inject_probes(os.path.basename(config_obj['probe_filename']), script_tar_data, containers_data, config_obj['sampling_interval_s'])
         
     # Notify the simulation that the probes are ready
     asyncio.run(signal_wsl(wsl_container))
-   
+
+    # Start the timer
+    start_ts = time.time_ns()
+
     # Wait for simulation to finish
     G_LOGGER.info('Waiting for simulation to finish...')
     wsl_status = True
@@ -376,10 +392,10 @@ def main():
 
         time.sleep(1)
         
+    end_ts = time.time_ns()
+    
     # Stop probes and gather metrics
     all_container_metrics = gather_probes(containers_data, probes_ids)
-
-    end_ts = time.time_ns()
 
     header = {'elapsed_ns' : end_ts - start_ts, 'sampling_interval_s' : config_obj['sampling_interval_s'], 'start_ts' : start_ts, 'end_ts' : end_ts, \
               'num_containers' : len(node_containers), 'probe' : config_obj['probe_filename'], 'container_str_pattern' : config_obj['container_str_pattern'], \
