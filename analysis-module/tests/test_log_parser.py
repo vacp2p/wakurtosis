@@ -20,3 +20,16 @@ class TestLogParser(unittest.TestCase):
         mock_open.assert_called_once_with('/path/to/simulation/messages.json', 'r')
         mock_json_load.assert_called_once_with(mock_file)
         self.assertEqual(data, mock_data)
+
+    def test_prepare_node_in_logs(self):
+        node_pbar = ['node1', 'node2']
+        topology = {'nodes': {'node1': {'peer_id': 'peer1'}, 'node2': {'peer_id': 'peer2'}}}
+        node_logs = {}
+        container_name = 'container1'
+
+        log_parser.prepare_node_in_logs(node_pbar, topology, node_logs, container_name)
+
+        self.assertEqual(node_logs, {'pee*peer1': {'published': [], 'received': [],
+                                                    'container_name': 'container1', 'peer_id': 'node1'},
+                                     'pee*peer2': {'published': [], 'received': [],
+                                                    'container_name': 'container1', 'peer_id': 'node2'}})
