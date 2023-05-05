@@ -1,7 +1,11 @@
 # Python Imports
 import sys
 import json
-import tomllib
+
+try:
+    import tomllib
+except ModuleNotFoundError:
+    import tomli as tomllib
 
 # Project Imports
 from src import analysis_logger
