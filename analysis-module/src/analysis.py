@@ -94,6 +94,7 @@ def compute_message_latencies(msgs_dict):
         for received_data in msg_data['received']:
             # Skip self
             if received_data['peer_id'] == peer_id:
+                analysis_logger.G_LOGGER.warning('Message %s received by the same node that published it' % msg_id)
                 continue
             # NOTE: We are getting some negative latencies meaning that the message appears to be received before it was sent ...
             # I assume this must be because those are the nodes that got the message injected in the first place
@@ -111,7 +112,10 @@ def compute_propagation_times(msgs_dict):
 
     for msg_id, msg_data in pbar:
         pbar.set_description('Computing propagation time of message %s' % msg_id)
-        msg_propagation_times.append(round(max(msg_data['latencies']) / 1000000))
+        if msg_data['latencies']:
+            msg_propagation_times.append(round(max(msg_data['latencies']) / 1000000))
+        else:
+            analysis_logger.G_LOGGER.warning('Message %s hasnt been received by any peers.' % msg_id)
 
     return msg_propagation_times
 
