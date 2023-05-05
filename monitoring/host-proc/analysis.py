@@ -187,28 +187,28 @@ class DStats(Plots, metaclass=Singleton):
     def __init__(self, log_dir, oprefix):
         Plots.__init__(self, log_dir, oprefix)
         self.fname = f'{log_dir}/host-proc-stats/docker-stats.out'
-        self.col2title = {  "ContainerID": "Docker ID",
+        self.col2title = {  "ContainerID"   : "Docker ID",
                             "ContainerName" : "Docker Name",
-                            "CPUPerc" : "CPU Utilisation",
-                            "MemUse" : "Memory Usage",
-                            "MemTotal" : "Total Memory",
-                            "MemPerc" : "Memory Utilisation",
-                            "NetRecv" : "Network Received",
-                            "NetSent" : "Network Sent",
-                            "BlockR" : "Block Reads",
-                            "BlockW" : "Block Writes",
-                            "PIDS" : "Docker PIDS"}
-        self.col2units = {  "ContainerID": "ID",
+                            "CPUPerc"       : "CPU Utilisation",
+                            "MemUse"        : "Memory Usage",
+                            "MemTotal"      : "Total Memory",
+                            "MemPerc"       : "Memory Utilisation",
+                            "NetRecv"       : "Network Received",
+                            "NetSent"       : "Network Sent",
+                            "BlockR"        : "Block Reads",
+                            "BlockW"        : "Block Writes",
+                            "PIDS"          : "Docker PIDS"}
+        self.col2units = {  "ContainerID"   : "ID",
                             "ContainerName" : "Name",
-                            "CPUPerc" : "Percentage (%)",
-                            "MemUse" : "MiB",
-                            "MemTotal" : "MiB",
-                            "MemPerc" : "Percentage (%)",
-                            "NetRecv" : "MiB",
-                            "NetSent" : "MiB",
-                            "BlockR" : "MiB",
-                            "BlockW" : "MiB",
-                            "PIDS" : "PIDS"}
+                            "CPUPerc"       : "Percentage (%)",
+                            "MemUse"        : "MiB",
+                            "MemTotal"      : "MiB",
+                            "MemPerc"       : "Percentage (%)",
+                            "NetRecv"       : "MiB",
+                            "NetSent"       : "MiB",
+                            "BlockR"        : "MiB",
+                            "BlockW"        : "MiB",
+                            "PIDS"          : "PIDS"}
         self.process_dstats_data()
 
     # remove the formatting artefacts
@@ -242,7 +242,8 @@ class DStats(Plots, metaclass=Singleton):
         log.info(f'processing {self.fname}...')
         self.pre_process()
         self.df = pd.read_csv(self.fname, header=0,  comment='#', skipinitialspace = True,
-                                delimiter='/', usecols=["ContainerID", "ContainerName",
+                                delimiter='/',
+                                usecols=["ContainerID", "ContainerName",
                                     "CPUPerc", "MemUse", "MemTotal", "MemPerc",
                                     "NetRecv", "NetSent", "BlockR","BlockW",  "PIDS"])
         self.post_process()
@@ -261,39 +262,39 @@ class ProcFS(Plots, metaclass=Singleton):
         Plots.__init__(self, log_dir, oprefix)
         self.fname = f'{log_dir}/host-proc-stats/docker-proc.out'
         # TODO: define CPU stuff
-        self.col2title = { 'VmPeak' : 'Memory: Peak Virtual Memory Usage',
-                            'VmSize' : 'Memory: Current Virtual Memory Usage',
-                            'VmHWM'  : 'Memory: Current Physical Memory Usage',
-                            'VmRSS' : 'Memory: Peak Physical Memory Usage',
-                            'VmData': 'Memory: Size of Data Segment',
-                            'VmStk' : 'Memory: Size of Stack Segment',
-                            'RxBytes'   : 'Network: Received Bytes',
-                            'RxPackets' : 'Network: Received Packets',
-                            'TxBytes'   : 'Network: Transmitted Bytes',
-                            'TxPackets' : 'Network: Transmitted Packets',
-                            'NetRX'      : 'Network: NetRX',
-                            'NetWX'      : 'Network: NetWX',
-                            'InOctets'   : 'Network: InOctets',
-                            'OutOctets'  : 'Network: OutOctets',
-                        'BLKR'       : 'Block Reads',
-                        'BLKW'       : 'Block Writes'
+        self.col2title = { 'VmPeak'     : 'Peak Virtual Memory Usage',
+                            'VmSize'    : 'Current Virtual Memory Usage',
+                            'VmRSS'     : 'Peak Physical Memory Usage',
+                            'VmHWM'     : 'Current Physical Memory Usage',
+                            'VmData'    : 'Size of Data Segment',
+                            'VmStk'     : 'Size of Stack Segment',
+                            'RxBytes'   : 'Network1: Received Bytes',
+                            'RxPackets' : 'Network1: Received Packets',
+                            'TxBytes'   : 'Network1: Transmitted Bytes',
+                            'TxPackets' : 'Network1: Transmitted Packets',
+                            'NetRX'     : 'Network2: NetRX',
+                            'NetWX'     : 'Network2: NetWX',
+                            'InOctets'  : 'Network3: InOctets',
+                            'OutOctets' : 'Network3: OutOctets',
+                            'BLKR'      : 'Block Reads',
+                            'BLKW'      : 'Block Writes'
                         }
-        self.col2units = { 'VmPeak' : 'MiB',
-                           'VmSize' : 'MiB',
-                           'VmHWM'  : 'MiB',
-                            'VmRSS' : 'MiB',
-                            'VmData': 'MiB',
-                            'VmStk' : 'MiB',
-                         'RxBytes'   : 'MiB',
-                         'RxPackets' : 'Packets',
-                         'TxBytes'   : 'MiB',
-                         'TxPackets' : 'Packets',
-                        'NetRX'      : 'MiB',
-                        'NetWX'      : 'MiB',
-                        'InOctets'   : 'MiB',
-                        'OutOctets'  : 'MiB',
-                        'BLKR'       : 'MiB',
-                        'BLKW'       : 'MiB'
+        self.col2units = { 'VmPeak'     : 'MiB',
+                           'VmSize'     : 'MiB',
+                           'VmHWM'      : 'MiB',
+                            'VmRSS'     : 'MiB',
+                            'VmData'    : 'MiB',
+                            'VmStk'     : 'MiB',
+                            'RxBytes'   : 'MiB',
+                            'RxPackets' : 'Packets',
+                            'TxBytes'   : 'MiB',
+                            'TxPackets' : 'Packets',
+                            'NetRX'     : 'MiB',
+                            'NetWX'     : 'MiB',
+                            'InOctets'  : 'MiB',
+                            'OutOctets' : 'MiB',
+                            'BLKR'      : 'MiB',
+                            'BLKW'      : 'MiB'
                         }
                     #'CPU-SYS', 'cpu', 'cpu0', 'cpu1', 'cpu2', 'cpu3',
                     #'cpu4', 'cpu5', 'cpu6', 'cpu7', 'cpu8', 'cpu9', 'CPUUTIME', 'CPUSTIME'
@@ -309,14 +310,13 @@ class ProcFS(Plots, metaclass=Singleton):
         self.df = pd.read_csv(self.fname, header=0,  comment='#', skipinitialspace = True,
         #self.df = pd.read_fwf(self.fname, header=0,  comment='#', skipinitialspace = True)
                 delimiter=r"\s+",
-                #delimiter=r"\s+"),
                 usecols= ['EpochId', 'PID', 'TimeStamp', 'ContainerID',
                     'VmPeak', 'VmPeakUnit', 'VmSize', 'VmSizeUnit', 'VmHWM', 'VmHWMUnit',
                     'VmRSS', 'VmRSSUnit', 'VmData','VmDataUnit', 'VmStk', 'VmStkUnit',
                     'HostVIF', 'RxBytes', 'RxPackets', 'TxBytes', 'TxPackets',
                     'VETH', 'InOctets', 'OutOctets',
                     'DockerVIF', 'NetRX', 'NetWX',
-                 'VETH',  'InOctets', 'OutOctets',
+                    'VETH',  'InOctets', 'OutOctets',
                     'BLKR', 'BLKW',
                     'CPU-SYS', 'cpu', 'cpu0', 'cpu1', 'cpu2', 'cpu3',
                    'cpu4', 'cpu5', 'cpu6', 'cpu7', 'cpu8', 'cpu9', 'CPUUTIME', 'CPUSTIME'])
@@ -332,6 +332,8 @@ class ProcFS(Plots, metaclass=Singleton):
         for size in ['VmPeak', 'VmSize', 'VmHWM','VmRSS', 'VmData','VmStk']:
             self.df[size] = self.df[size].map(lambda x: x/1024) # MiBs
         for size in ['RxBytes', 'TxBytes', 'InOctets','OutOctets', 'NetRX','NetWX']:
+            self.df[size] = self.df[size].map(lambda x: x/(1024*1024)) # MiBs
+        for size in ['BLKR', 'BLKW']:
             self.df[size] = self.df[size].map(lambda x: x/(1024*1024)) # MiBs
 
         # TODO: compute CPU utilisation and add it as a column
