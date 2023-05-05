@@ -66,7 +66,7 @@ docker cp cgennet:/gennet/network_data ${dir}/config/topology_generated
 docker rm cgennet > /dev/null 2>&1
 
 #make sure the prometheus and grafana configs are readable
-chmod  a+r monitoring/prometheus.yml   monitoring/configuration/config/grafana.ini
+chmod  a+r monitoring/prometheus.yml  monitoring/configuration/config/grafana.ini  ./monitoring/configuration/config/provisioning/dashboards/dashboard.yaml
 ##################### END
 
 
