@@ -61,6 +61,7 @@ def plot_figure_ex(metrics, simulation_config):
         if type(metric["values"][0]) is list:
             if sum([len(sublist) for sublist in metric["values"]]) == 0:
                 continue
+        print(f"Plotting {metric['metric_name']}: {metric['values']}")
         parts = axs[i].violinplot(metric["values"], showmeans=True)
         axs[i].set_title(metric["title"])
         axs[i].set_ylabel(metric["y_label"])
