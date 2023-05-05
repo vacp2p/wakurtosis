@@ -1,5 +1,4 @@
 G_DEFAULT_SIMULATION_PATH = "/simulation_data/"
-G_DEFAULT_TOML_PATH = "/simulation_data/config/topology_generated/"
 
 G_DEFAULT_FIG_FILENAME = 'analysis.pdf'
 G_DEFAULT_SUMMARY_FILENAME = 'summary.json'
