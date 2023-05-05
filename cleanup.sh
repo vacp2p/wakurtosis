@@ -12,3 +12,6 @@ kurtosis  --cli-log-level "error" enclave rm -f $enclave_name > /dev/null 2>&1
 
 docker stop $(docker ps -qa)  > /dev/null 2>&1
 docker rm $(docker ps -qa)  > /dev/null 2>&1
+
+#cleanup any host waku processes
+#sudo killall -15 wakunode waku

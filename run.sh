@@ -64,6 +64,9 @@ fi
 # Copy the network generated TODO: remove this extra copy
 docker cp cgennet:/gennet/network_data ${dir}/config/topology_generated
 docker rm cgennet > /dev/null 2>&1
+
+#make sure the prometheus and grafana configs are readable
+chmod  a+r monitoring/prometheus.yml   monitoring/configuration/config/grafana.ini
 ##################### END
 
 
