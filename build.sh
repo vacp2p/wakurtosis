@@ -13,6 +13,11 @@ sudo apt install kurtosis-cli=$kurtosis_version
 sudo apt-mark hold kurtosis-cli
 sudo rm /etc/apt/sources.list.d/kurtosis.list
 
+# Build the analysis docker image
+cd analysis-module
+docker build -t analysis .
+cd ..
+
 # Build Gennet & WLS docker images
 
 cd gennet-module
