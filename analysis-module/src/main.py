@@ -12,7 +12,7 @@ from src import plotting
 
 if __name__ == "__main__":
     """ Parse args """
-    simulation_path, tomls_folder, prom_port = arg_parser.parse_args()
+    simulation_path, prom_port = arg_parser.parse_args()
 
     """Load Configuration"""
     config = topology.load_json(simulation_path + "config/config.json")
@@ -20,7 +20,7 @@ if __name__ == "__main__":
 
     """ Load Topics Structure """
     topology_info = topology.load_json(simulation_path + vars.G_TOPOLOGY_FILE_NAME)
-    topology.load_topics_into_topology(topology_info, tomls_folder)
+    topology.load_topics_into_topology(topology_info, simulation_path + "config/topology_generated/")
 
     simulation_config = topology.load_json(simulation_path + "config/config.json")
 
