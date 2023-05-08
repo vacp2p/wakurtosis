@@ -64,6 +64,7 @@
           "container_network_receive_bytes_total",
           "container_network_transmit_bytes_total"
         ],
+        "xtic_labels": ["Received (Rx)", "Sent (Tx)"],
         "statistic": "max",
         "toMB": true
       },
@@ -74,6 +75,7 @@
           "container_fs_reads_bytes_total",
           "container_fs_writes_bytes_total"
         ],
+        "xtic_labels": ["Read", "Write"],
         "statistic": "max",
         "toMB": true
       }
