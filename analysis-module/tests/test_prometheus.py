@@ -2,15 +2,21 @@
 import unittest
 from unittest.mock import patch
 
+from prometheus_api_client import PrometheusConnect
+
 # Project Imports
 from src import prometheus
 
 
 class TestPrometheus(unittest.TestCase):
 
-    @patch('prometheus.fetch_metric')
-    def test_fetch_cadvisor_stats_from_prometheus(self, query):
-        query.side_effect = [10, 20, 30]
+    @patch('src.prometheus.fetch_metric')
+    def test_fetch_cadvisor_stats_from_prometheus(self, mock_fetch_metric):
+        mock_fetch_metric.side_effect = [
+            [10, 20, 30],  # metric_1_name
+            [10, 20, 30],  # metric_2_name_1
+            [5, 15, 25]    # metric_2_name_2
+        ]
 
         metrics = {
             "to_query": {
@@ -36,22 +42,41 @@ class TestPrometheus(unittest.TestCase):
         self.assertEqual(metrics["to_query"]["metric_1"]["values"], [sum([10, 20, 30])])
         self.assertEqual(metrics["to_query"]["metric_2"]["values"], [[max([10, 20, 30])], [max([5, 15, 25])]])
 
-    @patch('prom.custom_query_range')
-    def test_fetch_metric(self, query):
-        metric_result = query.return_value.__enter__.return_value
-        metric_result.read.return_value = [{'metric': {'__name__': 'container_memory_usage_bytes'},
-                                            'values': [[1683281260, '5382144'], [1683281261, '5382144'],
-                                                       [1683281262, '5382144'], [1683281263, '6291456'],
-                                                       [1683281320, '10289152']]}]
-        metric_values = prometheus.fetch_metric(None, None, None, None, None, False)
+    @patch.object(PrometheusConnect, 'custom_query_range')
+    def test_fetch_metric(self, mock_custom_query_range):
+        mock_custom_query_range.return_value = [
+            {
+                'metric': {'__name__': 'container_memory_usage_bytes'},
+                'values': [
+                    [1683281260, '5382144'],
+                    [1683281261, '5382144'],
+                    [1683281262, '5382144'],
+                    [1683281263, '6291456'],
+                    [1683281320, '10289152']
+                ]
+            }
+        ]
+
+        prom = PrometheusConnect()
+
+        metric_values = prometheus.fetch_metric(prom, None, None, None, None, False)
         self.assertEqual(metric_values, [5382144, 5382144, 5382144, 6291456, 10289152])
 
-    @patch('prom.custom_query_range')
-    def test_fetch_metric_mbytes(self, query):
-        metric_result = query.return_value.__enter__.return_value
-        metric_result.read.return_value = [{'metric': {'__name__': 'container_memory_usage_bytes'},
-                                            'values': [[1683281260, '1048576'], [1683281261, '5382144'],
-                                                       [1683281262, '5382144'], [1683281263, '6291456'],
-                                                       [1683281320, '10289152']]}]
-        metric_values = prometheus.fetch_metric(None, None, None, None, None, True)
-        self.assertEqual(metric_values, [1, 5382144, 5382144, 6291456, 10289152])
+    @patch.object(PrometheusConnect, 'custom_query_range')
+    def test_fetch_metric_mbytes(self, mock_custom_query_range):
+        mock_custom_query_range.return_value = [
+            {
+                'metric': {'__name__': 'container_memory_usage_bytes'},
+                'values': [
+                    [1683281260, '5382144'],
+                    [1683281261, '5382144'],
+                    [1683281262, '5382144'],
+                    [1683281263, '6291456'],
+                    [1683281320, '10289152']
+                ]
+            }
+        ]
+        prom = PrometheusConnect()
+
+        metric_values = prometheus.fetch_metric(prom, None, None, None, None, True)
+        self.assertEqual(metric_values, [5.1328125, 5.1328125, 5.1328125, 6.0, 9.8125])
