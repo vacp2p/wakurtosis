@@ -201,7 +201,7 @@ if [ "$metrics_infra" = "dstats" ]; then
     echo "dstats: killing dstats at $dstats_pid"
     kill -15 $dstats_pid
     echo "dstats: copying the docker stat measurements"
-    cp -r ./monitoring/host-proc/stats  ${enclave_name}_logs/dstats-stats
+    cp -r ./monitoring/dstats/stats  ${enclave_name}_logs/dstats-stats
 elif [ "$metrics_infra" = "host-proc" ]; then
     echo "Copying the /proc fs and docker stat measurements"
     cp -r ./monitoring/host-proc/stats  ${enclave_name}_logs/host-proc-stats
