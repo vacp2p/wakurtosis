@@ -85,7 +85,7 @@ def plot_figure_ex(metrics, simulation_config):
 
     plt.tight_layout()
 
-    figure_path = f'{vars.G_DEFAULT_SIMULATION_PATH}/{vars.G_DEFAULT_FIG_FILENAME}'
+    figure_path = f'{vars.G_DEFAULT_SIMULATION_PATH}{vars.G_DEFAULT_FIG_FILENAME}'
     plt.savefig(figure_path, format="pdf", bbox_inches="tight")
 
     analysis_logger.G_LOGGER.info(f'Figure saved in {figure_path}')
