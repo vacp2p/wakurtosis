@@ -2,7 +2,7 @@
 
 ##################### SETUP & CLEANUP
 if [ "$#" -eq 0 ]; then
-    echo "Error: Must select the measurement infra: cadvisor, host-proc, container-proc"
+    echo "Error: Must select the measurement infra: cadvisor, dstats, host-proc, container-proc"
     echo "Usage: sh ./run.sh <measurement_infra> [enclave_name] [config_file]"
     exit 1
 fi
@@ -49,7 +49,7 @@ usr=`id -u`
 grp=`id -g`
 odir=./stats
 signal_fifo=/tmp/hostproc-signal.fifo   # do not create fifo under ./stats, or inside the repo
-##################### P MONITORING MODULE PROLOGUES
+##################### MONITORING MODULE PROLOGUES
 if [ "$metrics_infra" = "cadvisor" ]; then #CADVISOR
     # Preparing enclave
     echo "Preparing the enclave..."
@@ -117,13 +117,36 @@ wls_cid="$service_name--$service_uuid"
 
 ##################### MONITORING MODULE EPILOGUE: WLS SIGNALLIN
 if [ "$metrics_infra" = "cadvisor" ]; then
-    echo "Signaling WLS"
+    echo "cadvisor: signaling WLS"
+    docker exec $wls_cid touch /wls/start.signal
+elif [ "$metrics_infra" = "dstats" ]; then
+    odir=./monitoring/host-proc/$odir
+    echo "odir: $odir"
+    mkdir -p $odir
+    dps=$odir/docker-ps.out
+    dids=$odir/docker-dids.out
+    dstats=$odir/docker-stats.out
+    filetrs="--filter ancestor=gowaku --filter ancestor=statusteam/nim-waku:nwaku-trace2"
+    docker ps --no-trunc $filters --format "{{.ID}}#{{.Names}}#{{.Image}}#{{.Command}}#{{.State}}#{{.Status}}#{{.Ports}}" > $dps
+    cut -f 1 -d '#' $dps > $dids
+    # add date and the names/versions of waku images involved
+    echo "dstats: starting the dstats monitor"
+    echo "# dstats started: $(date)" > $dstats
+    echo "# images involed: $(docker images | grep waku | tr '\n' '; ' )"  >> $dstats
+    # add the generating command to aid parsing/debugging
+    echo '# docker stats --no-trunc --format  "{{.Container}} / {{.Name}} / {{.ID}} / {{.CPUPerc}} / {{.MemUsage}} / {{.MemPerc}} / {{.NetIO}} / {{.BlockIO}} / {{.PIDs}}"' >> $dstats
+    echo "ContainerID/ContainerName/ID/CPUPerc/MemUse/MemTotal/MemPerc/NetRecv/NetSent/BlockR/BlockW/PIDS"  >> $dstats
+    # start the docker stats
+    docker stats --no-trunc --format  "{{.Container}} / {{.Name}} / {{.ID}} / {{.CPUPerc}} / {{.MemUsage}} / {{.MemPerc}} / {{.NetIO}} / {{.BlockIO}} / {{.PIDs}}" $(cat $dids)  >> $dstats &
+    dstats_pid=$!
+    cd -
+    echo "dstats: started and running as $dstats_pid"
+    echo "dstats: signalling WLS"
     docker exec $wls_cid touch /wls/start.signal
 elif [ "$metrics_infra" = "host-proc" ]; then
     echo "Starting the /proc fs and docker stat measurements"
     cd monitoring/host-proc
     sh ./dstats.sh  $wls_cid $odir $signal_fifo &
-    cd -
 elif [ "$metrics_infra" = "container-proc" ]; then
     echo "Jordi's measurement infra's epilogue goes here"
     # Start process level monitoring (in background, will wait to WSL to be created)
@@ -160,8 +183,8 @@ echo "Simulation took $DIFF1 + $DIFF2 = $(( $END2 - $START)) secs"
 
 ##################### END
 
-# give time for the messages to settle down before we collect logs
-sleep 60
+# give time for the messages to settle down before we collect the logs
+#sleep 60
 
 ##################### GATHER CONFIG, LOGS & METRICS
 # dump logs
@@ -174,7 +197,12 @@ cp -r ./config ${enclave_name}_logs
 
 
 ##################### MONITORING MODULE - COPY
-if [ "$metrics_infra" = "host-proc" ]; then
+if [ "$metrics_infra" = "dstats" ]; then
+    echo "dstats: killing dstats at $dstats_pid"
+    kill -15 $dstats_pid
+    echo "dstats: copying the docker stat measurements"
+    cp -r ./monitoring/host-proc/stats  ${enclave_name}_logs/dstats-stats
+elif [ "$metrics_infra" = "host-proc" ]; then
     echo "Copying the /proc fs and docker stat measurements"
     cp -r ./monitoring/host-proc/stats  ${enclave_name}_logs/host-proc-stats
 elif [ "$metrics_infra" = "container-proc" ]; then
