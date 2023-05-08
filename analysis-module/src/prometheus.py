@@ -1,7 +1,6 @@
 # Python Imports
 import builtins
 from datetime import datetime
-import subprocess
 from tqdm import tqdm
 from prometheus_api_client import PrometheusConnect
 
@@ -48,13 +47,11 @@ def fetch_cadvisor_stats_from_prometheus(metrics, prom, container_ip, start_ts, 
             for i, submetric in enumerate(metric["metric_name"]):
                 values = fetch_metric(prom, submetric, container_ip, start_timestamp, end_timestamp,
                                       metric["toMB"])
-                print(f"{submetric} is: {values}")
                 stat_function = vars(builtins)[metric["statistic"]]
                 metric["values"][i].append(stat_function(values))
         else:
             values = fetch_metric(prom, metric["metric_name"], container_ip, start_timestamp, end_timestamp,
                                   metric["toMB"])
-            print(f"{metric['metric_name']} is: {values}")
             stat_function = vars(builtins)[metric["statistic"]]
             metric.setdefault("values", []).append(stat_function(values))
 
@@ -62,10 +59,11 @@ def fetch_cadvisor_stats_from_prometheus(metrics, prom, container_ip, start_ts, 
 def fetch_metric(prom, metric, ip, start_timestamp, end_timestamp, to_mbytes=False):
     metric_result = prom.custom_query_range(f"{metric}{{container_label_com_kurtosistech_private_ip = '{ip}'}}",
                                   start_time=start_timestamp, end_time=end_timestamp, step="1s")
-    print(metric_result)
+    if not metric_result:
+        analysis_logger.G_LOGGER.error(f"{metric} returns no data. Adding zero.")
+        return [0]
     metric_values = [float(metric_result[0]['values'][i][1]) for i in range(len(metric_result[0]['values']))]
     if to_mbytes:
         metric_values = [value/(1024*1024) for value in metric_values]
-    print(metric_values)
 
     return metric_values
