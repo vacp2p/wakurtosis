@@ -61,12 +61,16 @@ def plot_figure_ex(metrics, simulation_config):
         if type(metric["values"][0]) is list:
             if sum([len(sublist) for sublist in metric["values"]]) == 0:
                 continue
-        print(f"Plotting {metric['metric_name']}: {metric['values']}")
+        analysis_logger.G_LOGGER.info(f"Plotting {metric['metric_name']}: {metric['values']}")
         parts = axs[i].violinplot(metric["values"], showmeans=True)
         axs[i].set_title(metric["title"])
         axs[i].set_ylabel(metric["y_label"])
         axs[i].spines[['right', 'top']].set_visible(False)
         axs[i].axes.xaxis.set_visible(False)
+        if "xtic_labels" in metric.keys():
+            axs[i].set_xticks([i+1 for i in range(len(metric["xtic_labels"]))])
+            axs[i].set_xticklabels(metric["xtic_labels"])
+            axs[i].axes.xaxis.set_visible(True)
         style_violin(parts, axs[i])
 
     fig.suptitle(
