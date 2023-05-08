@@ -1,6 +1,5 @@
 #!/bin/sh
 
-#TODO: make them functions
 ##################### SETUP & CLEANUP
 if [ "$#" -eq 0 ]; then
     echo "Error: Must select the measurement infra: cadvisor, host-proc, container-proc"
@@ -24,12 +23,34 @@ echo "- Configuration file: " $wakurtosis_config_file
 echo -e "\Cleaning up previous runs"
 sh ./cleanup.sh $enclave_name
 echo -e "\Done cleaning up previous runs"
+
+#make sure the prometheus and grafana configs are readable
+chmod  a+r monitoring/prometheus.yml  monitoring/configuration/config/grafana.ini  ./monitoring/configuration/config/provisioning/dashboards/dashboard.yaml
 ##################### END
 
 
-##################### CADVISOR
-if [ "$metrics_infra" = "cadvisor" ];
+##################### GENNET
+echo -e "\nRunning network generation"
+docker run --name cgennet -v ${dir}/config/:/config:ro gennet --config-file /config/${wakurtosis_config_file} --traits-dir /config/traits
+err=$?
+
+if [ $err != 0 ]
 then
+  echo "Gennet failed with error code $err"
+  exit
+fi
+# Copy the network generated TODO: remove this extra copy
+docker cp cgennet:/gennet/network_data ${dir}/config/topology_generated
+docker rm cgennet > /dev/null 2>&1
+##################### END
+
+
+usr=`id -u`
+grp=`id -g`
+odir=./stats
+signal_fifo=/tmp/hostproc-signal.fifo   # do not create fifo under ./stats, or inside the repo
+##################### P MONITORING MODULE PROLOGUES
+if [ "$metrics_infra" = "cadvisor" ]; then #CADVISOR
     # Preparing enclave
     echo "Preparing the enclave..."
     kurtosis  --cli-log-level $loglevel  enclave add --name ${enclave_name}
@@ -45,38 +66,7 @@ then
     # Set up Cadvisor
     docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev/disk/:/dev/disk:ro --volume=/sys:/sys:ro --volume=/etc/machine-id:/etc/machine-id:ro --publish=8080:8080 --detach=true --name=cadvisor --privileged --device=/dev/kmsg --network $enclave_prefix --ip=$last_ip gcr.io/cadvisor/cadvisor:v0.47.0
     # docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev/disk/:/dev/disk:ro --volume=/sys:/sys:ro --volume=/etc/machine-id:/etc/machine-id:ro --publish=8080:8080 --detach=true --name=cadvisor --privileged --device=/dev/kmsg gcr.io/cadvisor/cadvisor
-fi
-##################### END
-
-
-
-##################### GENNET
-# Run Gennet docker container
-echo -e "\nRunning network generation"
-docker run --name cgennet -v ${dir}/config/:/config:ro gennet --config-file /config/${wakurtosis_config_file} --traits-dir /config/traits
-err=$?
-
-if [ $err != 0 ]
-then
-  echo "Gennet failed with error code $err"
-  exit
-fi
-# Copy the network generated TODO: remove this extra copy
-docker cp cgennet:/gennet/network_data ${dir}/config/topology_generated
-docker rm cgennet > /dev/null 2>&1
-
-#make sure the prometheus and grafana configs are readable
-chmod  a+r monitoring/prometheus.yml  monitoring/configuration/config/grafana.ini  ./monitoring/configuration/config/provisioning/dashboards/dashboard.yaml
-##################### END
-
-
-##################### HOST PROCFS MONITOR : PROLOGUE
-usr=`id -u`
-grp=`id -g`
-odir=./stats
-signal_fifo=/tmp/hostproc-signal.fifo   # do not create fifo under ./stats, or inside the repo
-if [ "$metrics_infra" = "host-proc" ];
-then
+elif  [ "$metrics_infra" = "host-proc" ]; then # HOST-PROC
     rclist=$odir/docker-rc-list.out
     cd monitoring/host-proc
     mkdir -p $odir
@@ -84,6 +74,10 @@ then
     chmod 0777 $signal_fifo
     sudo sh ./procfs.sh $rclist $odir $usr $grp $signal_fifo &
     cd -
+elif  [ "$metrics_infra" = "container-proc" ]; then # CONTAINER-PROC
+  #Jordi's metrics module prologue
+    echo "Jordi's measurement infra  prologue goes here"
+
 fi
 ##################### END
 
@@ -120,31 +114,18 @@ wls_cid="$service_name--$service_uuid"
 ##################### END
 
 
-##################### CADVISOR MONITOR: EPILOGUE
-if [ "$metrics_infra" = "cadvisor" ];
-then
+
+##################### MONITORING MODULE EPILOGUE: WLS SIGNALLIN
+if [ "$metrics_infra" = "cadvisor" ]; then
     echo "Signaling WLS"
     docker exec $wls_cid touch /wls/start.signal
-fi
-##################### END
-
-
-##################### HOST PROCFS MONITOR: EPILOGUE
-if [ "$metrics_infra" = "host-proc" ];
-then
+elif [ "$metrics_infra" = "host-proc" ]; then
     echo "Starting the /proc fs and docker stat measurements"
     cd monitoring/host-proc
     sh ./dstats.sh  $wls_cid $odir $signal_fifo &
     cd -
-fi
-##################### END
-
-
-
-##################### DOCKER PROCFS MONITOR
-if [ "$metrics_infra" = "container-proc" ];
-then
-    echo "Jordi's measurement infra goes here"
+elif [ "$metrics_infra" = "container-proc" ]; then
+    echo "Jordi's measurement infra's epilogue goes here"
     # Start process level monitoring (in background, will wait to WSL to be created)
     #sudo -E python3 ./monitoring/monitor.py & ? 
     #monitor_pid=$! ?
@@ -191,14 +172,12 @@ cp kurtosisrun_log.txt ${enclave_name}_logs
 # copy metrics data, config, network_data to the logs dir
 cp -r ./config ${enclave_name}_logs
 
-if [ "$metrics_infra" = "host-proc" ];
-then
+
+##################### MONITORING MODULE - COPY
+if [ "$metrics_infra" = "host-proc" ]; then
     echo "Copying the /proc fs and docker stat measurements"
     cp -r ./monitoring/host-proc/stats  ${enclave_name}_logs/host-proc-stats
-fi
-
-if [ "$metrics_infra" = "container-proc" ];
-then
+elif [ "$metrics_infra" = "container-proc" ]; then
     echo "Jordi's data copy goes here"
     #echo -e "Waiting monitoring to finish ..." ?
     #wait $monitor_pid ?
