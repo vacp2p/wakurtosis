@@ -98,6 +98,7 @@ class MetricsCollector:
         self.did2veth = {}
         self.pid2veth = {}
         self.pid2did = {}
+        self.pid2node_name = {}
 
         self.procout_fname = os.environ["PROCOUT_FNAME"]
         self.procfs_fd = ""
@@ -170,7 +171,7 @@ class MetricsCollector:
                     self.pid2procfds[pid]["net3tx"], veth) # sysfs/cgroup stats
             blk = get_blk_metrics(self.pid2procfds[pid]["blk"]) # Read, Write
             out = ( f'SAMPLE_{self.procfs_sample_cnt} '
-                    f'{pid} {time.time()} {self.pid2did[pid]} '
+                    f'{pid} {self.pid2node_name[pid]} {time.time()} {self.pid2did[pid]} '
                     f'MEM {mem} NET {net1} {net2} {net3} '
                     f'BLK {blk} CPU-SYS {sys_stat} CPU-process {stat}\n'
                   )
@@ -195,8 +196,9 @@ class MetricsCollector:
                               f'{len(self.docker_pids)}\n'))
         self.procfs_fd.write(f'# {", ".join([f"{pid} = {self.pid2did[pid]}" for pid in self.pid2did])} : {len(self.pid2did.keys())}\n')
         self.procfs_fd.write(f'# {", ".join([f"{pid} = {self.pid2veth[pid]}" for pid in self.pid2did])} : {len(self.pid2veth.keys())}\n')
+        self.procfs_fd.write(f'# {", ".join([f"{pid} = {self.pid2node_name[pid]}" for pid in self.pid2did])} : {len(self.pid2node_name.keys())}\n')
         # write the df column names
-        self.procfs_fd.write((f'EpochId PID TimeStamp ContainerID '
+        self.procfs_fd.write((f'EpochId PID NodeName TimeStamp ContainerID '
                 f'MEM VmPeakKey VmPeak VmPeakUnit VmSizeKey VmSize VmSizeUnit '
                 f'VmHWMKey VmHWM VmHWMUnit VmRSSKey VmRSS VmRSSUnit '
                 f'VmDataKey VmData VmDataUnit VmStkKey VmStk VmStkUnit '
@@ -224,6 +226,12 @@ class MetricsCollector:
     def build_pid2did(self):
         with open(self.ps_pids_fname) as f:
             self.ps_pids = f.read().strip().split("\n")
+
+        #lsof_fname, lsof_cmd = 'docker-lof', f'lsof -i > docker-lsof'
+        #subprocess.run(lsof_cmd, shell=True)
+        #with open(lsof_fname) as f:
+        #    self.ps_pids = f.read().strip().split("\n")
+
         #self.docker_pids = [pid for pid in self.ps_pids if self.pid_exists(pid)]
         #log.debug((f'{self.docker_pids}:{len(self.docker_pids)} <- '
         #            f'{self.ps_pids}:{len(self.ps_pids)}'))
@@ -237,6 +245,14 @@ class MetricsCollector:
                     continue
             did = ""
             self.docker_pids.append(pid)
+             #/usr/bin/wakunode--rpc-address=0.0.0.0
+             #--metrics-server-address=0.0.0.0
+             #--log-level=TRACE
+             #--config-file=/node/configuration_file/node-6/node-6.toml
+             #--ports-shift=2m
+            with open(f'/proc/{pid}/cmdline') as f:
+                self.pid2node_name[pid] = f.readline().split("--config-file=")[1].split('/')[3]
+
             with open(f'/proc/{pid}/mountinfo') as f: # or /proc/{pid}/cgroup
                 line = f.readline()
                 while line:
