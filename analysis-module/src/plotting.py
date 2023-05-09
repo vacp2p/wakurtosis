@@ -1,4 +1,6 @@
 # Python Imports
+import math
+import numpy as np
 import matplotlib.pyplot as plt
 
 # Project Imports
@@ -6,51 +8,7 @@ from src import vars
 from src import analysis_logger
 
 
-def plot_figure(msg_propagation_times, cpu_usage, memory_usage, bandwith_in, bandwith_out):
-    fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(1, 5, figsize=(15, 10))
-
-    ax1.violinplot(msg_propagation_times, showmedians=True)
-    ax1.set_title(
-        f'Message propagation times \n(sample size: {len(msg_propagation_times)} messages)')
-    ax1.set_ylabel('Propagation Time (ms)')
-    ax1.spines[['right', 'top']].set_visible(False)
-    ax1.axes.xaxis.set_visible(False)
-
-    ax2.violinplot(cpu_usage, showmedians=True)
-    ax2.set_title(f'Maximum CPU usage per Waku node \n(sample size: {len(cpu_usage)} nodes)')
-    ax2.set_ylabel('CPU Cycles')
-    ax2.spines[['right', 'top']].set_visible(False)
-    ax2.axes.xaxis.set_visible(False)
-
-    ax3.violinplot(memory_usage, showmedians=True)
-    ax3.set_title(
-        f'Maximum memory usage per Waku node \n(sample size: {len(memory_usage)} nodes)')
-    ax3.set_ylabel('Bytes')
-    ax3.spines[['right', 'top']].set_visible(False)
-    ax3.axes.xaxis.set_visible(False)
-
-    ax4.violinplot(bandwith_in, showmedians=True)
-    ax4.set_title(f'Bandwith IN usage per Waku node \n(sample size: {len(bandwith_in)} nodes)')
-    ax4.set_ylabel('Bytes')
-    ax4.spines[['right', 'top']].set_visible(False)
-    ax4.axes.xaxis.set_visible(False)
-
-    ax5.violinplot(bandwith_out, showmedians=True)
-    ax5.set_title(f'Bandwith OUT usage per Waku node \n(sample size: {len(bandwith_out)} nodes)')
-    ax5.set_ylabel('Bytes')
-    ax5.spines[['right', 'top']].set_visible(False)
-    ax5.axes.xaxis.set_visible(False)
-
-    plt.tight_layout()
-
-    figure_path = f'{vars.G_DEFAULT_SIMULATION_PATH + vars.G_DEFAULT_FIG_FILENAME}'
-    plt.savefig(figure_path, format="pdf", bbox_inches="tight")
-
-    analysis_logger.G_LOGGER.info(f'Figure saved in {figure_path}')
-
-
-def plot_figure_ex(msg_propagation_times, cpu_usage, memory_usage, network_usage, disk_usage, injection_times,
-                   simulation_summary, simulation_config):
+def plot_figure_ex(metrics, simulation_config):
     def style_violin(parts, ax):
 
         # Change the extrema lines to dashed grey lines
@@ -82,62 +40,52 @@ def plot_figure_ex(msg_propagation_times, cpu_usage, memory_usage, network_usage
         # make lines invisible
         parts['cmeans'].set_visible(False)
 
-    fig, ((ax1, ax2, ax3), (ax4, ax5, ax6)) = plt.subplots(2, 3, figsize=(15, 15))
+    num_subplots = len(metrics["to_query"]) + len(metrics.keys()) - 1
+    num_cols = 3
+    num_rows = math.ceil(num_subplots / num_cols)
 
-    parts = ax1.violinplot(msg_propagation_times, showmeans=True)
-    ax1.set_title('Popagation Time (per message)')
-    ax1.set_ylabel('Propagation Time (ms)')
-    ax1.spines[['right', 'top']].set_visible(False)
-    ax1.axes.xaxis.set_visible(False)
-    style_violin(parts, ax1)
+    fig, axs = plt.subplots(num_rows, num_cols, figsize=(15, 15))
+    axs = axs.flatten()
 
-    parts = ax2.violinplot(cpu_usage, showmeans=True)
-    ax2.set_title('Peak CPU Usage (per node)')
-    ax2.set_ylabel('CPU Usage (%)')
-    ax2.spines[['right', 'top']].set_visible(False)
-    ax2.axes.xaxis.set_visible(False)
-    style_violin(parts, ax2)
+    # Remove unused subplots
+    for i in range(num_subplots, num_rows * num_cols):
+        fig.delaxes(axs[i])
 
-    parts = ax3.violinplot(memory_usage, showmeans=True)
-    ax3.set_title('Peak Memory Usage (per node)')
-    ax3.set_ylabel('Memory (MBytes)')
-    ax3.spines[['right', 'top']].set_visible(False)
-    ax3.axes.xaxis.set_visible(False)
-    style_violin(parts, ax3)
+    # Loop through the subplots and plot your data
+    metrics = {
+        **metrics.pop("to_query"),
+        **metrics
+    }
 
-    parts = ax4.violinplot([network_usage['rx_mbytes'], network_usage['tx_mbytes']], showmeans=True)
-    ax4.set_title('Total Netowrk IO (per node)')
-    ax4.set_ylabel('Bandwidth (MBytes)')
-    ax4.spines[['right', 'top']].set_visible(False)
-    ax4.set_xticks([1, 2])
-    ax4.set_xticklabels(['Received (Rx)', 'Sent (Tx)'])
-    style_violin(parts, ax4)
-
-    parts = ax5.violinplot(injection_times, showmeans=True)
-    ax5.set_title('Injection Time (per message)')
-    ax5.set_ylabel('Milliseconds (ms)')
-    ax5.spines[['right', 'top']].set_visible(False)
-    ax5.axes.xaxis.set_visible(False)
-    style_violin(parts, ax5)
-
-    parts = ax6.violinplot([disk_usage['disk_read_mbytes'], disk_usage['disk_write_mbytes']], showmeans=True)
-    ax6.set_title('Peak Disk IO (per node)')
-    ax6.set_ylabel('Disk IO (MBytes)')
-    ax6.spines[['right', 'top']].set_visible(False)
-    ax6.set_xticks([1, 2])
-    ax6.set_xticklabels(['Read', 'Write'])
-    style_violin(parts, ax6)
+    for i, metric in enumerate(metrics.values()):
+        if type(metric["values"][0]) is list:
+            if sum([len(sublist) for sublist in metric["values"]]) == 0:
+                continue
+        analysis_logger.G_LOGGER.info(f"Plotting {metric['metric_name']}: {metric['values']}")
+        parts = axs[i].violinplot(metric["values"], showmeans=True)
+        axs[i].set_title(metric["title"])
+        axs[i].set_ylabel(metric["y_label"])
+        axs[i].spines[['right', 'top']].set_visible(False)
+        axs[i].axes.xaxis.set_visible(False)
+        if "xtic_labels" in metric.keys():
+            axs[i].set_xticks([i+1 for i in range(len(metric["xtic_labels"]))])
+            axs[i].set_xticklabels(metric["xtic_labels"])
+            axs[i].axes.xaxis.set_visible(True)
+        style_violin(parts, axs[i])
 
     fig.suptitle(
-        'Wakurtosis Simulation Node Level Analysis\n(%d nodes, %d topic(s), Rate: %d msg/s, Time: %.2f s. Sampling Rate: %.2f samples/s.)\n' % (
-        simulation_summary['num_nodes'], \
-        simulation_summary['num_topics'], simulation_config['wls']['message_rate'],
-        simulation_summary['simulation_time_ms'] / 1000.0, \
-        simulation_summary['metrics']['esr']), fontsize=20)
+        'Wakurtosis Simulation Node Level Analysis\n(%d nodes, %d topic(s), Rate: %d msg/s, Time: %.2f s. Message Rate: %.2f. Min/Max size: %d/%d.)\n' % (
+        simulation_config['gennet']['num_nodes'], \
+        simulation_config['gennet']['num_topics'], simulation_config['wls']['message_rate'],
+        simulation_config['wls']['simulation_time'], \
+        simulation_config['wls']['message_rate'],
+        simulation_config['wls']['min_packet_size'],
+        simulation_config['wls']['max_packet_size']
+        ), fontsize=20)
 
     plt.tight_layout()
 
-    figure_path = f'{vars.G_DEFAULT_SIMULATION_PATH}/{vars.G_DEFAULT_FIG_FILENAME}'
+    figure_path = f'{vars.G_DEFAULT_SIMULATION_PATH}{vars.G_DEFAULT_FIG_FILENAME}'
     plt.savefig(figure_path, format="pdf", bbox_inches="tight")
 
     analysis_logger.G_LOGGER.info(f'Figure saved in {figure_path}')

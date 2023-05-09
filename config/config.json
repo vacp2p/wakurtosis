@@ -1,6 +1,6 @@
 {
-  "general":{
-    "prng_seed" : 1
+  "general": {
+    "prng_seed": 1
   },
   "kurtosis": {
     "enclave_name": "wakurtosis",
@@ -9,13 +9,16 @@
     "interconnection_batch": 10
   },
   "gennet": {
-    "num_nodes": 3,
+    "num_nodes": 9,
     "fanout": 3,
     "num_topics": 1,
     "num_partitions": 1,
     "num_subnets": 1,
     "container_size": "1",
-    "node_type_distribution": { "nwaku:relay":100, "gowaku:rln:dnsdisc:dns":0 },
+    "node_type_distribution": {
+      "nwaku:relay:rpc:metrics": 100,
+      "gowaku:rln:dnsdisc:dns": 0
+    },
     "network_type": "newmanwattsstrogatz",
     "output_dir": "network_data",
     "benchmark": "False"
@@ -35,7 +38,48 @@
     "container_str_pattern": "waku",
     "process_str_pattern": "waku",
     "sampling_interval_s": 1,
-    "probe_filename" : "./monitoring/probe.sh",
-    "metrics_filename" : "./monitoring/metrics.json"
-   }
+    "probe_filename": "./monitoring/probe.sh",
+    "metrics_filename": "./monitoring/metrics.json"
+  },
+  "plotting": {
+    "to_query": {
+      "cpu": {
+        "title": "Peak CPU Usage (per node)",
+        "y_label": "CPU Usage (%)",
+        "metric_name": "container_cpu_load_average_10s",
+        "statistic": "max",
+        "toMB": false
+      },
+      "memory": {
+        "title": "Peak Memory Usage (per node)",
+        "y_label": "Memory (MBytes)",
+        "metric_name": "container_memory_usage_bytes",
+        "statistic": "max",
+        "toMB": true
+      },
+      "bandwith": {
+        "title": "Total Netowrk IO (per node)",
+        "y_label": "Bandwidth (MBytes)",
+        "metric_name": [
+          "container_network_receive_bytes_total",
+          "container_network_transmit_bytes_total"
+        ],
+        "xtic_labels": ["Received (Rx)", "Sent (Tx)"],
+        "statistic": "max",
+        "toMB": true
+      },
+      "disk": {
+        "title": "Peak Disk IO (per node)",
+        "y_label": "Disk IO (MBytes)",
+        "metric_name": [
+          "container_fs_reads_bytes_total",
+          "container_fs_writes_bytes_total"
+        ],
+        "xtic_labels": ["Read", "Write"],
+        "statistic": "max",
+        "toMB": true
+      }
+    }
+  }
 }
+
