@@ -37,7 +37,7 @@ class TestPrometheus(unittest.TestCase):
         start_ts = 1630000000000000000
         end_ts = 1630000100000000000
 
-        prometheus.fetch_cadvisor_stats_from_prometheus(metrics, prom, container_ip, start_ts, end_ts)
+        prometheus.fetch_cadvisor_stats_from_prometheus_by_node(metrics, prom, container_ip, start_ts, end_ts)
 
         self.assertEqual(metrics["to_query"]["metric_1"]["values"], [sum([10, 20, 30])])
         self.assertEqual(metrics["to_query"]["metric_2"]["values"], [[max([10, 20, 30])], [max([5, 15, 25])]])
