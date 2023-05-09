@@ -120,7 +120,7 @@ if [ "$metrics_infra" = "cadvisor" ]; then
     echo "cadvisor: signaling WLS"
     docker exec $wls_cid touch /wls/start.signal
 elif [ "$metrics_infra" = "dstats" ]; then
-    odir=./monitoring/host-proc/$odir
+    odir=./monitoring/dstats/$odir
     echo "odir: $odir"
     mkdir -p $odir
     dps=$odir/docker-ps.out
