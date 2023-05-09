@@ -42,7 +42,7 @@
     "metrics_filename": "./monitoring/metrics.json"
   },
   "plotting": {
-    "to_query": {
+    "by_node": {
       "cpu": {
         "title": "Peak CPU Usage (per node)",
         "y_label": "CPU Usage (%)",
@@ -56,7 +56,9 @@
         "metric_name": "container_memory_usage_bytes",
         "statistic": "max",
         "toMB": true
-      },
+      }
+    },
+    "by_simulation": {
       "bandwith": {
         "title": "Total Netowrk IO (per node)",
         "y_label": "Bandwidth (MBytes)",
@@ -65,7 +67,6 @@
           "container_network_transmit_bytes_total"
         ],
         "xtic_labels": ["Received (Rx)", "Sent (Tx)"],
-        "statistic": "max",
         "toMB": true
       },
       "disk": {
@@ -76,7 +77,6 @@
           "container_fs_writes_bytes_total"
         ],
         "xtic_labels": ["Read", "Write"],
-        "statistic": "max",
         "toMB": true
       }
     }
