@@ -74,7 +74,7 @@ class Human2BytesConverter(metaclass=Singleton):
 class Plots(metaclass=Singleton):
     def __init__(self, log_dir, oprefix):
         self.log_dir, self.oprefix = log_dir, oprefix
-        self.df, self.n, self.waku_cids = "", 0, []
+        self.df, self.n, self.keys = "", 0, []
         self.col2title, self.col2units = {}, {}
         self.msg_settling_times, self.msg_injection_times = {}, {}
 
@@ -94,11 +94,14 @@ class Plots(metaclass=Singleton):
         self.msg_injection_times = analysis.compute_injection_times(injected_msgs_dict)
         #print("message propagation_times: ", self.msg_propagation_times)
 
-    def get_cid(self):
-        return self.df.ContainerID
+    #def get_cid(self):
+    #    return self.df.ContainerID
 
-    def set_wakucids(self):
-        self.waku_cids = self.df["ContainerID"].unique()
+    def get_key(self):
+        return self.df.Key
+
+    def set_keys(self):
+        self.keys = self.df['Key'].unique()
 
     def plot_settling_times(self):
         fig, axes = plt.subplots(1, 2, layout='constrained', sharey=True)
@@ -110,7 +113,7 @@ class Plots(metaclass=Singleton):
         pp = PdfPages(f'{self.oprefix}-settling-time.pdf')
         #axes[0].violinplot([0], showmedians=True)
         # TODO: add docker id as legend to xticks 
-        axes[0].set_xticks([x + 1 for x in range(len(self.waku_cids))])
+        axes[0].set_xticks([x + 1 for x in range(len(self.keys))])
         #axes[0].set_xticks(ticks=[x + 1 for x in range(len(self.waku_cids))], labels=self.df["ContainerID"].unique())
         axes[0].set_xlabel('TODO: revisit after Jordi added per-container settling times')
 
@@ -130,47 +133,64 @@ class Plots(metaclass=Singleton):
         fig.supylabel(self.col2units[col])
 
         pp = PdfPages(f'{self.oprefix}-{col}.pdf')
-        per_cid_arr, all_arr = [], []
+        per_key_arr, all_arr = [], []
 
         # per docker violin plot
         axes[0,0].ticklabel_format(style='plain')
         axes[0,0].yaxis.grid(True)
-        axes[0,0].set_xlabel('Container ID')
-        for cid in self.waku_cids:
+        for key in self.keys:
             if cdf:
-                tmp = self.df[self.get_cid() == cid][col].values
+                tmp = self.df[self.get_key() == key][col].values
             else:
-                tmp = self.df[self.get_cid() == cid][col].diff().dropna().values
+                tmp = self.df[self.get_key() == key][col].diff().dropna().values
             #print(f'{cid}-{col}: ', tmp)
-            per_cid_arr.append(tmp)
+            per_key_arr.append(tmp)
             all_arr = np.concatenate((all_arr, tmp), axis=0)
 
-        axes[0,0].violinplot(dataset=per_cid_arr, showmeans=True)
-        # TODO: add docker id as legend to xticks 
-        axes[0,0].set_xticks([x + 1 for x in range(len(self.waku_cids))])
+        axes[0,0].violinplot(dataset=per_key_arr, showmeans=True)
+        # TODO: add node id as legend to xticks 
+        #axes[0,0].set_xticks([x + 1 for x in range(len(self.keys))])
+        axes[0,0].set_xticks([x + 1 for x in range(len(self.keys))])
+        labels = [ '{}{}'.format( ' ', k) for i, k in enumerate(self.keys)]
+        axes[0,0].set_xticklabels(labels)
 
-        # pooled  violin plot
+        # consolidated  violin plot
         axes[1,0].ticklabel_format(style='plain')
         axes[1,0].yaxis.grid(True)
-        axes[1,0].set_xlabel('')
+        axes[1,0].set_xlabel('All Containers')
         axes[1,0].violinplot(dataset=all_arr, showmeans=True)
-        axes[1,0].axes.xaxis.set_visible(False)
+        axes[1,0].set_xticks([])
+        #axes[1,0].axes.xaxis.set_visible(False)
 
         # per docker scatter plot
         axes[0,1].ticklabel_format(style='plain')
         axes[0,1].yaxis.grid(True)
         axes[0,1].set_xlabel('Time')
-        for y in per_cid_arr:
-            axes[0, 1].scatter(x=range(0, len(y)), y=y, marker='.')
+        legends = []
+        for i, key in enumerate(self.keys):
+            y = per_key_arr[i]
+            legends.append(axes[0,1].scatter(x=range(0, len(y)), y=y, marker='.'))
+        axes[0,1].legend(legends, self.keys, scatterpoints=1,
+                        loc='upper left', ncol=5,
+                        fontsize=8)
 
-        # pooled scatter plot
+        # consolidated/summed-up scatter plot
         axes[1,1].ticklabel_format(style='plain')
         axes[1,1].yaxis.grid(True)
         axes[1,1].set_xlabel('Time')
-        for y in per_cid_arr:
-            c = [2] * len(y)
+        out, nkeys  = [], len(per_key_arr)
+        for j in range(len(per_key_arr[0])):
+            out.append(0)
+            for i in range(nkeys):
+                out[j] += per_key_arr[i][j]
+            out[j] = out[j]/nkeys
+        for y in per_key_arr:
+            c = ['m'] * len(y)
             axes[1, 1].scatter(x=range(0, len(y)), y=y, c=c,marker='.')
-
+        legends = axes[1,1].plot(out, color='g')
+        axes[1,1].legend(legends, [f'Average {self.col2title[col]}'], scatterpoints=1,
+                        loc='upper right', ncol=1,
+                        fontsize=8)
         pp.savefig(plt.gcf())
         pp.close()
         plt.show()
@@ -186,7 +206,8 @@ class Plots(metaclass=Singleton):
 class DStats(Plots, metaclass=Singleton):
     def __init__(self, log_dir, oprefix):
         Plots.__init__(self, log_dir, oprefix)
-        self.fname = f'{log_dir}/host-proc-stats/docker-stats.out'
+        self.dstats_fname = f'{log_dir}/dstats-stats/docker-stats.out'
+        self.ps_fname = f'{log_dir}/dstats-stats/docker-ps.out'
         self.col2title = {  "ContainerID"   : "Docker ID",
                             "ContainerName" : "Docker Name",
                             "CPUPerc"       : "CPU Utilisation",
@@ -213,19 +234,19 @@ class DStats(Plots, metaclass=Singleton):
 
     # remove the formatting artefacts
     def pre_process(self):
-        if not path_ok(Path(self.fname)):
+        if not path_ok(Path(self.dstats_fname)):
             sys.exit(0)
         regex = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
-        with open(self.fname) as f:
+        with open(self.dstats_fname) as f:
             cleaned_txt = regex.sub('', f.read())
-        with open(self.fname, 'w') as f:
+        with open(self.dstats_fname, 'w') as f:
             f.write(cleaned_txt)
 
     # make sure the df is all numeric
     def post_process(self):
         for name in ["ContainerID", "ContainerName"]:
             self.df[name] = self.df[name].map(lambda x: x.strip())
-        h2b, n = Human2BytesConverter(), len(self.waku_cids)
+        h2b, n = Human2BytesConverter(), len(self.keys)
         for percent in ["CPUPerc", "MemPerc"]:
             self.df[percent] = self.df[percent].str.replace('%','').astype(float)
         for size in ["MemUse", "MemTotal"]:
@@ -234,14 +255,16 @@ class DStats(Plots, metaclass=Singleton):
             self.df[size] = self.df[size].map(lambda x: h2b.convert(x.strip())/(1024*1024)) # MiBs
         for size in ["BlockR", "BlockW"]:
             self.df[size] = self.df[size].map(lambda x: h2b.convert(x.strip())/(1024*1024)) # MiBs
+        with open(self.ps_fname) as f:
+            self.df['Key'] = self.df['ContainerName'].map(lambda x: x.split("--")[0])
         self.df.to_csv(f'{self.oprefix}-cleaned.csv', sep='/')
-        self.set_wakucids()
+        self.set_keys()
 
     # build df from csv
     def process_dstats_data(self):
-        log.info(f'processing {self.fname}...')
+        log.info(f'processing {self.dstats_fname}...')
         self.pre_process()
-        self.df = pd.read_csv(self.fname, header=0,  comment='#', skipinitialspace = True,
+        self.df = pd.read_csv(self.dstats_fname, header=0,  comment='#', skipinitialspace = True,
                                 delimiter='/',
                                 usecols=["ContainerID", "ContainerName",
                                     "CPUPerc", "MemUse", "MemTotal", "MemPerc",
@@ -327,7 +350,6 @@ class ProcFS(Plots, metaclass=Singleton):
         self.df.to_csv(f'{self.oprefix}-cleaned.csv', sep='/')
 
     def post_process(self):
-        self.set_wakucids()
         #h2b = Human2BytesConverter()
         for size in ['VmPeak', 'VmSize', 'VmHWM','VmRSS', 'VmData','VmStk']:
             self.df[size] = self.df[size].map(lambda x: x/1024) # MiBs
@@ -347,6 +369,7 @@ class ProcFS(Plots, metaclass=Singleton):
                     #'cpu4', 'cpu5', 'cpu6', 'cpu7', 'cpu8', 'cpu9', 'CPUUTIME', 'CPUSTIME']:
             self.df[name] = self.df[name].map(lambda x: x.strip())
             '''
+        self.set_keys()
 
     def violin_plots(self, cdf):
         self.violin_plots_helper("VmPeak")
