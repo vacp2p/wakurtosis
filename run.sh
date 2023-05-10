@@ -47,7 +47,7 @@ docker rm cgennet > /dev/null 2>&1
 
 usr=`id -u`
 grp=`id -g`
-odir=./stats
+odir=stats
 signal_fifo=/tmp/hostproc-signal.fifo   # do not create fifo under ./stats, or inside the repo
 ##################### MONITORING MODULE PROLOGUES
 if [ "$metrics_infra" = "cadvisor" ]; then #CADVISOR
@@ -139,7 +139,6 @@ elif [ "$metrics_infra" = "dstats" ]; then
     # start the docker stats
     docker stats --no-trunc --format  "{{.Container}} / {{.Name}} / {{.ID}} / {{.CPUPerc}} / {{.MemUsage}} / {{.MemPerc}} / {{.NetIO}} / {{.BlockIO}} / {{.PIDs}}" $(cat $dids)  >> $dstats &
     dstats_pid=$!
-    cd -
     echo "dstats: started and running as $dstats_pid"
     echo "dstats: signalling WLS"
     docker exec $wls_cid touch /wls/start.signal
@@ -147,6 +146,7 @@ elif [ "$metrics_infra" = "host-proc" ]; then
     echo "Starting the /proc fs and docker stat measurements"
     cd monitoring/host-proc
     sh ./dstats.sh  $wls_cid $odir $signal_fifo &
+    cd -
 elif [ "$metrics_infra" = "container-proc" ]; then
     echo "Jordi's measurement infra's epilogue goes here"
     # Start process level monitoring (in background, will wait to WSL to be created)
