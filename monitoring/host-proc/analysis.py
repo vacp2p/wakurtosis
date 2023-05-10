@@ -15,7 +15,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
-from tqdm_loggable.auto import tqdm
+#from collections import defaultdict
+
+#from tqdm_loggable.auto import tqdm
 #import seaborn as sns
 
 from src import vars
@@ -75,7 +77,7 @@ class Plots(metaclass=Singleton):
     def __init__(self, log_dir, oprefix):
         self.log_dir, self.oprefix = log_dir, oprefix
         self.df, self.n, self.keys = "", 0, []
-        self.col2title, self.col2units = {}, {}
+        self.col2title, self.col2units, self.key2nodes = {}, {}, {}
         self.msg_settling_times, self.msg_injection_times = {}, {}
 
     # jordi's log processing
@@ -94,14 +96,14 @@ class Plots(metaclass=Singleton):
         self.msg_injection_times = analysis.compute_injection_times(injected_msgs_dict)
         #print("message propagation_times: ", self.msg_propagation_times)
 
-    #def get_cid(self):
-    #    return self.df.ContainerID
-
     def get_key(self):
         return self.df.Key
 
     def set_keys(self):
         self.keys = self.df['Key'].unique()
+
+    def build_key2nodes(self):
+        pass
 
     def plot_settling_times(self):
         fig, axes = plt.subplots(1, 2, layout='constrained', sharey=True)
@@ -135,6 +137,8 @@ class Plots(metaclass=Singleton):
         pp = PdfPages(f'{self.oprefix}-{col}.pdf')
         per_key_arr, all_arr = [], []
 
+
+        self.build_key2nodes()
         # per docker violin plot
         axes[0,0].ticklabel_format(style='plain')
         axes[0,0].yaxis.grid(True)
@@ -143,16 +147,20 @@ class Plots(metaclass=Singleton):
                 tmp = self.df[self.get_key() == key][col].values
             else:
                 tmp = self.df[self.get_key() == key][col].diff().dropna().values
-            #print(f'{cid}-{col}: ', tmp)
             per_key_arr.append(tmp)
             all_arr = np.concatenate((all_arr, tmp), axis=0)
 
-        axes[0,0].violinplot(dataset=per_key_arr, showmeans=True)
-        # TODO: add node id as legend to xticks 
+        # NOTE: xticks are from self.df.Keys
         #axes[0,0].set_xticks([x + 1 for x in range(len(self.keys))])
         axes[0,0].set_xticks([x + 1 for x in range(len(self.keys))])
         labels = [ '{}{}'.format( ' ', k) for i, k in enumerate(self.keys)]
         axes[0,0].set_xticklabels(labels)
+        legends = axes[0,0].violinplot(dataset=per_key_arr, showmeans=True)
+        text = ""
+        for key, nodes in self.key2nodes.items():
+            text += f'{key} {", ".join(nodes)}\n'
+        axes[0,0].text(0.65, 0.99, text, transform=axes[0,0].transAxes, 
+                fontsize=7, verticalalignment='top')
 
         # consolidated  violin plot
         axes[1,0].ticklabel_format(style='plain')
@@ -160,7 +168,7 @@ class Plots(metaclass=Singleton):
         axes[1,0].set_xlabel('All Containers')
         axes[1,0].violinplot(dataset=all_arr, showmeans=True)
         axes[1,0].set_xticks([])
-        #axes[1,0].axes.xaxis.set_visible(False)
+        axes[1,0].axes.xaxis.set_visible(False)
 
         # per docker scatter plot
         axes[0,1].ticklabel_format(style='plain')
@@ -207,7 +215,7 @@ class DStats(Plots, metaclass=Singleton):
     def __init__(self, log_dir, oprefix):
         Plots.__init__(self, log_dir, oprefix)
         self.dstats_fname = f'{log_dir}/dstats-stats/docker-stats.out'
-        self.ps_fname = f'{log_dir}/dstats-stats/docker-ps.out'
+        self.kinspect_fname = f'{log_dir}/dstats-stats/docker-kinspect.out'
         self.col2title = {  "ContainerID"   : "Docker ID",
                             "ContainerName" : "Docker Name",
                             "CPUPerc"       : "CPU Utilisation",
@@ -255,8 +263,7 @@ class DStats(Plots, metaclass=Singleton):
             self.df[size] = self.df[size].map(lambda x: h2b.convert(x.strip())/(1024*1024)) # MiBs
         for size in ["BlockR", "BlockW"]:
             self.df[size] = self.df[size].map(lambda x: h2b.convert(x.strip())/(1024*1024)) # MiBs
-        with open(self.ps_fname) as f:
-            self.df['Key'] = self.df['ContainerName'].map(lambda x: x.split("--")[0])
+        self.df['Key'] = self.df['ContainerName'].map(lambda x: x.split("--")[0])
         self.df.to_csv(f'{self.oprefix}-cleaned.csv', sep='/')
         self.set_keys()
 
@@ -270,6 +277,22 @@ class DStats(Plots, metaclass=Singleton):
                                     "CPUPerc", "MemUse", "MemTotal", "MemPerc",
                                     "NetRecv", "NetSent", "BlockR","BlockW",  "PIDS"])
         self.post_process()
+
+    def build_key2nodes(self):
+        with open(self.kinspect_fname) as f:
+            for line in f:
+                if "User Services" in line:
+                    f.readline()
+                    break
+            for line in f:
+                if line == "\n":
+                    break
+                larray = line.split()
+                if "containers_" in larray[1]:
+                    key = larray[1]
+                    self.key2nodes[key] = [larray[2].split("libp2p-")[1].replace(':', '')]
+                elif "libp2p-node" in larray[0]:
+                    self.key2nodes[key].append(larray[0].split("libp2p-")[1].replace(':', ''))
 
     def violin_plots(self, cdf):
         self.violin_plots_helper("CPUPerc")
