@@ -126,12 +126,12 @@ elif [ "$metrics_infra" = "dstats" ]; then
     dps=$odir/docker-ps.out
     dids=$odir/docker-dids.out
     dstats=$odir/docker-stats.out
-    filetrs="--filter ancestor=gowaku --filter ancestor=statusteam/nim-waku:nwaku-trace2"
-    docker ps --no-trunc $filters --format "{{.ID}}#{{.Names}}#{{.Image}}#{{.Command}}#{{.State}}#{{.Status}}#{{.Ports}}" > $dps
+    filters="--filter ancestor=gowaku --filter ancestor=statusteam/nim-waku:nwaku-trace2"
+    docker ps --no-trunc --format "{{.ID}}#{{.Names}}#{{.Image}}#{{.Command}}#{{.State}}#{{.Status}}#{{.Ports}}" $filters > $dps
     cut -f 1 -d '#' $dps > $dids
     # add date and the names/versions of waku images involved
     echo "dstats: starting the dstats monitor"
-    echo "# dstats started: $(date)" > $dstats
+    echo "# dstats started: $(date)" > $dstats  # clear the $dstats
     echo "# images involed: $(docker images | grep waku | tr '\n' '; ' )"  >> $dstats
     # add the generating command to aid parsing/debugging
     echo '# docker stats --no-trunc --format  "{{.Container}} / {{.Name}} / {{.ID}} / {{.CPUPerc}} / {{.MemUsage}} / {{.MemPerc}} / {{.NetIO}} / {{.BlockIO}} / {{.PIDs}}"' >> $dstats
@@ -146,7 +146,6 @@ elif [ "$metrics_infra" = "host-proc" ]; then
     echo "Starting the /proc fs and docker stat measurements"
     cd monitoring/host-proc
     sh ./dstats.sh  $wls_cid $odir $signal_fifo &
-    cd -
 elif [ "$metrics_infra" = "container-proc" ]; then
     echo "Jordi's measurement infra's epilogue goes here"
     # Start process level monitoring (in background, will wait to WSL to be created)
