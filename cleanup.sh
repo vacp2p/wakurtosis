@@ -3,7 +3,7 @@ enclave_name=${1:-"wakurtosis"}
 # hardcoded files/fifo/folders
 rm -f   ./kurtosisrun_log.txt
 rm -f /tmp/hostproc-signal.fifo
-rm -rf  ./wakurtosis_logs ./config/topology_generated  ./monitoring/host-proc/stats
+rm -rf  ./wakurtosis_logs ./config/topology_generated  ./monitoring/host-proc/stats ./monitoring/dstats/stats
 
 docker stop gennet cadvisor > /dev/null  2>&1
 docker rm gennet cadvisor > /dev/null  2>&1
