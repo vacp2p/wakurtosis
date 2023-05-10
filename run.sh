@@ -126,6 +126,7 @@ elif [ "$metrics_infra" = "dstats" ]; then
     dps=$odir/docker-ps.out
     dids=$odir/docker-dids.out
     dstats=$odir/docker-stats.out
+    kinspect=$odir/docker-kinspect.out
     filters="--filter ancestor=gowaku --filter ancestor=statusteam/nim-waku:nwaku-trace2"
     docker ps --no-trunc --format "{{.ID}}#{{.Names}}#{{.Image}}#{{.Command}}#{{.State}}#{{.Status}}#{{.Ports}}" $filters > $dps
     cut -f 1 -d '#' $dps > $dids
@@ -136,6 +137,8 @@ elif [ "$metrics_infra" = "dstats" ]; then
     # add the generating command to aid parsing/debugging
     echo '# docker stats --no-trunc --format  "{{.Container}} / {{.Name}} / {{.ID}} / {{.CPUPerc}} / {{.MemUsage}} / {{.MemPerc}} / {{.NetIO}} / {{.BlockIO}} / {{.PIDs}}"' >> $dstats
     echo "ContainerID/ContainerName/ID/CPUPerc/MemUse/MemTotal/MemPerc/NetRecv/NetSent/BlockR/BlockW/PIDS"  >> $dstats
+    # collect container/node mapping using kurtosis
+    kurtosis  --cli-log-level $loglevel  enclave inspect $enclave_name > $kinspect
     # start the docker stats
     docker stats --no-trunc --format  "{{.Container}} / {{.Name}} / {{.ID}} / {{.CPUPerc}} / {{.MemUsage}} / {{.MemPerc}} / {{.NetIO}} / {{.BlockIO}} / {{.PIDs}}" $(cat $dids)  >> $dstats &
     dstats_pid=$!

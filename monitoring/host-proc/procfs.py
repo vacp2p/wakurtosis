@@ -245,11 +245,11 @@ class MetricsCollector:
                     continue
             did = ""
             self.docker_pids.append(pid)
-             #/usr/bin/wakunode--rpc-address=0.0.0.0
-             #--metrics-server-address=0.0.0.0
-             #--log-level=TRACE
-             #--config-file=/node/configuration_file/node-6/node-6.toml
-             #--ports-shift=2m
+            #'/proc/{pid}/cmdline  = /usr/bin/wakunode--rpc-address=0.0.0.0
+                                    #--metrics-server-address=0.0.0.0
+                                    #--log-level=TRACE
+                                    #--config-file=/node/configuration_file/node-6/node-6.toml
+                                    #--ports-shift=2m
             with open(f'/proc/{pid}/cmdline') as f:
                 self.pid2node_name[pid] = f.readline().split("--config-file=")[1].split('/')[3]
 
