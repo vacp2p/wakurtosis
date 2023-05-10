@@ -40,7 +40,14 @@ def plot_figure_ex(metrics, simulation_config):
         # make lines invisible
         parts['cmeans'].set_visible(False)
 
-    num_subplots = len(metrics["to_query"]) + len(metrics.keys()) - 1
+    # Loop through the subplots and plot your data
+    metrics = {
+        **metrics.pop("by_node"),
+        **metrics.pop("by_simulation"),
+        **metrics
+    }
+
+    num_subplots = len(metrics.keys())
     num_cols = 3
     num_rows = math.ceil(num_subplots / num_cols)
 
@@ -50,12 +57,6 @@ def plot_figure_ex(metrics, simulation_config):
     # Remove unused subplots
     for i in range(num_subplots, num_rows * num_cols):
         fig.delaxes(axs[i])
-
-    # Loop through the subplots and plot your data
-    metrics = {
-        **metrics.pop("to_query"),
-        **metrics
-    }
 
     for i, metric in enumerate(metrics.values()):
         if type(metric["values"][0]) is list:
