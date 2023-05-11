@@ -113,7 +113,8 @@ def compute_propagation_times(msgs_dict):
     for msg_id, msg_data in pbar:
         pbar.set_description('Computing propagation time of message %s' % msg_id)
         if msg_data['latencies']:
-            msg_propagation_times.append(round(max(msg_data['latencies']) / 1000000))
+            msg_propagation_times.append(max(msg_data['latencies']) / 1000000)
+            # msg_propagation_times.append(round(max(msg_data['latencies']) / 1000000))
         else:
             analysis_logger.G_LOGGER.warning('Message %s hasnt been received by any peers.' % msg_id)
 
