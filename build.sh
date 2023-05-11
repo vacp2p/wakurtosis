@@ -15,7 +15,7 @@ sudo rm /etc/apt/sources.list.d/kurtosis.list
 
 # Build the analysis docker image
 cd analysis-module
-docker build -t analysis .
+sh ./build.sh
 cd ..
 
 # Build Gennet & WLS docker images
