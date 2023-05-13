@@ -17,18 +17,20 @@ from collections import defaultdict
 
 # TODO: return the %CPU utilisation instead?
 # pulls system-wide jiffies
-def get_cpu_system(f):
+def get_system_cpu(f):
     f.seek(0)
-    rbuff = f.readlines()
-    return f'{rbuff[0].strip()}'
+    return sum(float(s) for s in f.readline().split()[2:])
+    #return f'{rbuff[0].strip()}'
 
 
 # pulls per-process user/system jiffies
-def get_cpu_process(f):
+def get_process_cpu(f):
     f.seek(0)
-    rbuff = f.read().strip().split()
-    lst = [-3, -2]  # user jiffies, system jiffies
-    return f'{rbuff[-3]} {rbuff[-2]}'
+    rbuff = f.readline().split()
+    ptot = rbuff[13] + rbuff[14]
+    return float(ptot)
+    #lst = [-3, -2]  # user jiffies, system jiffies
+    #return f'{rbuff[-3]} {rbuff[-2]}'
 
 
 # pulls VmPeak, VmSize, VmRSS stats per wakunode
@@ -112,6 +114,8 @@ class MetricsCollector:
         self.last_tstamp = 0
         self.start_time = 0
 
+        self.last_sys_ctot, self.last_pid_ctot = {}, {}
+
     # check if a wakunode/pid exists
     def pid_exists(self, pid):
         pid = int(pid)
@@ -162,8 +166,10 @@ class MetricsCollector:
     def procfs_collector(self):
         for pid in self.docker_pids:
             veth = self.pid2veth[pid]
-            sys_stat = get_cpu_system(self.pid2procfds[0]["cpu"])
-            stat = get_cpu_process(self.pid2procfds[pid]["cpu"])
+            sys_ctot = get_system_cpu(self.pid2procfds[0]["cpu"])
+            pid_ctot = get_process_cpu(self.pid2procfds[pid]["cpu"])
+            cpu_perc = (pid_ctot - self.last_pid_ctot[pid]) / (sys_ctot - self.last_sys_ctot[pid])
+            self.last_sys_ctot[pid], self.last_pid_ctot[pid] = sys_ctot, pid_ctot
             mem = get_mem_metrics(self.pid2procfds[pid]["mem"])
             net1 = get_net1_metrics(self.pid2procfds[pid]["net1"], self.host_if)
             net2 = get_net2_metrics(self.pid2procfds[pid]["net2"], veth) # SNMP MIB
@@ -173,20 +179,27 @@ class MetricsCollector:
             out = ( f'SAMPLE_{self.procfs_sample_cnt} '
                     f'{pid} {self.pid2node_name[pid]} {time.time()} {self.pid2did[pid]} '
                     f'MEM {mem} NET {net1} {net2} {net3} '
-                    f'BLK {blk} CPU-SYS {sys_stat} CPU-process {stat}\n'
+                    f'BLK {blk} CPU {cpu_perc}\n'
                   )
             self.procfs_fd.write(str(out))
         self.procfs_sample_cnt += 1     # schedule the next event ASAP
         if not self.got_signal: # could be xpensive for n > 1000 : branch
             self.procfs_scheduler.enter(self.procfs_sampling_interval, 1, self.procfs_collector, ())
-        if not self.procfs_sample_cnt % 50: # could be xpensive for n > 1000 : branch + mod
+        if  (self.procfs_sample_cnt-1) % 50 == 0: # could be xpensive for n > 1000 : branch + mod
             tstamp = time.time()
             n = self.docker_npids
             elapsed = tstamp - self.last_tstamp
             log.info((f'Metrics: sample cnt = {self.procfs_sample_cnt}: '
-                f'time took per sample (of {n} wakunodes) ~ '
+                f'avg time took to sample {n}\t wakunodes ~ '
                 f'{elapsed/50-self.procfs_sampling_interval:.5f} secs'))
             self.last_tstamp = tstamp
+
+
+    def set_last_cpu_totals(self):
+        log.info("Metrics: set last_cpu_totals")
+        for pid in self.docker_pids:
+            self.last_sys_ctot[pid] = get_system_cpu(self.pid2procfds[0]["cpu"])
+            self.last_pid_ctot[pid] = get_process_cpu(self.pid2procfds[pid]["cpu"])
 
     # add headers and schedule /proc reader's first read
     def launch_procfs_monitor(self, wls_cid):
@@ -207,11 +220,13 @@ class MetricsCollector:
                 f'VETH InOctetsKey InOctets OutOctetsKey OutOctets '
                 f'DockerVIF NetRXKey NetRX NETWXKey NetWX '
                 f'BLK READKEY BLKR WRITEKEY BLKW '
-                f'CPU-SYS cpu cpu0 cpu1 cpu2 cpu3 cpu4 cpu5 cpu6 cpu7 cpu8 cpu9 '
-                f'CPU-Process CPUUTIME CPUSTIME\n'))
+                #f'CPU-SYS cpu cpu0 cpu1 cpu2 cpu3 cpu4 cpu5 cpu6 cpu7 cpu8 cpu9 '
+                #f'CPU-Process CPUUTIME CPUSTIME 
+                f'CPU CPUPERC\n'))
         log.info("Metrics: launch_procfs_monitor: signalling WLS")
         signal_wls = f'docker exec {wls_cid} touch /wls/start.signal'
         subprocess.run(signal_wls, shell=True) # revisit after Jordi's pending branch merge
+        self.set_last_cpu_totals()
         self.start_time = time.time()
         self.last_tstamp = time.time()
         self.procfs_scheduler.enter(self.procfs_sampling_interval, 1,
