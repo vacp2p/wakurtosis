@@ -47,7 +47,7 @@ docker rm cgennet > /dev/null 2>&1
 
 usr=`id -u`
 grp=`id -g`
-odir=stats
+stats_dir=stats
 signal_fifo=/tmp/hostproc-signal.fifo   # do not create fifo under ./stats, or inside the repo
 ##################### MONITORING MODULE PROLOGUES
 if [ "$metrics_infra" = "cadvisor" ]; then #CADVISOR
@@ -67,7 +67,7 @@ if [ "$metrics_infra" = "cadvisor" ]; then #CADVISOR
     docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev/disk/:/dev/disk:ro --volume=/sys:/sys:ro --volume=/etc/machine-id:/etc/machine-id:ro --publish=8080:8080 --detach=true --name=cadvisor --privileged --device=/dev/kmsg --network $enclave_prefix --ip=$last_ip gcr.io/cadvisor/cadvisor:v0.47.0
     # docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev/disk/:/dev/disk:ro --volume=/sys:/sys:ro --volume=/etc/machine-id:/etc/machine-id:ro --publish=8080:8080 --detach=true --name=cadvisor --privileged --device=/dev/kmsg gcr.io/cadvisor/cadvisor
 elif  [ "$metrics_infra" = "host-proc" ]; then # HOST-PROC
-    rclist=$odir/docker-rc-list.out
+    rclist=$stats_dir/docker-rc-list.out
     cd monitoring/host-proc
     mkdir -p $odir
     mkfifo $signal_fifo
@@ -115,36 +115,17 @@ wls_cid="$service_name--$service_uuid"
 
 
 
-##################### MONITORING MODULE EPILOGUE: WLS SIGNALLIN
+##################### MONITORING MODULE EPILOGUE: WLS SIGNALLING
 if [ "$metrics_infra" = "cadvisor" ]; then
     echo "cadvisor: signaling WLS"
     docker exec $wls_cid touch /wls/start.signal
 elif [ "$metrics_infra" = "dstats" ]; then
-    odir=./monitoring/dstats/$odir
-    echo "odir: $odir"
+    odir=./monitoring/dstats/$stats_dir
     mkdir -p $odir
-    dps=$odir/docker-ps.out
-    dids=$odir/docker-dids.out
-    dstats=$odir/docker-stats.out
+    # collect container/node mapping via kurtosis
     kinspect=$odir/docker-kinspect.out
-    filters="--filter ancestor=gowaku --filter ancestor=statusteam/nim-waku:nwaku-trace2"
-    docker ps --no-trunc --format "{{.ID}}#{{.Names}}#{{.Image}}#{{.Command}}#{{.State}}#{{.Status}}#{{.Ports}}" $filters > $dps
-    cut -f 1 -d '#' $dps > $dids
-    # add date and the names/versions of waku images involved
-    echo "dstats: starting the dstats monitor"
-    echo "# dstats started: $(date)" > $dstats  # clear the $dstats
-    echo "# images involed: $(docker images | grep waku | tr '\n' '; ' )"  >> $dstats
-    # add the generating command to aid parsing/debugging
-    echo '# docker stats --no-trunc --format  "{{.Container}} / {{.Name}} / {{.ID}} / {{.CPUPerc}} / {{.MemUsage}} / {{.MemPerc}} / {{.NetIO}} / {{.BlockIO}} / {{.PIDs}}"' >> $dstats
-    echo "ContainerID/ContainerName/ID/CPUPerc/MemUse/MemTotal/MemPerc/NetRecv/NetSent/BlockR/BlockW/PIDS"  >> $dstats
-    # collect container/node mapping using kurtosis
     kurtosis  --cli-log-level $loglevel  enclave inspect $enclave_name > $kinspect
-    # start the docker stats
-    docker stats --no-trunc --format  "{{.Container}} / {{.Name}} / {{.ID}} / {{.CPUPerc}} / {{.MemUsage}} / {{.MemPerc}} / {{.NetIO}} / {{.BlockIO}} / {{.PIDs}}" $(cat $dids)  >> $dstats &
-    dstats_pid=$!
-    echo "dstats: started and running as $dstats_pid"
-    echo "dstats: signalling WLS"
-    docker exec $wls_cid touch /wls/start.signal
+    sh ./monitoring/dstats/dstats.sh $wls_cid $odir &  # the process subtree takes care of itself
 elif [ "$metrics_infra" = "host-proc" ]; then
     echo "Starting the /proc fs and docker stat measurements"
     cd monitoring/host-proc
@@ -200,8 +181,7 @@ cp -r ./config ${enclave_name}_logs
 
 ##################### MONITORING MODULE - COPY
 if [ "$metrics_infra" = "dstats" ]; then
-    echo "dstats: killing dstats at $dstats_pid"
-    kill -15 $dstats_pid
+    # unfortunately no way to introduce a race-free finish signalling
     echo "dstats: copying the docker stat measurements"
     cp -r ./monitoring/dstats/stats  ${enclave_name}_logs/dstats-stats
 elif [ "$metrics_infra" = "host-proc" ]; then
