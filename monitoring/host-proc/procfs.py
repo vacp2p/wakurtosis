@@ -212,10 +212,6 @@ class MetricsCollector:
         log.info("Metrics: launch_procfs_monitor: signalling WLS")
         signal_wls = f'docker exec {wls_cid} touch /wls/start.signal'
         subprocess.run(signal_wls, shell=True) # revisit after Jordi's pending branch merge
-        log.info("Metrics: launch_procfs_monitor: signalling dstats")
-        f = os.open(self.signal_fifo, os.O_WRONLY)
-        os.write(f, "host-proc: signal dstats\n".encode('utf-8'))
-        os.close(f)
         self.start_time = time.time()
         self.last_tstamp = time.time()
         self.procfs_scheduler.enter(self.procfs_sampling_interval, 1,
