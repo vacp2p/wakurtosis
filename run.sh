@@ -67,13 +67,12 @@ if [ "$metrics_infra" = "cadvisor" ]; then #CADVISOR
     docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev/disk/:/dev/disk:ro --volume=/sys:/sys:ro --volume=/etc/machine-id:/etc/machine-id:ro --publish=8080:8080 --detach=true --name=cadvisor --privileged --device=/dev/kmsg --network $enclave_prefix --ip=$last_ip gcr.io/cadvisor/cadvisor:v0.47.0
     # docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev/disk/:/dev/disk:ro --volume=/sys:/sys:ro --volume=/etc/machine-id:/etc/machine-id:ro --publish=8080:8080 --detach=true --name=cadvisor --privileged --device=/dev/kmsg gcr.io/cadvisor/cadvisor
 elif  [ "$metrics_infra" = "host-proc" ]; then # HOST-PROC
-    rclist=$stats_dir/docker-rc-list.out
-    cd monitoring/host-proc
-    mkdir -p $odir
+    odir=./monitoring/host-proc/$stats_dir
+    rclist=$odir/docker-rc-list.out
+    mkdir $odir
     mkfifo $signal_fifo
     chmod 0777 $signal_fifo
-    sudo sh ./procfs.sh $rclist $odir $usr $grp $signal_fifo &
-    cd -
+    sudo sh ./monitoring/host-proc/procfs.sh $rclist $odir $usr $grp $signal_fifo &
 elif  [ "$metrics_infra" = "container-proc" ]; then # CONTAINER-PROC
   #Jordi's metrics module prologue
     echo "Jordi's measurement infra  prologue goes here"
@@ -120,16 +119,16 @@ if [ "$metrics_infra" = "cadvisor" ]; then
     echo "cadvisor: signaling WLS"
     docker exec $wls_cid touch /wls/start.signal
 elif [ "$metrics_infra" = "dstats" ]; then
+    echo "Starting dstats measurements.."
     odir=./monitoring/dstats/$stats_dir
-    mkdir -p $odir
+    mkdir $odir
     # collect container/node mapping via kurtosis
     kinspect=$odir/docker-kinspect.out
     kurtosis  --cli-log-level $loglevel  enclave inspect $enclave_name > $kinspect
     sh ./monitoring/dstats/dstats.sh $wls_cid $odir &  # the process subtree takes care of itself
 elif [ "$metrics_infra" = "host-proc" ]; then
-    echo "Starting the /proc fs and docker stat measurements"
-    cd monitoring/host-proc
-    sh ./dstats.sh  $wls_cid $odir $signal_fifo &
+    echo "Starting host-proc measurements.."
+    sh ./monitoring/host-proc/host-proc.sh  $wls_cid $odir $signal_fifo &
 elif [ "$metrics_infra" = "container-proc" ]; then
     echo "Jordi's measurement infra's epilogue goes here"
     # Start process level monitoring (in background, will wait to WSL to be created)
@@ -182,10 +181,10 @@ cp -r ./config ${enclave_name}_logs
 ##################### MONITORING MODULE - COPY
 if [ "$metrics_infra" = "dstats" ]; then
     # unfortunately no way to introduce a race-free finish signalling
-    echo "dstats: copying the docker stat measurements"
+    echo "dstats: copying the dstats data"
     cp -r ./monitoring/dstats/stats  ${enclave_name}_logs/dstats-stats
 elif [ "$metrics_infra" = "host-proc" ]; then
-    echo "Copying the /proc fs and docker stat measurements"
+    echo "Copying the host-proc data"
     cp -r ./monitoring/host-proc/stats  ${enclave_name}_logs/host-proc-stats
 elif [ "$metrics_infra" = "container-proc" ]; then
     echo "Jordi's data copy goes here"
