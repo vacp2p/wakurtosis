@@ -101,6 +101,7 @@ class Plots(metaclass=Singleton):
 
     def set_keys(self):
         self.keys = self.df['Key'].unique()
+        self.keys.sort()
 
     def build_key2nodes(self):
         pass
@@ -159,7 +160,7 @@ class Plots(metaclass=Singleton):
         text = ""
         for key, nodes in self.key2nodes.items():
             text += f'{key} {", ".join(nodes)}\n'
-        axes[0,0].text(0.65, 0.99, text, transform=axes[0,0].transAxes, 
+        axes[0,0].text(0.675, 0.985, text, transform=axes[0,0].transAxes, 
                 fontsize=7, verticalalignment='top')
 
         # consolidated  violin plot
@@ -346,8 +347,8 @@ class ProcFS(Plots, metaclass=Singleton):
                     #'cpu4', 'cpu5', 'cpu6', 'cpu7', 'cpu8', 'cpu9', 'CPUUTIME', 'CPUSTIME'
         self.process_procfs_data()
 
-    def pid2cid(pid):
-        pass
+    def build_key2nodes(self):
+        self.key2nodes[key] = .append(larray[0].split("libp2p-")[1].replace(':', ''))
 
     def process_procfs_data(self):
         if not path_ok(Path(self.fname)):
@@ -356,7 +357,7 @@ class ProcFS(Plots, metaclass=Singleton):
         self.df = pd.read_csv(self.fname, header=0,  comment='#', skipinitialspace = True,
         #self.df = pd.read_fwf(self.fname, header=0,  comment='#', skipinitialspace = True)
                 delimiter=r"\s+",
-                usecols= ['EpochId', 'PID', 'TimeStamp', 'ContainerID',
+                usecols= ['EpochId', 'PID', 'TimeStamp', 'ContainerID', 'NodeName',
                     'VmPeak', 'VmPeakUnit', 'VmSize', 'VmSizeUnit', 'VmHWM', 'VmHWMUnit',
                     'VmRSS', 'VmRSSUnit', 'VmData','VmDataUnit', 'VmStk', 'VmStkUnit',
                     'HostVIF', 'RxBytes', 'RxPackets', 'TxBytes', 'TxPackets',
@@ -364,8 +365,9 @@ class ProcFS(Plots, metaclass=Singleton):
                     'DockerVIF', 'NetRX', 'NetWX',
                     'VETH',  'InOctets', 'OutOctets',
                     'BLKR', 'BLKW',
-                    'CPU-SYS', 'cpu', 'cpu0', 'cpu1', 'cpu2', 'cpu3',
-                   'cpu4', 'cpu5', 'cpu6', 'cpu7', 'cpu8', 'cpu9', 'CPUUTIME', 'CPUSTIME'])
+                    'CPUPERC'])
+                    #'CPU-SYS', 'cpu', 'cpu0', 'cpu1', 'cpu2', 'cpu3',
+                   #'cpu4', 'cpu5', 'cpu6', 'cpu7', 'cpu8', 'cpu9', 'CPUUTIME', 'CPUSTIME'])
         #print(self.df[['BLKR']].to_string(index=False))
         #print(self.df.columns)
         #print(self.df.shape)
@@ -380,18 +382,9 @@ class ProcFS(Plots, metaclass=Singleton):
             self.df[size] = self.df[size].map(lambda x: x/(1024*1024)) # MiBs
         for size in ['BLKR', 'BLKW']:
             self.df[size] = self.df[size].map(lambda x: x/(1024*1024)) # MiBs
-
-        # TODO: compute CPU utilisation and add it as a column
-        '''for name in  ['EpochId', 'PID', 'TimeStamp', 'ContainerID',
-                    'VmPeak', 'VmPeakUnit', 'VmSize', 'VmSizeUnit', 'VmHWM', 'VmHWMUnit',
-                    'VmRSS', 'VmRSSUnit', 'VmData','VmDataUnit', 'VmStk', 'VmStkUnit',
-                    'HostVIF', 'RxBytes', 'RxPackets', 'TxBytes', 'TxPackets',
-                    'DockerVIF', 'NetRX', 'NetWX',
-                    'BLKR', 'BLKW']:
-                    #'CPU-SYS', 'cpu', 'cpu0', 'cpu1', 'cpu2', 'cpu3',
-                    #'cpu4', 'cpu5', 'cpu6', 'cpu7', 'cpu8', 'cpu9', 'CPUUTIME', 'CPUSTIME']:
-            self.df[name] = self.df[name].map(lambda x: x.strip())
-            '''
+        self.df['Key'] = self.df['PID']
+        #self.df.rename(columns={'NodeName': 'Key'}, inplace=True)
+        self.df.to_csv(f'{self.oprefix}-cleaned.csv', sep='/')
         self.set_keys()
 
     def violin_plots(self, cdf):
