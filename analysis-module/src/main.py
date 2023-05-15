@@ -52,7 +52,7 @@ if __name__ == "__main__":
                        msg_injection_times, summary['general'], summary['parameters'])
         
         """ Export summary """
-        analysis_cproc.export_sumary(simulation_path, summary)
+        analysis_cproc.export_summary(simulation_path, summary)
         
     # Add cadvisor and host-proc logic cases bellow
     else:
@@ -63,8 +63,6 @@ if __name__ == "__main__":
             max_tss, prom_port)
 
         total_network_usage = {'rx_mbytes': bandwith_in, 'tx_mbytes': bandwith_out}
-        # plotting.plot_figure_ex(msg_propagation_times, cpu_usage, memory_usage, total_network_usage)
-
         """ Generate Figure """
         plotting.plot_figure(msg_propagation_times, cpu_usage, memory_usage, bandwith_in, bandwith_out)
 

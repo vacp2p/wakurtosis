@@ -35,7 +35,7 @@
     "container_str_pattern": "waku",
     "process_str_pattern": "waku",
     "sampling_interval_s": 1,
-    "probe_filename" : "./monitoring/container-proc/probe_fast_3.sh",
+    "probe_filename" : "./monitoring/container-proc/probe.sh",
     "metrics_filename" : "./wakurtosis_logs/cproc_metrics.json"
    }
 }
