@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 # Project Imports
 from src import vars
 from src import analysis_logger
+from src import plotting_configuration
 
 
 def plot_figure_ex(metrics, simulation_config):
@@ -40,14 +41,7 @@ def plot_figure_ex(metrics, simulation_config):
         # make lines invisible
         parts['cmeans'].set_visible(False)
 
-    # Loop through the subplots and plot your data
-    metrics = {
-        **metrics.pop("by_node"),
-        **metrics.pop("by_simulation"),
-        **metrics
-    }
-
-    num_subplots = len(metrics.keys())
+    num_subplots = len(metrics["by_node"]) + len(metrics["by_simulation"])
     num_cols = 3
     num_rows = math.ceil(num_subplots / num_cols)
 
@@ -58,11 +52,12 @@ def plot_figure_ex(metrics, simulation_config):
     for i in range(num_subplots, num_rows * num_cols):
         fig.delaxes(axs[i])
 
-    for i, metric in enumerate(metrics.values()):
-        if type(metric["values"][0]) is list:
-            if sum([len(sublist) for sublist in metric["values"]]) == 0:
+    for i, key in enumerate(metrics.keys()):
+        if type(metrics[key]) is list:
+            if sum([plotting_configuration[val]["values"] for val in metrics[key]]) == 0:
                 continue
-        analysis_logger.G_LOGGER.info(f"Plotting {metric['metric_name']}: {metric['values']}")
+        metric = plotting_configuration[metrics[key]]
+        analysis_logger.G_LOGGER.info(f"Plotting {key}: {metric['values']}")
         parts = axs[i].violinplot(metric["values"], showmeans=True)
         axs[i].set_title(metric["title"])
         axs[i].set_ylabel(metric["y_label"])
