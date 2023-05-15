@@ -103,9 +103,6 @@ class Plots(metaclass=Singleton):
         self.keys = self.df['Key'].unique()
         self.keys.sort()
 
-    def build_key2nodes(self):
-        pass
-
     def plot_settling_times(self):
         fig, axes = plt.subplots(1, 2, layout='constrained', sharey=True)
         fig.set_figwidth(12)
@@ -129,7 +126,7 @@ class Plots(metaclass=Singleton):
         plt.show()
 
     def violin_plots_helper(self, col, cdf=True):
-        fig, axes = plt.subplots(2, 2, layout='constrained', sharey=True)
+        fig, axes = plt.subplots(2, 2, layout='constrained', sharey=False)
         fig.set_figwidth(12)
         fig.set_figheight(10)
         fig.suptitle(self.col2title[col])
@@ -140,6 +137,7 @@ class Plots(metaclass=Singleton):
 
 
         self.build_key2nodes()
+
         # per docker violin plot
         axes[0,0].ticklabel_format(style='plain')
         axes[0,0].yaxis.grid(True)
@@ -160,7 +158,7 @@ class Plots(metaclass=Singleton):
         text = ""
         for key, nodes in self.key2nodes.items():
             text += f'{key} {", ".join(nodes)}\n'
-        axes[0,0].text(0.675, 0.985, text, transform=axes[0,0].transAxes, 
+        axes[0,0].text(0.675, 0.985, text, transform=axes[0,0].transAxes,
                 fontsize=7, verticalalignment='top')
 
         # consolidated  violin plot
@@ -187,22 +185,37 @@ class Plots(metaclass=Singleton):
         axes[1,1].ticklabel_format(style='plain')
         axes[1,1].yaxis.grid(True)
         axes[1,1].set_xlabel('Time')
-        out, nkeys  = [], len(per_key_arr)
-        for j in range(len(per_key_arr[0])):
-            out.append(0)
-            for i in range(nkeys):
+        out, out_avg, nkeys  = [], [], len(per_key_arr)
+        # omit the very last measurement: could be a partial record
+        jindices, iindices  =  range (len(per_key_arr[0])-1), range(len(per_key_arr))
+        for j in jindices:
+            out.append(0.0)
+            for i in iindices:
                 out[j] += per_key_arr[i][j]
-            out[j] = out[j]/nkeys
-        for y in per_key_arr:
-            c = ['m'] * len(y)
-            axes[1, 1].scatter(x=range(0, len(y)), y=y, c=c,marker='.')
-        legends = axes[1,1].plot(out, color='g')
-        axes[1,1].legend(legends, [f'Average {self.col2title[col]}'], scatterpoints=1,
-                        loc='upper right', ncol=1,
-                        fontsize=8)
+            out_avg.append(out[j]/nkeys)
+        axes[1,1].plot(out, color='b')
+        axes[1,1].plot(out_avg, color='y')
+        axes[1,1].legend([f'Total {self.col2title[col]}', f'Average {self.col2title[col]}'],
+                loc='upper right', ncol=1, fontsize=8)
         pp.savefig(plt.gcf())
         pp.close()
         plt.show()
+
+    def build_key2nodes(self):
+        with open(self.kinspect_fname) as f:
+            for line in f:
+                if "User Services" in line:
+                    f.readline()
+                    break
+            for line in f:
+                if line == "\n":
+                    break
+                larray = line.split()
+                if "containers_" in larray[1]:
+                    key = larray[1]
+                    self.key2nodes[key] = [larray[2].split("libp2p-")[1].replace(':', '')]
+                elif "libp2p-node" in larray[0]:
+                    self.key2nodes[key].append(larray[0].split("libp2p-")[1].replace(':', ''))
 
     def get_df(self):
         return self.df
@@ -265,7 +278,7 @@ class DStats(Plots, metaclass=Singleton):
         for size in ["BlockR", "BlockW"]:
             self.df[size] = self.df[size].map(lambda x: h2b.convert(x.strip())/(1024*1024)) # MiBs
         self.df['Key'] = self.df['ContainerName'].map(lambda x: x.split("--")[0])
-        self.df.to_csv(f'{self.oprefix}-cleaned.csv', sep='/')
+        self.df.to_csv(f'dstats-cleaned.csv', sep='/')
         self.set_keys()
 
     # build df from csv
@@ -279,22 +292,6 @@ class DStats(Plots, metaclass=Singleton):
                                     "NetRecv", "NetSent", "BlockR","BlockW",  "PIDS"])
         self.post_process()
 
-    def build_key2nodes(self):
-        with open(self.kinspect_fname) as f:
-            for line in f:
-                if "User Services" in line:
-                    f.readline()
-                    break
-            for line in f:
-                if line == "\n":
-                    break
-                larray = line.split()
-                if "containers_" in larray[1]:
-                    key = larray[1]
-                    self.key2nodes[key] = [larray[2].split("libp2p-")[1].replace(':', '')]
-                elif "libp2p-node" in larray[0]:
-                    self.key2nodes[key].append(larray[0].split("libp2p-")[1].replace(':', ''))
-
     def violin_plots(self, cdf):
         self.violin_plots_helper("CPUPerc")
         self.violin_plots_helper("MemUse")
@@ -304,12 +301,14 @@ class DStats(Plots, metaclass=Singleton):
         self.violin_plots_helper("BlockW", cdf)
 
 
-class ProcFS(Plots, metaclass=Singleton):
+class HostProc(Plots, metaclass=Singleton):
     def __init__(self, log_dir, oprefix):
         Plots.__init__(self, log_dir, oprefix)
         self.fname = f'{log_dir}/host-proc-stats/docker-proc.out'
+        self.kinspect_fname = f'{log_dir}/host-proc-stats/docker-kinspect.out'
         # TODO: define CPU stuff
-        self.col2title = { 'VmPeak'     : 'Peak Virtual Memory Usage',
+        self.col2title = {  'CPUPERC'   : 'CPU Utilisation',
+                            'VmPeak'    : 'Peak Virtual Memory Usage',
                             'VmSize'    : 'Current Virtual Memory Usage',
                             'VmRSS'     : 'Peak Physical Memory Usage',
                             'VmHWM'     : 'Current Physical Memory Usage',
@@ -326,7 +325,8 @@ class ProcFS(Plots, metaclass=Singleton):
                             'BLKR'      : 'Block Reads',
                             'BLKW'      : 'Block Writes'
                         }
-        self.col2units = { 'VmPeak'     : 'MiB',
+        self.col2units = {  'CPUPERC'   : '%',
+                            'VmPeak'    : 'MiB',
                            'VmSize'     : 'MiB',
                            'VmHWM'      : 'MiB',
                             'VmRSS'     : 'MiB',
@@ -345,19 +345,22 @@ class ProcFS(Plots, metaclass=Singleton):
                         }
                     #'CPU-SYS', 'cpu', 'cpu0', 'cpu1', 'cpu2', 'cpu3',
                     #'cpu4', 'cpu5', 'cpu6', 'cpu7', 'cpu8', 'cpu9', 'CPUUTIME', 'CPUSTIME'
-        self.process_procfs_data()
+        self.process_host_proc_data()
 
-    def build_key2nodes(self):
-        self.key2nodes[key] = .append(larray[0].split("libp2p-")[1].replace(':', ''))
+    '''def build_key2nodes(self):
+        for key in self.df["Key"]:
+            self.key2nodes[key] = self.df.loc[self.df['Key'] == key, 'NodeName'].unique()
+            #self.df[Node][self.df.Key=key].unique()
+    '''
 
-    def process_procfs_data(self):
+    def process_host_proc_data(self):
         if not path_ok(Path(self.fname)):
             sys.exit(0)
 
         self.df = pd.read_csv(self.fname, header=0,  comment='#', skipinitialspace = True,
         #self.df = pd.read_fwf(self.fname, header=0,  comment='#', skipinitialspace = True)
                 delimiter=r"\s+",
-                usecols= ['EpochId', 'PID', 'TimeStamp', 'ContainerID', 'NodeName',
+                usecols= ['EpochId', 'PID', 'TimeStamp', 'ContainerName', 'ContainerID', 'NodeName',
                     'VmPeak', 'VmPeakUnit', 'VmSize', 'VmSizeUnit', 'VmHWM', 'VmHWMUnit',
                     'VmRSS', 'VmRSSUnit', 'VmData','VmDataUnit', 'VmStk', 'VmStkUnit',
                     'HostVIF', 'RxBytes', 'RxPackets', 'TxBytes', 'TxPackets',
@@ -382,12 +385,15 @@ class ProcFS(Plots, metaclass=Singleton):
             self.df[size] = self.df[size].map(lambda x: x/(1024*1024)) # MiBs
         for size in ['BLKR', 'BLKW']:
             self.df[size] = self.df[size].map(lambda x: x/(1024*1024)) # MiBs
-        self.df['Key'] = self.df['PID']
+        #self.df['Key'] = self.df['ContainerName'].map(lambda x: x.split("--")[0])
+        self.df['Key'] = self.df['NodeName']#.map(lambda x: x.split("--")[0])
         #self.df.rename(columns={'NodeName': 'Key'}, inplace=True)
-        self.df.to_csv(f'{self.oprefix}-cleaned.csv', sep='/')
+        self.df.to_csv(f'host-proc-cleaned.csv', sep='/')
         self.set_keys()
+        self.df.fillna(0)
 
     def violin_plots(self, cdf):
+        self.violin_plots_helper("CPUPERC")
         self.violin_plots_helper("VmPeak")
         self.violin_plots_helper("VmRSS")
         self.violin_plots_helper("VmSize")
@@ -409,17 +415,17 @@ app = typer.Typer()
 
 # process / plot docker-procfs.out
 @app.command()
-def procfs(log_dir: Path,
+def host_proc(log_dir: Path,
             oprefix:str = typer.Option("out", help="Specify the prefix for the plot pdfs"),
             cdf: bool = typer.Option(True, help="Specify the prefix for the plots")):
     if not path_ok(log_dir, True):
         sys.exit(0)
 
-    procfs = ProcFS(log_dir, oprefix)
-    procfs.compute_settling_times()
-    procfs.violin_plots(cdf)
-    procfs.plot_settling_times()
-    df = procfs.get_df()
+    host_proc = HostProc(log_dir, oprefix)
+    host_proc.compute_settling_times()
+    host_proc.violin_plots(cdf)
+    host_proc.plot_settling_times()
+    df = host_proc.get_df()
 
     print(f'Got {log_dir}')
 
