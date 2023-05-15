@@ -128,6 +128,8 @@ elif [ "$metrics_infra" = "dstats" ]; then
     sh ./monitoring/dstats/dstats.sh $wls_cid $odir &  # the process subtree takes care of itself
 elif [ "$metrics_infra" = "host-proc" ]; then
     echo "Starting host-proc measurements.."
+    kinspect=$odir/docker-kinspect.out
+    kurtosis  --cli-log-level $loglevel  enclave inspect $enclave_name > $kinspect
     sh ./monitoring/host-proc/host-proc.sh  $wls_cid $odir $signal_fifo &
 elif [ "$metrics_infra" = "container-proc" ]; then
     echo "Jordi's measurement infra's epilogue goes here"
