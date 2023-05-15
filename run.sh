@@ -66,13 +66,16 @@ if [ "$metrics_infra" = "cadvisor" ]; then #CADVISOR
     # Set up Cadvisor
     docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev/disk/:/dev/disk:ro --volume=/sys:/sys:ro --volume=/etc/machine-id:/etc/machine-id:ro --publish=8080:8080 --detach=true --name=cadvisor --privileged --device=/dev/kmsg --network $enclave_prefix --ip=$last_ip gcr.io/cadvisor/cadvisor:v0.47.0
     # docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev/disk/:/dev/disk:ro --volume=/sys:/sys:ro --volume=/etc/machine-id:/etc/machine-id:ro --publish=8080:8080 --detach=true --name=cadvisor --privileged --device=/dev/kmsg gcr.io/cadvisor/cadvisor
+elif  [ "$metrics_infra" = "dstats" ]; then # HOST-PROC
+    odir=./monitoring/dstats/$stats_dir
+    mkdir $odir
 elif  [ "$metrics_infra" = "host-proc" ]; then # HOST-PROC
     odir=./monitoring/host-proc/$stats_dir
     rclist=$odir/docker-rc-list.out
     mkdir $odir
     mkfifo $signal_fifo
     chmod 0777 $signal_fifo
-    sudo sh ./monitoring/host-proc/procfs.sh $rclist $odir $usr $grp $signal_fifo &
+    sudo sh ./monitoring/host-proc/host-proc-helper.sh $rclist $odir $usr $grp $signal_fifo &
 elif  [ "$metrics_infra" = "container-proc" ]; then # CONTAINER-PROC
   #Jordi's metrics module prologue
     echo "Jordi's measurement infra  prologue goes here"
@@ -120,8 +123,6 @@ if [ "$metrics_infra" = "cadvisor" ]; then
     docker exec $wls_cid touch /wls/start.signal
 elif [ "$metrics_infra" = "dstats" ]; then
     echo "Starting dstats measurements.."
-    odir=./monitoring/dstats/$stats_dir
-    mkdir $odir
     # collect container/node mapping via kurtosis
     kinspect=$odir/docker-kinspect.out
     kurtosis  --cli-log-level $loglevel  enclave inspect $enclave_name > $kinspect
@@ -129,6 +130,7 @@ elif [ "$metrics_infra" = "dstats" ]; then
 elif [ "$metrics_infra" = "host-proc" ]; then
     echo "Starting host-proc measurements.."
     kinspect=$odir/docker-kinspect.out
+    # collect container/node mapping via kurtosis
     kurtosis  --cli-log-level $loglevel  enclave inspect $enclave_name > $kinspect
     sh ./monitoring/host-proc/host-proc.sh  $wls_cid $odir $signal_fifo &
 elif [ "$metrics_infra" = "container-proc" ]; then
