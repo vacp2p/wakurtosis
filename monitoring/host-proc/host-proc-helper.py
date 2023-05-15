@@ -101,6 +101,7 @@ class MetricsCollector:
         self.pid2veth = {}
         self.pid2did = {}
         self.pid2node_name = {}
+        self.pid2kdid = {}
 
         self.procout_fname = os.environ["PROCOUT_FNAME"]
         self.procfs_fd = ""
@@ -177,7 +178,8 @@ class MetricsCollector:
                     self.pid2procfds[pid]["net3tx"], veth) # sysfs/cgroup stats
             blk = get_blk_metrics(self.pid2procfds[pid]["blk"]) # Read, Write
             out = ( f'SAMPLE_{self.procfs_sample_cnt} '
-                    f'{pid} {self.pid2node_name[pid]} {time.time()} {self.pid2did[pid]} '
+                    f'{pid} {self.pid2node_name[pid]} {time.time()} '
+                    f'{self.pid2did[pid]} {self.pid2kdid[pid]} '
                     f'MEM {mem} NET {net1} {net2} {net3} '
                     f'BLK {blk} CPU {cpu_perc}\n'
                   )
@@ -193,7 +195,6 @@ class MetricsCollector:
                 f'avg time took to sample {n}\t wakunodes ~ '
                 f'{elapsed/50-self.procfs_sampling_interval:.5f} secs'))
             self.last_tstamp = tstamp
-
 
     def set_last_cpu_totals(self):
         log.info("Metrics: set last_cpu_totals")
@@ -211,7 +212,7 @@ class MetricsCollector:
         self.procfs_fd.write(f'# {", ".join([f"{pid} = {self.pid2veth[pid]}" for pid in self.pid2did])} : {len(self.pid2veth.keys())}\n')
         self.procfs_fd.write(f'# {", ".join([f"{pid} = {self.pid2node_name[pid]}" for pid in self.pid2did])} : {len(self.pid2node_name.keys())}\n')
         # write the df column names
-        self.procfs_fd.write((f'EpochId PID NodeName TimeStamp ContainerID '
+        self.procfs_fd.write((f'EpochId PID NodeName TimeStamp ContainerID ContainerName '
                 f'MEM VmPeakKey VmPeak VmPeakUnit VmSizeKey VmSize VmSizeUnit '
                 f'VmHWMKey VmHWM VmHWMUnit VmRSSKey VmRSS VmRSSUnit '
                 f'VmDataKey VmData VmDataUnit VmStkKey VmStk VmStkUnit '
@@ -232,6 +233,17 @@ class MetricsCollector:
         self.procfs_scheduler.enter(self.procfs_sampling_interval, 1,
                      self.procfs_collector, ())
         self.procfs_scheduler.run()
+
+    def build_pid2kdid(self):
+        did2kdid = {}
+        with open(self.docker_ps_fname) as f:
+            line = f.readline()
+            while line:
+                larr = line.split('#')
+                did2kdid[larr[0]] = larr[1]
+                line = f.readline()
+        for pid in self.pid2did:
+            self.pid2kdid[pid] = did2kdid[self.pid2did[pid]]
 
     # build the host pid to docker id map : will include non-docker wakunodes
     def build_pid2did(self):
@@ -293,10 +305,11 @@ class MetricsCollector:
     def process_metadata(self):
         t1 = time.time()
         self.build_pid2did()
+        self.build_pid2kdid()
         t2 = time.time()
         self.build_pid2veth()
         t3 = time.time()
-        log.info(f'Metrics: process_metadata: pid2did = {t2-t1:.5f} secs, pid2veth = {t3-t2:0.5f} secs')
+        log.info(f'Metrics: process_metadata: pid2did/kdid = {t2-t1:.5f} secs, pid2veth = {t3-t2:0.5f} secs')
         log.info(f'Metrics: process_metadata took {t3-t1:.5f} secs')
 
     # after metadata is collected, create the threads and launch data collection
