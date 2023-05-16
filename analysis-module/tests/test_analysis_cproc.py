@@ -1,6 +1,6 @@
 # Python Imports
 import unittest
-from unittest.mock import patch, mock_open, MagicMock
+from unittest.mock import patch, mock_open
 
 # Proyect Imports
 from src import analysis_cproc
