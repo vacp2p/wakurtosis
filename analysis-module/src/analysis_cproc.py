@@ -1,10 +1,11 @@
+# Python Imports
 import re
 import sys
 import json
 from datetime import datetime
 from typing import Any, Dict, List, Set, Optional, Tuple
 
-from src import vars
+# Project Imports
 from src import analysis_logger
 
 def compute_simulation_time_window(min_tss: float, max_tss: float) -> Tuple[float, float, float]:
