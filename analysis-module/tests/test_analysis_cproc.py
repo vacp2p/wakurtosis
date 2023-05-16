@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import patch, mock_open
 
-# Proyect Imports
+# Project Imports
 from src import analysis_cproc
 
 
