@@ -93,7 +93,7 @@ def compute_message_latencies(msgs_dict):
         for received_data in msg_data['received']:
             # Skip self
             if received_data['peer_id'] == peer_id:
-                analysis_logger.G_LOGGER.warning('Message %s received by the same node that published it' % msg_id)
+                analysis_logger.G_LOGGER.warning('Message %s received by the same node that published it' % msg_hash)
                 continue
             # NOTE: We are getting some negative latencies meaning that the message appears to be received before it was sent ...
             # I assume this must be because those are the nodes that got the message injected in the first place
