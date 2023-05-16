@@ -34,12 +34,11 @@ def load_topics_into_topology(topology, tomls_folder):
     analysis_logger.G_LOGGER.info('Loaded nodes topics from toml files')
 
 
-def load_topology(topology_file):
-    """ Load topology """
-    with open(topology_file, 'r') as read_file:
-        topology = json.load(read_file)
+def load_json(json_file):
+    with open(json_file, 'r') as read_file:
+        jfile = json.load(read_file)
 
-    analysis_logger.G_LOGGER.debug(topology)
-    analysis_logger.G_LOGGER.info('Topology loaded')
+    analysis_logger.G_LOGGER.debug(jfile)
+    analysis_logger.G_LOGGER.info(f'{json_file} loaded')
 
-    return topology
+    return jfile

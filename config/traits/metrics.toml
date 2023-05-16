@@ -6,7 +6,7 @@
 # --metrics-logging         Enable metrics logging: true|false [=true].
 #                               ValidIpAddress.init("1.0.0.1")]].
 
-metrics-server=false
+metrics-server=true
 #metrics-server-address=
 metrics-server-port=8008
 #metrics-logging=
