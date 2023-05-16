@@ -186,10 +186,10 @@ cp -r ./config ${enclave_name}_logs
 if [ "$metrics_infra" = "dstats" ]; then
     # unfortunately no way to introduce a race-free finish signalling
     echo "dstats: copying the dstats data"
-    cp -r ./monitoring/dstats/stats  ${enclave_name}_logs/dstats-stats
+    cp -r ./monitoring/dstats/stats  ${enclave_name}_logs/dstats-data
 elif [ "$metrics_infra" = "host-proc" ]; then
     echo "Copying the host-proc data"
-    cp -r ./monitoring/host-proc/stats  ${enclave_name}_logs/host-proc-stats
+    cp -r ./monitoring/host-proc/stats  ${enclave_name}_logs/host-proc-data
 elif [ "$metrics_infra" = "container-proc" ]; then
     echo "Jordi's data copy goes here"
     #echo -e "Waiting monitoring to finish ..." ?

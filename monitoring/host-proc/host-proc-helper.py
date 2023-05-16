@@ -15,7 +15,6 @@ from pathlib import Path
 from collections import defaultdict
 
 
-# TODO: return the %CPU utilisation instead?
 # pulls system-wide jiffies
 def get_system_cpu(f):
     f.seek(0)

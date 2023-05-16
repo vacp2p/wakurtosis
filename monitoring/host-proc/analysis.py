@@ -15,6 +15,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
+from sklearn.cluster import KMeans
+
 #from collections import defaultdict
 
 #from tqdm_loggable.auto import tqdm
@@ -76,9 +78,10 @@ class Human2BytesConverter(metaclass=Singleton):
 class Plots(metaclass=Singleton):
     def __init__(self, log_dir, oprefix):
         self.log_dir, self.oprefix = log_dir, oprefix
-        self.df, self.n, self.keys = "", 0, []
+        self.df, self.n, self.keys = pd.DataFrame(), 0, []
         self.col2title, self.col2units, self.key2nodes = {}, {}, {}
         self.msg_settling_times, self.msg_injection_times = {}, {}
+        self.grp2idx, self.idx2grp = {}, {}
 
     # jordi's log processing
     def compute_settling_times(self):
@@ -112,7 +115,6 @@ class Plots(metaclass=Singleton):
 
         pp = PdfPages(f'{self.oprefix}-settling-time.pdf')
         #axes[0].violinplot([0], showmedians=True)
-        # TODO: add docker id as legend to xticks 
         axes[0].set_xticks([x + 1 for x in range(len(self.keys))])
         #axes[0].set_xticks(ticks=[x + 1 for x in range(len(self.waku_cids))], labels=self.df["ContainerID"].unique())
         axes[0].set_xlabel('TODO: revisit after Jordi added per-container settling times')
@@ -125,7 +127,7 @@ class Plots(metaclass=Singleton):
         pp.close()
         plt.show()
 
-    def violin_plots_helper(self, col, cdf=True):
+    def panel_helper(self, col, cdf=True):
         fig, axes = plt.subplots(2, 2, layout='constrained', sharey=False)
         fig.set_figwidth(12)
         fig.set_figheight(10)
@@ -220,7 +222,21 @@ class Plots(metaclass=Singleton):
     def get_df(self):
         return self.df
 
-    def cluster_plots_helper(self, col):
+    def build_cluster_index(self, grp):
+        lst = self.df[grp].unique()
+        self.grp2idx =  { val : i for i, val in enumerate(lst)}
+        self.idx2grp =  { i : val for i, val in enumerate(lst)}
+        self.df[f'{grp}_idx'] = self.df[grp].map(lambda x: self.grp2idx[x])
+
+    def cluster_helper(self, grp, col):
+        kmeans = KMeans(n_clusters= 10)
+        X =self.df[col]
+        labels = kmeans.fit_predict(X)
+        #TODO: plot better. it is not interpretable now
+        plt.scatter(X.iloc[:, 0], X.iloc[:, 1], c=labels, s=50, cmap='plasma')
+        plt.show()
+
+    def phase_helper(self, grp, col):
         pass
 
 
@@ -228,8 +244,8 @@ class Plots(metaclass=Singleton):
 class DStats(Plots, metaclass=Singleton):
     def __init__(self, log_dir, oprefix):
         Plots.__init__(self, log_dir, oprefix)
-        self.dstats_fname = f'{log_dir}/dstats-stats/docker-stats.out'
-        self.kinspect_fname = f'{log_dir}/dstats-stats/docker-kinspect.out'
+        self.dstats_fname = f'{log_dir}/dstats-data/docker-stats.out'
+        self.kinspect_fname = f'{log_dir}/dstats-data/docker-kinspect.out'
         self.col2title = {  "ContainerID"   : "Docker ID",
                             "ContainerName" : "Docker Name",
                             "CPUPerc"       : "CPU Utilisation",
@@ -292,21 +308,20 @@ class DStats(Plots, metaclass=Singleton):
                                     "NetRecv", "NetSent", "BlockR","BlockW",  "PIDS"])
         self.post_process()
 
-    def violin_plots(self, cdf):
-        self.violin_plots_helper("CPUPerc")
-        self.violin_plots_helper("MemUse")
-        self.violin_plots_helper("NetSent", cdf)
-        self.violin_plots_helper("NetRecv", cdf)
-        self.violin_plots_helper("BlockR", cdf)
-        self.violin_plots_helper("BlockW", cdf)
+    def plot_panels(self, cdf):
+        self.panel_helper("CPUPerc")
+        self.panel_helper("MemUse")
+        self.panel_helper("NetSent", cdf)
+        self.panel_helper("NetRecv", cdf)
+        self.panel_helper("BlockR", cdf)
+        self.panel_helper("BlockW", cdf)
 
 
 class HostProc(Plots, metaclass=Singleton):
     def __init__(self, log_dir, oprefix):
         Plots.__init__(self, log_dir, oprefix)
-        self.fname = f'{log_dir}/host-proc-stats/docker-proc.out'
-        self.kinspect_fname = f'{log_dir}/host-proc-stats/docker-kinspect.out'
-        # TODO: define CPU stuff
+        self.fname = f'{log_dir}/host-proc-data/docker-proc.out'
+        self.kinspect_fname = f'{log_dir}/host-proc-data/docker-kinspect.out'
         self.col2title = {  'CPUPERC'   : 'CPU Utilisation',
                             'VmPeak'    : 'Peak Virtual Memory Usage',
                             'VmSize'    : 'Current Virtual Memory Usage',
@@ -392,23 +407,25 @@ class HostProc(Plots, metaclass=Singleton):
         self.set_keys()
         self.df.fillna(0)
 
-    def violin_plots(self, cdf):
-        self.violin_plots_helper("CPUPERC")
-        self.violin_plots_helper("VmPeak")
-        self.violin_plots_helper("VmRSS")
-        self.violin_plots_helper("VmSize")
-        self.violin_plots_helper("VmHWM")
-        self.violin_plots_helper("VmData")
-        self.violin_plots_helper("VmStk")
-        self.violin_plots_helper("RxBytes")
-        self.violin_plots_helper("TxBytes")
-        self.violin_plots_helper("NetRX")
-        self.violin_plots_helper("NetWX")
-        self.violin_plots_helper("InOctets")
-        self.violin_plots_helper("OutOctets")
-        self.violin_plots_helper("BLKR")
-        self.violin_plots_helper("BLKW")
+    def plot_panels(self, cdf):
+        self.panel_helper("CPUPERC")
+        self.panel_helper("VmPeak")
+        self.panel_helper("VmRSS")
+        self.panel_helper("VmSize")
+        self.panel_helper("VmHWM")
+        self.panel_helper("VmData")
+        self.panel_helper("VmStk")
+        self.panel_helper("RxBytes")
+        self.panel_helper("TxBytes")
+        self.panel_helper("NetRX")
+        self.panel_helper("NetWX")
+        self.panel_helper("InOctets")
+        self.panel_helper("OutOctets")
+        self.panel_helper("BLKR")
+        self.panel_helper("BLKW")
 
+    def plot_clusters(self, grp, cdf):
+        self.cluster_helper(col=['CPUPERC', 'VmPeak', 'VmRSS', 'VmSize', 'VmHWM', 'VmData'], grp=grp)
 
 # instantiate typer and set the commands
 app = typer.Typer()
@@ -417,13 +434,15 @@ app = typer.Typer()
 @app.command()
 def host_proc(log_dir: Path,
             oprefix:str = typer.Option("out", help="Specify the prefix for the plot pdfs"),
-            cdf: bool = typer.Option(True, help="Specify the prefix for the plots")):
+            cdf: bool = typer.Option(True, help="Specify whether to accumulate or dis-aggregate")):
     if not path_ok(log_dir, True):
         sys.exit(0)
 
     host_proc = HostProc(log_dir, oprefix)
     host_proc.compute_settling_times()
-    host_proc.violin_plots(cdf)
+    host_proc.build_cluster_index('ContainerID')
+    host_proc.plot_clusters('ContainerID', cdf)
+    host_proc.plot_panels(cdf)
     host_proc.plot_settling_times()
     df = host_proc.get_df()
 
@@ -440,7 +459,7 @@ def dstats(log_dir: Path,
 
     dstats = DStats(log_dir, oprefix)
     dstats.compute_settling_times()
-    dstats.violin_plots(cdf)
+    dstats.plot_panels(cdf)
     dstats.plot_settling_times()
     df = dstats.get_df()
 
