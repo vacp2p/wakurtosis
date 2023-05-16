@@ -11,6 +11,7 @@ from src import analysis_logger
 from src import plotting
 from src import analysis_cproc
 from src import config
+
 if __name__ == "__main__":
     """ Parse args """
     simulation_path, prom_port, infra_type = arg_parser.parse_args()
@@ -40,15 +41,33 @@ if __name__ == "__main__":
     msg_propagation_times = analysis.compute_propagation_times(msgs_dict)
     msg_injection_times = analysis.compute_injection_times(injected_msgs_dict)
 
-    analysis.inject_metric_in_dict(metrics, "propagation", "Propagation Time (per message)", "Propagation Time (ms)",
-                       "msg_propagation_times", msg_propagation_times)
-    analysis.inject_metric_in_dict(metrics, "injection", "Injection Time (per message)", "Milliseconds (ms)",
-                       "msg_injection_times", msg_injection_times)
+    """ Generate stats depending on the type of measurements we have """
+    if infra_type == 'container-proc':
+        analysis_logger.G_LOGGER.info('Generating stats for container_proc infrastructure ...')
 
-    prometheus.get_hardware_metrics(metrics, topology_info, min_tss, max_tss, prom_port)
+        metrics_info, max_cpu_usage, max_memory_usage, total_network_usage, max_disk_usage, avg_samples_per_node = analysis_cproc.compute_process_level_metrics(simulation_path, config)
+        
+        """ Build simulation summary """
+        summary = analysis_cproc.build_summary(config, metrics_info, msgs_dict, node_logs, [], min_tss, max_tss, avg_samples_per_node)
+        
+        """ Generate Figure """
+        plotting.plot_figure_cproc(msg_propagation_times, max_cpu_usage, max_memory_usage, total_network_usage, max_disk_usage, 
+                       msg_injection_times, summary['general'], summary['parameters'])
+        
+        """ Export summary """
+        analysis_cproc.export_summary(simulation_path, summary)
 
-    """ Generate Figure """
-    plotting.plot_figure_ex(metrics, simulation_config)
+    # """ Other infrastructure types """
+    else:
+        analysis.inject_metric_in_dict(metrics, "propagation", "Propagation Time (per message)", "Propagation Time (ms)",
+                         "msg_propagation_times", msg_propagation_times)
+        analysis.inject_metric_in_dict(metrics, "injection", "Injection Time (per message)", "Milliseconds (ms)",
+                      "msg_injection_times", msg_injection_times)
+
+        prometheus.get_hardware_metrics(metrics, topology_info, min_tss, max_tss, prom_port)
+
+        """ Generate Figure """
+        plotting.plot_figure_ex(metrics, simulation_config)
 
     """ We are done """
     analysis_logger.G_LOGGER.info('Ended')
