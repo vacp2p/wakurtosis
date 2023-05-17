@@ -230,11 +230,12 @@ class Plots(metaclass=Singleton):
 
     def cluster_helper(self, grp, col):
         kmeans = KMeans(n_clusters= 10)
-        X =self.df[col]
-        labels = kmeans.fit_predict(X)
-        #TODO: plot better. it is not interpretable now
-        plt.scatter(X.iloc[:, 0], X.iloc[:, 1], c=labels, s=50, cmap='plasma')
-        plt.show()
+        for cid in self.df['ContainerID'].unique():
+            X =self.df[self.df.ContainerID == cid][col]
+            labels = kmeans.fit_predict(X)
+            #TODO: plot better. it is not interpretable now
+            plt.scatter(X.iloc[:, 0], X.iloc[:, 1], c=labels, s=50, cmap='plasma')
+            plt.show()
 
     def phase_helper(self, grp, col):
         pass
@@ -386,9 +387,6 @@ class HostProc(Plots, metaclass=Singleton):
                     'CPUPERC'])
                     #'CPU-SYS', 'cpu', 'cpu0', 'cpu1', 'cpu2', 'cpu3',
                    #'cpu4', 'cpu5', 'cpu6', 'cpu7', 'cpu8', 'cpu9', 'CPUUTIME', 'CPUSTIME'])
-        #print(self.df[['BLKR']].to_string(index=False))
-        #print(self.df.columns)
-        #print(self.df.shape)
         self.post_process()
         self.df.to_csv(f'{self.oprefix}-cleaned.csv', sep='/')
 
