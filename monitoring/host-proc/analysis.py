@@ -78,7 +78,7 @@ class Human2BytesConverter(metaclass=Singleton):
 class Plots(metaclass=Singleton):
     def __init__(self, log_dir, oprefix):
         self.log_dir, self.oprefix = log_dir, oprefix
-        self.df, self.n, self.keys = pd.DataFrame(), 0, []
+        self.df, self.n, self.keys, self.cols = pd.DataFrame(), 0, [], []
         self.col2title, self.col2units, self.key2nodes = {}, {}, {}
         self.msg_settling_times, self.msg_injection_times = {}, {}
         self.grp2idx, self.idx2grp = {}, {}
@@ -108,22 +108,23 @@ class Plots(metaclass=Singleton):
         self.keys.sort()
 
     def plot_settling_times(self):
-        fig, axes = plt.subplots(1, 2, layout='constrained', sharey=True)
-        fig.set_figwidth(12)
-        fig.set_figheight(10)
-        fig.suptitle(f'Settling Time: {len(self.msg_propagation_times)} messages')
-        fig.supylabel("msecs")
+        self.set_panel_size(2, 2, False)
+        self.fig.set_figwidth(12)
+        self.fig.set_figheight(10)
+        self.fig.suptitle(f'Settling Time: {len(self.msg_propagation_times)} messages')
+        self.fig.supylabel("msecs")
 
         pp = PdfPages(f'{self.oprefix}-settling-time.pdf')
         #axes[0].violinplot([0], showmedians=True)
-        axes[0].set_xticks([x + 1 for x in range(len(self.keys))])
+        self.axes[0,0].set_xticks([x + 1 for x in range(len(self.keys))])
         #axes[0].set_xticks(ticks=[x + 1 for x in range(len(self.waku_cids))], labels=self.df["ContainerID"].unique())
-        axes[0].set_xlabel('TODO: revisit after Jordi added per-container settling times')
+        self.axes[0,0].set_xlabel('TODO: revisit after Jordi added per-container settling times')
 
         #fig, axes = plt.subplots(2, 2, layout='constrained', sharey=True)
-        axes[1].violinplot(self.msg_propagation_times, showmedians=True)
+        self.axes[1,0].violinplot(self.msg_propagation_times, showmedians=True)
         #axes[0].spines[['right', 'top']].set_visible(False)
-        axes[1].axes.xaxis.set_visible(False)
+        self.axes[1,0].axes.xaxis.set_visible(False)
+        self.cluster_plot_helper(grp='ContainerID', cols=self.cols, axis=self.axes[0,1])
         pp.savefig(plt.gcf())
         pp.close()
         plt.show()
@@ -232,16 +233,29 @@ class Plots(metaclass=Singleton):
         self.idx2grp =  { i : val for i, val in enumerate(lst)}
         self.df[f'{grp}_idx'] = self.df[grp].map(lambda x: self.grp2idx[x])
 
-    def cluster_helper(self, grp, col):
+    def cluster_plot_helper(self, grp, cols, axis):
+        self.build_cluster_index(grp)
         kmeans = KMeans(n_clusters= 10)
-        for cid in self.df['ContainerID'].unique():
-            X =self.df[self.df.ContainerID == cid][col]
+
+        groups = self.df[grp].unique()
+        groups.sort()
+        for g in groups:
+            X =self.df.loc[self.df[grp] == g][cols]
+#        for gid in self.df[grp].unique():
+#            print("gid, grp :", gid, grp, self.df[grp].unique())
+ #           sys.exit()
+ #           X =self.df[self.df.ContainerID == gid][col]
+            #print(X)
             labels = kmeans.fit_predict(X)
             #TODO: plot better. it is not interpretable now
             #plt.scatter(X.iloc[:, 0], X.iloc[:, 1], c=labels,  cmap='plasma')
-            plt.scatter(x=range(0, len(labels)), y=labels)#(X.iloc[:, 0], X.iloc[:, 1], c=labels,  cmap='plasma')
-        #plt.axes.Axes.set_xlabel('Time')
-        plt.show()
+            axis.scatter(x=range(0, len(labels)), y=labels, marker='.')#(X.iloc[:, 0], X.iloc[:, 1], c=labels,  cmap='plasma')
+        axis.set_xlabel('Time')
+        #axis.set_yticks([x  for x in range(len(groups))])
+        axis.set_yticks(range(len(groups)))
+        labels = [ '{}{}'.format( ' ', k) for i, k in enumerate(self.keys)]
+        axis.set_yticklabels(labels)
+        #plt.show()
 
     def phase_helper(self, grp, col):
         pass
@@ -275,6 +289,7 @@ class DStats(Plots, metaclass=Singleton):
                             "BlockR"        : "MiB",
                             "BlockW"        : "MiB",
                             "PIDS"          : "PIDS"}
+        self.cols = ["CPUPerc", "MemUse","NetRecv", "NetSent", "BlockR", "BlockW"]
         self.process_dstats_data()
 
     # remove the formatting artefacts
@@ -367,6 +382,9 @@ class HostProc(Plots, metaclass=Singleton):
                         }
                     #'CPU-SYS', 'cpu', 'cpu0', 'cpu1', 'cpu2', 'cpu3',
                     #'cpu4', 'cpu5', 'cpu6', 'cpu7', 'cpu8', 'cpu9', 'CPUUTIME', 'CPUSTIME'
+        self.cols = ['VmPeak', 'VmSize', 'VmHWM', 'VmRSS', 'VmData', 'VmStk',
+                            'RxBytes', 'RxPackets', 'TxBytes', 'TxPackets', 'NetRX', 'NetWX'
+                            'InOctets', 'OutOctets', 'BLKR', 'BLKW']
         self.process_host_proc_data()
 
     '''def build_key2nodes(self):
@@ -428,8 +446,8 @@ class HostProc(Plots, metaclass=Singleton):
         self.column_panel_helper("BLKR")
         self.column_panel_helper("BLKW")
 
-    def plot_clusters(self, grp, cdf):
-        self.cluster_helper(col=['CPUPERC', 'VmPeak', 'VmRSS', 'VmSize', 'VmHWM', 'VmData'], grp=grp)
+    def plot_clusters(self, grp, cdf, axes):
+        self.cluster_plot_helper(col=['CPUPERC', 'VmPeak', 'VmRSS', 'VmSize', 'VmHWM', 'VmData'], grp=grp, axes=axes)
 
 # instantiate typer and set the commands
 app = typer.Typer()
@@ -445,7 +463,7 @@ def host_proc(log_dir: Path,
     host_proc = HostProc(log_dir, oprefix)
     host_proc.compute_settling_times()
     host_proc.build_cluster_index('ContainerID')
-    host_proc.plot_clusters('ContainerID', cdf)
+    #host_proc.plot_clusters('ContainerID', cdf)
     host_proc.plot_column_panels(cdf)
     host_proc.plot_settling_times()
     df = host_proc.get_df()
@@ -463,8 +481,8 @@ def dstats(log_dir: Path,
 
     dstats = DStats(log_dir, oprefix)
     dstats.compute_settling_times()
-    dstats.plot_column_panels(cdf)
     dstats.plot_settling_times()
+    dstats.plot_column_panels(cdf)
     df = dstats.get_df()
 
     print(f'Got {log_dir}')
