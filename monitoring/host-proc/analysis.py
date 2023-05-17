@@ -82,6 +82,7 @@ class Plots(metaclass=Singleton):
         self.col2title, self.col2units, self.key2nodes = {}, {}, {}
         self.msg_settling_times, self.msg_injection_times = {}, {}
         self.grp2idx, self.idx2grp = {}, {}
+        self.fig, self.axes = "", ""
 
     # jordi's log processing
     def compute_settling_times(self):
@@ -127,22 +128,25 @@ class Plots(metaclass=Singleton):
         pp.close()
         plt.show()
 
-    def panel_helper(self, col, cdf=True):
-        fig, axes = plt.subplots(2, 2, layout='constrained', sharey=False)
-        fig.set_figwidth(12)
-        fig.set_figheight(10)
-        fig.suptitle(self.col2title[col])
-        fig.supylabel(self.col2units[col])
+    def set_panel_size(self, m, n, shareY=False):
+        self.fig, self.axes = plt.subplots(m, n, layout='constrained', sharey=shareY)
+
+    def column_panel_helper(self, col, cdf=True):
+        self.set_panel_size(2, 2)
+        #fig, axes = plt.subplots(2, 2, layout='constrained', sharey=False)
+        self.fig.set_figwidth(12)
+        self.fig.set_figheight(10)
+        self.fig.suptitle(self.col2title[col])
+        self.fig.supylabel(self.col2units[col])
 
         pp = PdfPages(f'{self.oprefix}-{col}.pdf')
         per_key_arr, all_arr = [], []
 
-
         self.build_key2nodes()
 
         # per docker violin plot
-        axes[0,0].ticklabel_format(style='plain')
-        axes[0,0].yaxis.grid(True)
+        self.axes[0,0].ticklabel_format(style='plain')
+        self.axes[0,0].yaxis.grid(True)
         for key in self.keys:
             if cdf:
                 tmp = self.df[self.get_key() == key][col].values
@@ -153,40 +157,40 @@ class Plots(metaclass=Singleton):
 
         # NOTE: xticks are from self.df.Keys
         #axes[0,0].set_xticks([x + 1 for x in range(len(self.keys))])
-        axes[0,0].set_xticks([x + 1 for x in range(len(self.keys))])
+        self.axes[0,0].set_xticks([x + 1 for x in range(len(self.keys))])
         labels = [ '{}{}'.format( ' ', k) for i, k in enumerate(self.keys)]
-        axes[0,0].set_xticklabels(labels)
-        legends = axes[0,0].violinplot(dataset=per_key_arr, showmeans=True)
+        self.axes[0,0].set_xticklabels(labels)
+        legends = self.axes[0,0].violinplot(dataset=per_key_arr, showmeans=True)
         text = ""
         for key, nodes in self.key2nodes.items():
             text += f'{key} {", ".join(nodes)}\n'
-        axes[0,0].text(0.675, 0.985, text, transform=axes[0,0].transAxes,
+        self.axes[0,0].text(0.675, 0.985, text, transform=self.axes[0,0].transAxes,
                 fontsize=7, verticalalignment='top')
 
         # consolidated  violin plot
-        axes[1,0].ticklabel_format(style='plain')
-        axes[1,0].yaxis.grid(True)
-        axes[1,0].set_xlabel('All Containers')
-        axes[1,0].violinplot(dataset=all_arr, showmeans=True)
-        axes[1,0].set_xticks([])
-        axes[1,0].axes.xaxis.set_visible(False)
+        self.axes[1,0].ticklabel_format(style='plain')
+        self.axes[1,0].yaxis.grid(True)
+        self.axes[1,0].set_xlabel('All Containers')
+        self.axes[1,0].violinplot(dataset=all_arr, showmeans=True)
+        self.axes[1,0].set_xticks([])
+        self.axes[1,0].axes.xaxis.set_visible(False)
 
         # per docker scatter plot
-        axes[0,1].ticklabel_format(style='plain')
-        axes[0,1].yaxis.grid(True)
-        axes[0,1].set_xlabel('Time')
+        self.axes[0,1].ticklabel_format(style='plain')
+        self.axes[0,1].yaxis.grid(True)
+        self.axes[0,1].set_xlabel('Time')
         legends = []
         for i, key in enumerate(self.keys):
             y = per_key_arr[i]
-            legends.append(axes[0,1].scatter(x=range(0, len(y)), y=y, marker='.'))
-        axes[0,1].legend(legends, self.keys, scatterpoints=1,
+            legends.append(self.axes[0,1].scatter(x=range(0, len(y)), y=y, marker='.'))
+        self.axes[0,1].legend(legends, self.keys, scatterpoints=1,
                         loc='upper left', ncol=5,
                         fontsize=8)
 
         # consolidated/summed-up scatter plot
-        axes[1,1].ticklabel_format(style='plain')
-        axes[1,1].yaxis.grid(True)
-        axes[1,1].set_xlabel('Time')
+        self.axes[1,1].ticklabel_format(style='plain')
+        self.axes[1,1].yaxis.grid(True)
+        self.axes[1,1].set_xlabel('Time')
         out, out_avg, nkeys  = [], [], len(per_key_arr)
         # omit the very last measurement: could be a partial record
         jindices, iindices  =  range (len(per_key_arr[0])-1), range(len(per_key_arr))
@@ -195,9 +199,9 @@ class Plots(metaclass=Singleton):
             for i in iindices:
                 out[j] += per_key_arr[i][j]
             out_avg.append(out[j]/nkeys)
-        axes[1,1].plot(out, color='b')
-        axes[1,1].plot(out_avg, color='y')
-        axes[1,1].legend([f'Total {self.col2title[col]}', f'Average {self.col2title[col]}'],
+        self.axes[1,1].plot(out, color='b')
+        self.axes[1,1].plot(out_avg, color='y')
+        self.axes[1,1].legend([f'Total {self.col2title[col]}', f'Average {self.col2title[col]}'],
                 loc='upper right', ncol=1, fontsize=8)
         pp.savefig(plt.gcf())
         pp.close()
@@ -234,8 +238,10 @@ class Plots(metaclass=Singleton):
             X =self.df[self.df.ContainerID == cid][col]
             labels = kmeans.fit_predict(X)
             #TODO: plot better. it is not interpretable now
-            plt.scatter(X.iloc[:, 0], X.iloc[:, 1], c=labels, s=50, cmap='plasma')
-            plt.show()
+            #plt.scatter(X.iloc[:, 0], X.iloc[:, 1], c=labels,  cmap='plasma')
+            plt.scatter(x=range(0, len(labels)), y=labels)#(X.iloc[:, 0], X.iloc[:, 1], c=labels,  cmap='plasma')
+        #plt.axes.Axes.set_xlabel('Time')
+        plt.show()
 
     def phase_helper(self, grp, col):
         pass
@@ -309,13 +315,13 @@ class DStats(Plots, metaclass=Singleton):
                                     "NetRecv", "NetSent", "BlockR","BlockW",  "PIDS"])
         self.post_process()
 
-    def plot_panels(self, cdf):
-        self.panel_helper("CPUPerc")
-        self.panel_helper("MemUse")
-        self.panel_helper("NetSent", cdf)
-        self.panel_helper("NetRecv", cdf)
-        self.panel_helper("BlockR", cdf)
-        self.panel_helper("BlockW", cdf)
+    def plot_column_panels(self, cdf):
+        self.column_panel_helper("CPUPerc")
+        self.column_panel_helper("MemUse")
+        self.column_panel_helper("NetSent", cdf)
+        self.column_panel_helper("NetRecv", cdf)
+        self.column_panel_helper("BlockR", cdf)
+        self.column_panel_helper("BlockW", cdf)
 
 
 class HostProc(Plots, metaclass=Singleton):
@@ -405,22 +411,22 @@ class HostProc(Plots, metaclass=Singleton):
         self.set_keys()
         self.df.fillna(0)
 
-    def plot_panels(self, cdf):
-        self.panel_helper("CPUPERC")
-        self.panel_helper("VmPeak")
-        self.panel_helper("VmRSS")
-        self.panel_helper("VmSize")
-        self.panel_helper("VmHWM")
-        self.panel_helper("VmData")
-        self.panel_helper("VmStk")
-        self.panel_helper("RxBytes")
-        self.panel_helper("TxBytes")
-        self.panel_helper("NetRX")
-        self.panel_helper("NetWX")
-        self.panel_helper("InOctets")
-        self.panel_helper("OutOctets")
-        self.panel_helper("BLKR")
-        self.panel_helper("BLKW")
+    def plot_column_panels(self, cdf):
+        self.column_panel_helper("CPUPERC")
+        self.column_panel_helper("VmPeak")
+        self.column_panel_helper("VmRSS")
+        self.column_panel_helper("VmSize")
+        self.column_panel_helper("VmHWM")
+        self.column_panel_helper("VmData")
+        self.column_panel_helper("VmStk")
+        self.column_panel_helper("RxBytes")
+        self.column_panel_helper("TxBytes")
+        self.column_panel_helper("NetRX")
+        self.column_panel_helper("NetWX")
+        self.column_panel_helper("InOctets")
+        self.column_panel_helper("OutOctets")
+        self.column_panel_helper("BLKR")
+        self.column_panel_helper("BLKW")
 
     def plot_clusters(self, grp, cdf):
         self.cluster_helper(col=['CPUPERC', 'VmPeak', 'VmRSS', 'VmSize', 'VmHWM', 'VmData'], grp=grp)
@@ -440,7 +446,7 @@ def host_proc(log_dir: Path,
     host_proc.compute_settling_times()
     host_proc.build_cluster_index('ContainerID')
     host_proc.plot_clusters('ContainerID', cdf)
-    host_proc.plot_panels(cdf)
+    host_proc.plot_column_panels(cdf)
     host_proc.plot_settling_times()
     df = host_proc.get_df()
 
@@ -457,7 +463,7 @@ def dstats(log_dir: Path,
 
     dstats = DStats(log_dir, oprefix)
     dstats.compute_settling_times()
-    dstats.plot_panels(cdf)
+    dstats.plot_column_panels(cdf)
     dstats.plot_settling_times()
     df = dstats.get_df()
 
