@@ -6,10 +6,10 @@ import matplotlib.pyplot as plt
 # Project Imports
 from src import vars
 from src import analysis_logger
-from src import plotting_configuration
+from src import plotting_configurations
 
 
-def plot_figure_ex(metrics, simulation_config):
+def plot_figure_ex(simulation_config):
     def style_violin(parts, ax):
 
         # Change the extrema lines to dashed grey lines
@@ -41,7 +41,8 @@ def plot_figure_ex(metrics, simulation_config):
         # make lines invisible
         parts['cmeans'].set_visible(False)
 
-    num_subplots = len(metrics["by_node"]) + len(metrics["by_simulation"])
+    metrics = plotting_configurations.plotting_config
+    num_subplots = len(metrics.keys())
     num_cols = 3
     num_rows = math.ceil(num_subplots / num_cols)
 
@@ -53,10 +54,10 @@ def plot_figure_ex(metrics, simulation_config):
         fig.delaxes(axs[i])
 
     for i, key in enumerate(metrics.keys()):
-        if type(metrics[key]) is list:
-            if sum([plotting_configuration[val]["values"] for val in metrics[key]]) == 0:
-                continue
-        metric = plotting_configuration[metrics[key]]
+        # if type(metrics[key]) is list:
+        #     if sum([plotting_configurations[val]["values"] for val in metrics[key]]) == 0:
+        #         continue
+        metric = metrics[key]
         analysis_logger.G_LOGGER.info(f"Plotting {key}: {metric['values']}")
         parts = axs[i].violinplot(metric["values"], showmeans=True)
         axs[i].set_title(metric["title"])

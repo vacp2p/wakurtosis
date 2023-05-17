@@ -44,21 +44,12 @@ def fetch_cadvisor_stats_from_prometheus_by_simulation(metrics, prom, container_
     start_timestamp = datetime.utcfromtimestamp(start_ts / 1e9)
     end_timestamp = datetime.fromtimestamp(end_ts / 1e9)
 
-    for metric in metrics["by_simulation"].values():
+    for metric in metrics["by_simulation"]:
         plotting_config = plotting_configurations.plotting_config[metric]
-
-        if type(metric) is list:
-            plotting_config["values"] = []
-            for i, submetric in enumerate(metric):
-                values = fetch_accumulated_metric_for_all_nodes(prom, submetric, container_ips,
-                                                                start_timestamp,
-                                                                end_timestamp, plotting_config["toMB"])
-                plotting_config["values"].append(values)
-        else:
-            plotting_config.setdefault("values", []).append(
-                fetch_accumulated_metric_for_all_nodes(prom, metric, container_ips,
-                                                       start_timestamp,
-                                                       end_timestamp, plotting_config["toMB"]))
+        plotting_config.setdefault("values", []).append(
+            fetch_accumulated_metric_for_all_nodes(prom, metric, container_ips,
+                                                   start_timestamp,
+                                                   end_timestamp, plotting_config["toMB"]))
 
 
 def fetch_cadvisor_stats_from_prometheus_by_node(metrics, prom, container_ip, start_ts, end_ts):
@@ -70,17 +61,9 @@ def fetch_cadvisor_stats_from_prometheus_by_node(metrics, prom, container_ip, st
     for metric in metrics["by_node"]:
         plotting_config = plotting_configurations.plotting_config[metric]
         stat_function = function_dispatcher[plotting_config["statistic"]]
-        if type(metric) is list:
-            if "values" not in metric.keys():
-                plotting_config["values"] = [[] for _ in range(len(metric))]
-            for i, submetric in enumerate(metric):
-                values = fetch_metric(prom, submetric, container_ip, start_timestamp, end_timestamp,
-                                      plotting_config["toMB"])
-                plotting_config["values"][i].append(stat_function(values))
-        else:
-            values = fetch_metric(prom, metric, container_ip, start_timestamp, end_timestamp,
-                                  plotting_config["toMB"])
-            plotting_config.setdefault("values", []).append(stat_function(values))
+        values = fetch_metric(prom, metric, container_ip, start_timestamp, end_timestamp,
+                              plotting_config["toMB"])
+        plotting_config.setdefault("values", []).append(stat_function(values))
 
 
 def fetch_accumulated_metric_for_all_nodes(prom, metric, container_ips, start_timestamp,
