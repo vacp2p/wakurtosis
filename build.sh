@@ -29,8 +29,8 @@ docker build -t wls:0.0.1 .
 cd ..
 
 # Prepare container proc monitoring venv
-python3 -m venv ./monitoring/container-proc/venv --without-pip
-source ./monitoring/container-proc/venv/bin/activate   
+python3 -m venv ./cproc-venv --without-pip
+source ./cproc-venv/bin/activate   
 curl https://bootstrap.pypa.io/get-pip.py | python
 pip3 install -r ./monitoring/container-proc/requirements.txt
 deactivate

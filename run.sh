@@ -144,7 +144,7 @@ if [ "$metrics_infra" = "container-proc" ];
 then
     echo "Starting monitoring with probes in the containers"
     # Start process level monitoring (in background, will wait to WSL to be created)
-    . ./monitoring/container-proc/venv/bin/activate
+    . ./cproc-venv/bin/activate
     sudo -E python3 ./monitoring/container-proc/monitor.py &
     monitor_pid=$!
 fi
