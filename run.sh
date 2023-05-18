@@ -143,7 +143,7 @@ if [ "$metrics_infra" = "container-proc" ];
 then
     echo "Jordi's measurement infra goes here"
     # Start process level monitoring (in background, will wait to WSL to be created)
-    #sudo -E python3 ./monitoring/monitor.py & ? 
+    #sudo -E python3 ./monitoring/monitor.py & ?
     #monitor_pid=$! ?
 fi
 ##################### END
@@ -209,6 +209,14 @@ docker cp "$wls_cid:/wls/network_topology/network_data.json" "./${enclave_name}_
 echo "- Metrics Infra:  $metrics_infra" > ./${enclave_name}_logs/run_args
 echo "- Enclave name:  $enclave_name" >> ./${enclave_name}_logs/run_args
 echo "- Configuration file:  $wakurtosis_config_file" >> ./${enclave_name}_logs/run_args
+
+# Run analysis
+if jq -e ."plotting" >/dev/null 2>&1 "./config/${wakurtosis_config_file}";
+then
+    echo "Analyzing and plotting data into wakurtosis_logs..."
+    prometheus_port=$(kurtosis enclave inspect wakurtosis | grep "\<prometheus\>" | awk '{print $6}' | awk -F':' '{print $2}')
+    docker run --network "host" -v "$(pwd)/wakurtosis_logs:/simulation_data/" --add-host=host.docker.internal:host-gateway analysis src/main.py -p "$prometheus_port" >/dev/null 2>&1
+fi
 
 echo "Done."
 ##################### END

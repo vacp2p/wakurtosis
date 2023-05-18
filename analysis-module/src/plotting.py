@@ -6,9 +6,10 @@ import matplotlib.pyplot as plt
 # Project Imports
 from src import vars
 from src import analysis_logger
+from src import plotting_configurations
 
 
-def plot_figure_ex(metrics, simulation_config):
+def plot_figure_ex(simulation_config):
     def style_violin(parts, ax):
 
         # Change the extrema lines to dashed grey lines
@@ -40,7 +41,8 @@ def plot_figure_ex(metrics, simulation_config):
         # make lines invisible
         parts['cmeans'].set_visible(False)
 
-    num_subplots = len(metrics["to_query"]) + len(metrics.keys()) - 1
+    metrics = plotting_configurations.plotting_config
+    num_subplots = len(metrics.keys())
     num_cols = 3
     num_rows = math.ceil(num_subplots / num_cols)
 
@@ -51,17 +53,12 @@ def plot_figure_ex(metrics, simulation_config):
     for i in range(num_subplots, num_rows * num_cols):
         fig.delaxes(axs[i])
 
-    # Loop through the subplots and plot your data
-    metrics = {
-        **metrics.pop("to_query"),
-        **metrics
-    }
-
-    for i, metric in enumerate(metrics.values()):
-        if type(metric["values"][0]) is list:
-            if sum([len(sublist) for sublist in metric["values"]]) == 0:
-                continue
-        analysis_logger.G_LOGGER.info(f"Plotting {metric['metric_name']}: {metric['values']}")
+    for i, key in enumerate(metrics.keys()):
+        # if type(metrics[key]) is list:
+        #     if sum([plotting_configurations[val]["values"] for val in metrics[key]]) == 0:
+        #         continue
+        metric = metrics[key]
+        analysis_logger.G_LOGGER.info(f"Plotting {key}: {metric['values']}")
         parts = axs[i].violinplot(metric["values"], showmeans=True)
         axs[i].set_title(metric["title"])
         axs[i].set_ylabel(metric["y_label"])
