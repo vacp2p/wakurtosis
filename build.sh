@@ -18,7 +18,7 @@ cd analysis-module
 sh ./build.sh
 cd ..
 
-# Build Gennet & WLS docker images
+# Build Gennet, WLS and Container-Proc monitoring docker images
 
 cd gennet-module
 sh ./build_docker.sh
@@ -26,6 +26,10 @@ cd ..
 
 cd wls-module
 docker build -t wls:0.0.1 .
+cd ..
+
+cd ./monitoring/container-proc
+sh ./build.sh
 cd ..
 
 # Prepare container proc monitoring venv
