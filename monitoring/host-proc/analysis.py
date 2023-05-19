@@ -107,6 +107,15 @@ class Plots(metaclass=Singleton):
         self.keys = self.df['Key'].unique()
         self.keys.sort()
 
+
+    # extract the maximal complete sample set
+    def remove_incomplete_samples(self, grp, err):
+        self.df, minRows = self.df[~self.df.isin([err]).any(axis=1)], sys.maxsize
+        for cid in self.df[grp].unique():
+            rows = self.df[self.df[grp] == cid].shape[0]
+            minRows = rows if minRows > rows else minRows
+        self.df = self.df.groupby(grp).head(minRows)
+
     def plot_settling_times(self):
         self.set_panel_size(2, 2, False)
         self.fig.set_figwidth(12)
@@ -127,7 +136,7 @@ class Plots(metaclass=Singleton):
         self.cluster_plot_helper(grp='ContainerID', cols=self.cols)
         pp.savefig(plt.gcf())
         pp.close()
-        plt.show()
+        #plt.show()
 
     def set_panel_size(self, m, n, shareY=False):
         self.fig, self.axes = plt.subplots(m, n, layout='constrained', sharey=shareY)
@@ -206,7 +215,7 @@ class Plots(metaclass=Singleton):
                 loc='upper right', ncol=1, fontsize=8)
         pp.savefig(plt.gcf())
         pp.close()
-        plt.show()
+        #plt.show()
 
     def build_key2nodes(self):
         with open(self.kinspect_fname) as f:
@@ -240,9 +249,11 @@ class Plots(metaclass=Singleton):
         groups = self.df[grp].unique()
         groups.sort()
         xpdf = pd.DataFrame()
+        print(f'GG: {groups}, {xpdf}, {self.df.shape}')
         for g in groups:
             X =self.df.loc[self.df[grp] == g][cols]
             Xflat = X.values.flatten()
+            print(f'GGG: {g}, {X.shape}, {Xflat.shape}, {xpdf.shape}')
             xpdf[g] = Xflat
             labels = kmeans.fit_predict(X)
             #TODO: plot better. it is not very interpretable now
@@ -312,18 +323,9 @@ class DStats(Plots, metaclass=Singleton):
         with open(self.dstats_fname, 'w') as f:
             f.write(cleaned_txt)
 
-    def remove_incomplete_samples(self):
-        self.df = self.df[~self.df.isin(['--']).any(axis=1)]
-        #df.groupby('ContainerID').filter(lambda x : len(x)>3)
-        minRows = sys.maxsize
-        for cid in self.df['ContainerID'].unique():
-            curr = len(self.df[self.df.ContainerID == cid])
-            minRows = curr if minRows > curr else minRows
-        self.df = self.df.groupby('ContainerID').filter(lambda x : len(x) > minRows)
-
     # make sure the df is all numeric
     def post_process(self):
-        self.remove_incomplete_samples()
+        self.remove_incomplete_samples(grp='ContainerID', err='--')
         for name in ["ContainerID", "ContainerName"]:
             self.df[name] = self.df[name].map(lambda x: x.strip())
         h2b, n = Human2BytesConverter(), len(self.keys)
@@ -336,7 +338,7 @@ class DStats(Plots, metaclass=Singleton):
         for size in ["BlockR", "BlockW"]:
             self.df[size] = self.df[size].map(lambda x: h2b.convert(x.strip())/(1024*1024)) # MiBs
         self.df['Key'] = self.df['ContainerName'].map(lambda x: x.split("--")[0])
-        self.df.to_csv(f'dstats-cleaned.csv', sep='/')
+        self.df.to_csv(f'{self.oprefix}-dstats-cleaned.csv', sep='/')
         self.set_keys()
 
     # build df from csv
@@ -403,7 +405,7 @@ class HostProc(Plots, metaclass=Singleton):
                     #'CPU-SYS', 'cpu', 'cpu0', 'cpu1', 'cpu2', 'cpu3',
                     #'cpu4', 'cpu5', 'cpu6', 'cpu7', 'cpu8', 'cpu9', 'CPUUTIME', 'CPUSTIME'
         self.cols = ['VmPeak', 'VmSize', 'VmHWM', 'VmRSS', 'VmData', 'VmStk',
-                            'RxBytes', 'RxPackets', 'TxBytes', 'TxPackets', 'NetRX', 'NetWX'
+                            'RxBytes', 'RxPackets', 'TxBytes', 'TxPackets', 'NetRX', 'NetWX',
                             'InOctets', 'OutOctets', 'BLKR', 'BLKW']
         self.process_host_proc_data()
 
@@ -416,7 +418,6 @@ class HostProc(Plots, metaclass=Singleton):
     def process_host_proc_data(self):
         if not path_ok(Path(self.fname)):
             sys.exit(0)
-
         self.df = pd.read_csv(self.fname, header=0,  comment='#', skipinitialspace = True,
         #self.df = pd.read_fwf(self.fname, header=0,  comment='#', skipinitialspace = True)
                 delimiter=r"\s+",
@@ -432,9 +433,10 @@ class HostProc(Plots, metaclass=Singleton):
                     #'CPU-SYS', 'cpu', 'cpu0', 'cpu1', 'cpu2', 'cpu3',
                    #'cpu4', 'cpu5', 'cpu6', 'cpu7', 'cpu8', 'cpu9', 'CPUUTIME', 'CPUSTIME'])
         self.post_process()
-        self.df.to_csv(f'{self.oprefix}-cleaned.csv', sep='/')
+        self.df.to_csv(f'{self.oprefix}-host-proc-cleaned.csv', sep='/')
 
     def post_process(self):
+        self.remove_incomplete_samples(grp='NodeName', err='--')
         #h2b = Human2BytesConverter()
         for size in ['VmPeak', 'VmSize', 'VmHWM','VmRSS', 'VmData','VmStk']:
             self.df[size] = self.df[size].map(lambda x: x/1024) # MiBs
@@ -445,7 +447,6 @@ class HostProc(Plots, metaclass=Singleton):
         #self.df['Key'] = self.df['ContainerName'].map(lambda x: x.split("--")[0])
         self.df['Key'] = self.df['NodeName']#.map(lambda x: x.split("--")[0])
         #self.df.rename(columns={'NodeName': 'Key'}, inplace=True)
-        self.df.to_csv(f'host-proc-cleaned.csv', sep='/')
         self.set_keys()
         self.df.fillna(0)
 
@@ -488,7 +489,7 @@ def host_proc(log_dir: Path,
     host_proc.plot_settling_times()
     df = host_proc.get_df()
 
-    print(f'Got {log_dir}')
+    print(f'Done: {log_dir}')
 
 
 # process / plot docker-dstats.out
@@ -505,7 +506,7 @@ def dstats(log_dir: Path,
     dstats.plot_column_panels(cdf)
     df = dstats.get_df()
 
-    print(f'Got {log_dir}')
+    print(f'Done: {log_dir}')
 
 
 
