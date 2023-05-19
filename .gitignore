@@ -44,3 +44,5 @@ monitoring/procfs-stats/stats
 stats/
 monitoring/container-proc/venv
 cproc-env/
+monitoring/container-proc/config/config.json
+monitoring/container-proc/cproc_metrics.json
