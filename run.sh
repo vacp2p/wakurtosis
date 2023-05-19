@@ -206,7 +206,7 @@ then
     wait $monitor_pid
     echo "Copying the container-proc measurements"
     cp ./monitoring/container-proc/cproc_metrics.json "./${enclave_name}_logs/cproc_metrics.json" > /dev/null 2>&1
-    rm ./monitoring/container-proc/cproc_metrics.json > /dev/null 2>&1
+    # \rm -r ./monitoring/container-proc/cproc_metrics.json > /dev/null 2>&1
 fi
 
 # Copy simulation results
