@@ -124,7 +124,7 @@ class Plots(metaclass=Singleton):
         self.axes[1,0].violinplot(self.msg_propagation_times, showmedians=True)
         #axes[0].spines[['right', 'top']].set_visible(False)
         self.axes[1,0].axes.xaxis.set_visible(False)
-        self.cluster_plot_helper(grp='ContainerID', cols=self.cols, axis=self.axes[0,1])
+        self.cluster_plot_helper(grp='ContainerID', cols=self.cols)
         pp.savefig(plt.gcf())
         pp.close()
         plt.show()
@@ -185,7 +185,7 @@ class Plots(metaclass=Singleton):
             y = per_key_arr[i]
             legends.append(self.axes[0,1].scatter(x=range(0, len(y)), y=y, marker='.'))
         self.axes[0,1].legend(legends, self.keys, scatterpoints=1,
-                        loc='upper left', ncol=5,
+                        loc='upper left', ncol=3,
                         fontsize=8)
 
         # consolidated/summed-up scatter plot
@@ -233,31 +233,39 @@ class Plots(metaclass=Singleton):
         self.idx2grp =  { i : val for i, val in enumerate(lst)}
         self.df[f'{grp}_idx'] = self.df[grp].map(lambda x: self.grp2idx[x])
 
-    def cluster_plot_helper(self, grp, cols, axis):
+    def cluster_plot_helper(self, grp, cols):
         self.build_cluster_index(grp)
         kmeans = KMeans(n_clusters= 10)
 
         groups = self.df[grp].unique()
         groups.sort()
+        xpdf = pd.DataFrame()
         for g in groups:
             X =self.df.loc[self.df[grp] == g][cols]
-#        for gid in self.df[grp].unique():
-#            print("gid, grp :", gid, grp, self.df[grp].unique())
- #           sys.exit()
- #           X =self.df[self.df.ContainerID == gid][col]
-            #print(X)
+            Xflat = X.values.flatten()
+            xpdf[g] = Xflat
             labels = kmeans.fit_predict(X)
-            #TODO: plot better. it is not interpretable now
-            #plt.scatter(X.iloc[:, 0], X.iloc[:, 1], c=labels,  cmap='plasma')
-            axis.scatter(x=range(0, len(labels)), y=labels, marker='.')#(X.iloc[:, 0], X.iloc[:, 1], c=labels,  cmap='plasma')
-        axis.set_xlabel('Time')
+            #TODO: plot better. it is not very interpretable now
+            self.axes[0,1].scatter(x=range(0, len(labels)), y=labels, marker='.')
+            #self.axes[0,1].scatter(X.iloc[:, 0], X.iloc[:, 1], c=labels,  cmap='plasma')
+        self.axes[0,1].set_xlabel('Time')
         #axis.set_yticks([x  for x in range(len(groups))])
-        axis.set_yticks(range(len(groups)))
-        labels = [ '{}{}'.format( ' ', k) for i, k in enumerate(self.keys)]
-        axis.set_yticklabels(labels)
+        self.axes[0,1].set_yticks(range(len(groups)))
+        labels = ['{}{}'.format( ' ', k) for i, k in enumerate(self.keys)]
+        self.axes[0,1].set_yticklabels(labels)
+
+        #print(xpdf.shape, xpdf.columns)
+        labels = kmeans.fit_predict(xpdf)
+        self.axes[1,1].scatter(xpdf.iloc[:, 0], xpdf.iloc[:, 2], c=labels,  cmap='plasma')
+        #self.axes[1,1].scatter(x=range(0, len(labels)), y=labels, marker='.')
+
+
         #plt.show()
 
-    def phase_helper(self, grp, col):
+    def compare_plots(self):
+        pass
+
+    def phase_plots_helper(self, grp, col):
         pass
 
 
@@ -277,7 +285,8 @@ class DStats(Plots, metaclass=Singleton):
                             "NetSent"       : "Network Sent",
                             "BlockR"        : "Block Reads",
                             "BlockW"        : "Block Writes",
-                            "PIDS"          : "Docker PIDS"}
+                            "PIDS"          : "Docker PIDS"
+                            }
         self.col2units = {  "ContainerID"   : "ID",
                             "ContainerName" : "Name",
                             "CPUPerc"       : "Percentage (%)",
@@ -288,7 +297,8 @@ class DStats(Plots, metaclass=Singleton):
                             "NetSent"       : "MiB",
                             "BlockR"        : "MiB",
                             "BlockW"        : "MiB",
-                            "PIDS"          : "PIDS"}
+                            "PIDS"          : "PIDS"
+                            }
         self.cols = ["CPUPerc", "MemUse","NetRecv", "NetSent", "BlockR", "BlockW"]
         self.process_dstats_data()
 
@@ -302,8 +312,18 @@ class DStats(Plots, metaclass=Singleton):
         with open(self.dstats_fname, 'w') as f:
             f.write(cleaned_txt)
 
+    def remove_incomplete_samples(self):
+        self.df = self.df[~self.df.isin(['--']).any(axis=1)]
+        #df.groupby('ContainerID').filter(lambda x : len(x)>3)
+        minRows = sys.maxsize
+        for cid in self.df['ContainerID'].unique():
+            curr = len(self.df[self.df.ContainerID == cid])
+            minRows = curr if minRows > curr else minRows
+        self.df = self.df.groupby('ContainerID').filter(lambda x : len(x) > minRows)
+
     # make sure the df is all numeric
     def post_process(self):
+        self.remove_incomplete_samples()
         for name in ["ContainerID", "ContainerName"]:
             self.df[name] = self.df[name].map(lambda x: x.strip())
         h2b, n = Human2BytesConverter(), len(self.keys)
