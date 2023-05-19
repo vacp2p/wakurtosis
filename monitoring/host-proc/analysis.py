@@ -109,7 +109,8 @@ class Plots(metaclass=Singleton):
 
 
     # extract the maximal complete sample set
-    def remove_incomplete_samples(self, grp, err):
+    def remove_incomplete_samples(self, grp, err=''):
+        #if not err:
         self.df, minRows = self.df[~self.df.isin([err]).any(axis=1)], sys.maxsize
         for cid in self.df[grp].unique():
             rows = self.df[self.df[grp] == cid].shape[0]
@@ -133,7 +134,7 @@ class Plots(metaclass=Singleton):
         self.axes[1,0].violinplot(self.msg_propagation_times, showmedians=True)
         #axes[0].spines[['right', 'top']].set_visible(False)
         self.axes[1,0].axes.xaxis.set_visible(False)
-        self.cluster_plot_helper(grp='ContainerID', cols=self.cols)
+        self.cluster_plot_helper(grp='Key', cols=self.cols)
         pp.savefig(plt.gcf())
         pp.close()
         #plt.show()
@@ -325,7 +326,6 @@ class DStats(Plots, metaclass=Singleton):
 
     # make sure the df is all numeric
     def post_process(self):
-        self.remove_incomplete_samples(grp='ContainerID', err='--')
         for name in ["ContainerID", "ContainerName"]:
             self.df[name] = self.df[name].map(lambda x: x.strip())
         h2b, n = Human2BytesConverter(), len(self.keys)
@@ -338,7 +338,6 @@ class DStats(Plots, metaclass=Singleton):
         for size in ["BlockR", "BlockW"]:
             self.df[size] = self.df[size].map(lambda x: h2b.convert(x.strip())/(1024*1024)) # MiBs
         self.df['Key'] = self.df['ContainerName'].map(lambda x: x.split("--")[0])
-        self.df.to_csv(f'{self.oprefix}-dstats-cleaned.csv', sep='/')
         self.set_keys()
 
     # build df from csv
@@ -351,6 +350,8 @@ class DStats(Plots, metaclass=Singleton):
                                     "CPUPerc", "MemUse", "MemTotal", "MemPerc",
                                     "NetRecv", "NetSent", "BlockR","BlockW",  "PIDS"])
         self.post_process()
+        self.remove_incomplete_samples(grp='Key', err='--')
+        self.df.to_csv(f'{self.oprefix}-dstats-cleaned.csv', sep='/')
 
     def plot_column_panels(self, cdf):
         self.column_panel_helper("CPUPerc")
@@ -433,10 +434,10 @@ class HostProc(Plots, metaclass=Singleton):
                     #'CPU-SYS', 'cpu', 'cpu0', 'cpu1', 'cpu2', 'cpu3',
                    #'cpu4', 'cpu5', 'cpu6', 'cpu7', 'cpu8', 'cpu9', 'CPUUTIME', 'CPUSTIME'])
         self.post_process()
+        self.remove_incomplete_samples(grp='Key')
         self.df.to_csv(f'{self.oprefix}-host-proc-cleaned.csv', sep='/')
 
     def post_process(self):
-        self.remove_incomplete_samples(grp='NodeName', err='--')
         #h2b = Human2BytesConverter()
         for size in ['VmPeak', 'VmSize', 'VmHWM','VmRSS', 'VmData','VmStk']:
             self.df[size] = self.df[size].map(lambda x: x/1024) # MiBs
@@ -452,20 +453,20 @@ class HostProc(Plots, metaclass=Singleton):
 
     def plot_column_panels(self, cdf):
         self.column_panel_helper("CPUPERC")
+        self.column_panel_helper("VmSize")
         self.column_panel_helper("VmPeak")
         self.column_panel_helper("VmRSS")
-        self.column_panel_helper("VmSize")
-        self.column_panel_helper("VmHWM")
+        #self.column_panel_helper("VmHWM") - HighWaterMark
         self.column_panel_helper("VmData")
         self.column_panel_helper("VmStk")
-        self.column_panel_helper("RxBytes")
-        self.column_panel_helper("TxBytes")
-        self.column_panel_helper("NetRX")
-        self.column_panel_helper("NetWX")
-        self.column_panel_helper("InOctets")
-        self.column_panel_helper("OutOctets")
-        self.column_panel_helper("BLKR")
-        self.column_panel_helper("BLKW")
+        self.column_panel_helper("RxBytes", cdf)
+        self.column_panel_helper("TxBytes", cdf)
+        self.column_panel_helper("NetRX", cdf)
+        self.column_panel_helper("NetWX", cdf)
+        self.column_panel_helper("InOctets", cdf)
+        self.column_panel_helper("OutOctets", cdf)
+        self.column_panel_helper("BLKR", cdf)
+        self.column_panel_helper("BLKW", cdf)
 
     def plot_clusters(self, grp, cdf, axes):
         self.cluster_plot_helper(col=['CPUPERC', 'VmPeak', 'VmRSS', 'VmSize', 'VmHWM', 'VmData'], grp=grp, axes=axes)
