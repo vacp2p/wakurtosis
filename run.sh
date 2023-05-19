@@ -139,13 +139,17 @@ fi
 
 
 
-##################### DOCKER PROCFS MONITOR
+##################### Container-Proc MONITOR
 if [ "$metrics_infra" = "container-proc" ];
 then
     echo "Starting monitoring with probes in the containers"
     # Start process level monitoring (in background, will wait to WSL to be created)
-    . ./cproc-venv/bin/activate
-    sudo -E python3 ./monitoring/container-proc/monitor.py &
+   docker run \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v $(pwd)/monitoring/container-proc/:/cproc-mon/ \
+    -v $(pwd)/config/config.json:/cproc-mon/config/config.json \
+    container-proc:latest &
+ 
     monitor_pid=$!
 fi
 ##################### END
@@ -200,10 +204,12 @@ if [ "$metrics_infra" = "container-proc" ];
 then
     echo -e "Waiting monitoring to finish ..."
     wait $monitor_pid
+    echo "Copying the container-proc measurements"
+    cp ./monitoring/container-proc/cproc_metrics.json "./${enclave_name}_logs/cproc_metrics.json" > /dev/null 2>&1
+    rm ./monitoring/container-proc/cproc_metrics.json > /dev/null 2>&1
 fi
 
 # Copy simulation results
-# docker cp "$wls_cid:/wls/summary.json" "./${enclave_name}_logs" > /dev/null 2>&1
 docker cp "$wls_cid:/wls/messages.json" "./${enclave_name}_logs"
 docker cp "$wls_cid:/wls/network_topology/network_data.json" "./${enclave_name}_logs"
 
