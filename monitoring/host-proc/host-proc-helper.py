@@ -262,9 +262,11 @@ class MetricsCollector:
                 continue
             with open(f'/proc/{pid}/cmdline') as f:
                 line = f.readline()
-                if "waku" not  in line: # assert that these pids are waku's
+                # assert that these pids are waku's and have config enabled
+                if "waku" not  in line or "--config-file=" not in line:
                     log.info(f'non-waku pid {pid} = {line}')
                     continue
+                self.pid2node_name[pid] = line.split("--config-file=")[1].split('/')[3]
             did = ""
             self.docker_pids.append(pid)
             #'/proc/{pid}/cmdline  = /usr/bin/wakunode--rpc-address=0.0.0.0
@@ -272,8 +274,6 @@ class MetricsCollector:
                                     #--log-level=TRACE
                                     #--config-file=/node/configuration_file/node-6/node-6.toml
                                     #--ports-shift=2m
-            with open(f'/proc/{pid}/cmdline') as f:
-                self.pid2node_name[pid] = f.readline().split("--config-file=")[1].split('/')[3]
 
             with open(f'/proc/{pid}/mountinfo') as f: # or /proc/{pid}/cgroup
                 line = f.readline()

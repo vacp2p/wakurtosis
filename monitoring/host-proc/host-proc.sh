@@ -64,4 +64,4 @@ echo "export DPS_FNAME=$dps DINSPECT_FNAME=$dinspect PIDLIST_FNAME=$pidlist ID2V
 echo "host-proc: collected all requisite docker/process meta-data"
 echo "host-proc: signalling the monitor"
 # *should* be non-blocking as attendant read is already issued
-echo "host-proc: signalling the monitor " >  $signal_fifo
+echo "host-proc: start the /procfs" >  $signal_fifo
