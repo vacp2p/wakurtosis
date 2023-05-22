@@ -217,5 +217,17 @@ echo "- Metrics Infra:  $metrics_infra" > ./${enclave_name}_logs/run_args
 echo "- Enclave name:  $enclave_name" >> ./${enclave_name}_logs/run_args
 echo "- Configuration file:  $wakurtosis_config_file" >> ./${enclave_name}_logs/run_args
 
+# Run analysis
+if jq -e ."plotting" >/dev/null 2>&1 "./config/${wakurtosis_config_file}";
+then
+    if [ "$metrics_infra" = "container-proc" ];
+    then
+        docker run --network "host" -v "$(pwd)/wakurtosis_logs:/simulation_data/" --add-host=host.docker.internal:host-gateway analysis src/main.py -i container-proc >/dev/null 2>&1
+    else
+        prometheus_port=$(kurtosis enclave inspect wakurtosis | grep "\<prometheus\>" | awk '{print $6}' | awk -F':' '{print $2}')
+        docker run --network "host" -v "$(pwd)/wakurtosis_logs:/simulation_data/" --add-host=host.docker.internal:host-gateway analysis src/main.py -i cadvisor -p "$prometheus_port" >/dev/null 2>&1
+    fi
+fi
+
 echo "Done."
 ##################### END
