@@ -32,12 +32,6 @@ cd ./monitoring/container-proc
 sh ./build.sh
 cd ..
 
-# Prepare container proc monitoring venv
-python3 -m venv ./cproc-venv --without-pip
-source ./cproc-venv/bin/activate   
-curl https://bootstrap.pypa.io/get-pip.py | python
-pip3 install -r ./monitoring/container-proc/requirements.txt
-deactivate
 
 git clone git@github.com:waku-org/go-waku.git
 cd go-waku
