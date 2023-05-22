@@ -17,4 +17,4 @@ def run(simulation_config, metrics, topology_info, msg_propagation_times, msg_in
     prometheus.get_hardware_metrics(metrics, topology_info, min_tss, max_tss, prom_port)
 
     """ Generate Figure """
-    plotting.plot_figure_ex(metrics, simulation_config)
+    plotting.plot_figure_ex(simulation_config)
