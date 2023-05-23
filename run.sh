@@ -44,6 +44,7 @@ docker rm cgennet > /dev/null 2>&1
 ##################### END
 
 
+kurtosis_inspect="kurtosis_inspect.log"
 usr=`id -u`
 grp=`id -g`
 stats_dir=stats
@@ -98,8 +99,12 @@ END1=$(date +%s)
 DIFF1=$(( $END1 - $START ))
 echo -e "Enclave $enclave_name is up and running: took $DIFF1 secs to setup"
 
+sed -n '/Starlark code successfully run. No output was returned./,$p'  kurtosisrun_log.txt  > $kurtosis_inspect
+
 # Extract the WLS service name
-wls_service_name=$(kurtosis --cli-log-level $loglevel enclave inspect $enclave_name | grep "\<wls\>" | awk '{print $1}')
+#wls_service_name=$(kurtosis --cli-log-level $loglevel enclave inspect $enclave_name | grep "\<wls\>" | awk '{print $1}')
+#echo -e "\n--> To see simulation logs run: kurtosis service logs $enclave_name $wls_service_name <--"
+wls_service_name=$(grep "\<wls\>" $kurtosis_inspect | awk '{print $1}')
 echo -e "\n--> To see simulation logs run: kurtosis service logs $enclave_name $wls_service_name <--"
 ##################### END
 
@@ -107,13 +112,16 @@ echo -e "\n--> To see simulation logs run: kurtosis service logs $enclave_name $
 
 ##################### EXTRACT WLS CID
 # Get the container prefix/suffix for the WLS service
-service_name=$(kurtosis --cli-log-level $loglevel  enclave inspect $enclave_name | grep $wls_service_name | awk '{print $2}')
-service_uuid=$(kurtosis --cli-log-level $loglevel  enclave inspect --full-uuids $enclave_name | grep $wls_service_name | awk '{print $1}')
+service_name=$(grep  $wls_service_name $kurtosis_inspect | awk '{print $2}')
+#service_name=$(kurtosis --cli-log-level $loglevel  enclave inspect $enclave_name | grep $wls_service_name | awk '{print $2}')
+service_uuid=$(grep $wls_service_name $kurtosis_inspect | awk '{print $1}')
+#service_uuid=$(kurtosis --cli-log-level $loglevel  enclave inspect --full-uuids $enclave_name | grep $wls_service_name | awk '{print $1}')
 
 # Construct the fully qualified container name that kurtosis has created
 wls_cid="$service_name--$service_uuid"
+echo "->$wls_cid<-"
 ##################### END
-
+#echo "$wls_cid == "$sn"--"$suuid
 
 
 ##################### MONITORING MODULE EPILOGUE: WLS SIGNALLING
@@ -124,13 +132,15 @@ elif [ "$metrics_infra" = "dstats" ]; then
     echo "Starting dstats measurements.."
     # collect container/node mapping via kurtosis
     kinspect=$odir/docker-kinspect.out
-    kurtosis  --cli-log-level $loglevel  enclave inspect $enclave_name > $kinspect
+    cp $kurtosis_inspect $kinspect
+    #kurtosis  --cli-log-level $loglevel  enclave inspect $enclave_name > $kinspect
     sh ./monitoring/dstats/dstats.sh $wls_cid $odir &  # the process subtree takes care of itself
 elif [ "$metrics_infra" = "host-proc" ]; then
     echo "Starting host-proc measurements.."
     kinspect=$odir/docker-kinspect.out
+    cp $kurtosis_inspect $kinspect
     # collect container/node mapping via kurtosis
-    kurtosis  --cli-log-level $loglevel  enclave inspect $enclave_name > $kinspect
+    #kurtosis  --cli-log-level $loglevel  enclave inspect $enclave_name > $kinspect
     sh ./monitoring/host-proc/host-proc.sh  $wls_cid $odir $signal_fifo &
 elif [ "$metrics_infra" = "container-proc" ]; then
     echo "Starting monitoring with probes in the containers"
@@ -149,7 +159,8 @@ fi
 ##################### GRAFANA
 # Fetch the Grafana address & port
 
-grafana_host=$(kurtosis enclave inspect $enclave_name | grep "\<grafana\>" | awk '{print $6}')
+#grafana_host=$(kurtosis enclave inspect $enclave_name | grep "\<grafana\>" | awk '{print $6}')
+grafana_host=$(grep "\<grafana\>" $kurtosis_inspect | awk '{print $6}')
 
 echo -e "\n--> Statistics in Grafana server at http://$grafana_host/ <--"
 echo "Output of kurtosis run command written in kurtosisrun_log.txt"
@@ -157,8 +168,8 @@ echo "Output of kurtosis run command written in kurtosisrun_log.txt"
 
 
 # Get the container prefix/uffix for the WLS service
-service_name="$(kurtosis --cli-log-level $loglevel  enclave inspect $enclave_name | grep $wls_service_name | awk '{print $2}')"
-service_uuid="$(kurtosis --cli-log-level $loglevel  enclave inspect --full-uuids $enclave_name | grep $wls_service_name | awk '{print $1}')"
+#service_name="$(kurtosis --cli-log-level $loglevel  enclave inspect $enclave_name | grep $wls_service_name | awk '{print $2}')"
+#service_uuid="$(kurtosis --cli-log-level $loglevel  enclave inspect --full-uuids $enclave_name | grep $wls_service_name | awk '{print $1}')"
 
 
 ##################### WAIT FOR THE WLS TO FINISH
