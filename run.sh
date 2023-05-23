@@ -89,7 +89,7 @@ fi
 jobs=$(cat config/${wakurtosis_config_file} | jq -r ".kurtosis.jobs")
 echo -e "\nSetting up the enclave: $enclave_name"
 
-kurtosis_cmd="kurtosis --cli-log-level \"$loglevel\" run --enclave ${enclave_name} . '{\"wakurtosis_config_file\" : \"config/${wakurtosis_config_file}\"}' --parallelism ${jobs} > kurtosisrun_log.txt 2>&1"
+kurtosis_cmd="kurtosis --cli-log-level \"$loglevel\" run --full-uuids --enclave ${enclave_name} . '{\"wakurtosis_config_file\" : \"config/${wakurtosis_config_file}\"}' --parallelism ${jobs} > kurtosisrun_log.txt 2>&1"
 
 START=$(date +%s)
   eval $kurtosis_cmd
