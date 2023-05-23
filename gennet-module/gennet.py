@@ -382,6 +382,7 @@ def generate_and_write_files(ctx: typer, G):
     json_dump, json_dump[CONTAINERS_JSON], json_dump[NODES_JSON] = {}, {}, {}
     for container, nodes in container2nodes.items():
         json_dump[CONTAINERS_JSON][container] = nodes
+    json_dump[CONTAINERS_JSON]["bootstrap"] = ["bootstrap"]
 
     i, traits_dir = 0,  ctx.params["traits_dir"]
     for node in G.nodes:
@@ -402,6 +403,15 @@ def generate_and_write_files(ctx: typer, G):
         port_shift, cid = node2container[node]
         json_dump[NODES_JSON][node]["port_shift"] = port_shift
         json_dump[NODES_JSON][node]["container_id"] = cid
+
+    json_dump[NODES_JSON]["bootstrap"] = {}
+    json_dump[NODES_JSON]["bootstrap"]["static_nodes"] = []
+    json_dump[NODES_JSON]["bootstrap"]["image"] = nodeTypeToDocker[nodeType.NWAKU]
+    json_dump[NODES_JSON]["bootstrap"]["node_config"] = "bootstrap.toml"
+    json_dump[NODES_JSON]["bootstrap"]["node_log"] = "bootstrap.log"
+    json_dump[NODES_JSON]["bootstrap"]["port_shift"] = 0
+    json_dump[NODES_JSON]["bootstrap"]["container_id"] = "bootstrap"
+
     write_json(ctx.params["output_dir"], json_dump)  # network wide json
 
 
