@@ -34,7 +34,7 @@ echo -e "\nRunning network generation"
 docker run --name cgennet -v ${dir}/config/:/config:ro gennet --config-file /config/${wakurtosis_config_file} --traits-dir /config/traits
 err=$?
 
-if [ $err != 0 ] then
+if [ $err != 0 ]; then
   echo "Gennet failed with error code $err"
   exit
 fi
