@@ -9,7 +9,7 @@ from src import analysis_logger
 from src import log_parser
 
 
-def compare_tss(tss, min_tss, max_tss):
+def update_min_max_tss(tss, min_tss, max_tss):
     if tss < min_tss:
         min_tss = tss
     elif tss > max_tss:
@@ -33,7 +33,6 @@ def compute_injection_times(injected_msgs_dict):
 
 def analyze_published(log_line, node_logs, msgs_dict, msg_publishTime):
     msg_topics, msg_topic, msg_hash, msg_peer_id = get_relay_line_info(log_line)
-
     node_logs[msg_peer_id]['published'].append([msg_publishTime, msg_topics, msg_topic, msg_hash])
 
     if msg_hash not in msgs_dict:
@@ -64,36 +63,37 @@ def parse_lines_in_file(file, node_logs, msgs_dict, min_tss, max_tss):
 
                 analyze_published(log_line, node_logs, msgs_dict, msg_publishTime)
 
-                min_tss, max_tss = compare_tss(msg_publishTime, min_tss, max_tss)
+                min_tss, max_tss = update_min_max_tss(msg_publishTime, min_tss, max_tss)
 
             elif 'received' in log_line:
                 msg_receivedTime = int(re.search(r'receivedTime=([\d]+)', log_line).group(1))
 
                 analyze_received(log_line, node_logs, msgs_dict, msg_receivedTime)
 
-                min_tss, max_tss = compare_tss(msg_receivedTime, min_tss, max_tss)
+                min_tss, max_tss = update_min_max_tss(msg_receivedTime, min_tss, max_tss)
 
     return min_tss, max_tss
 
 
 def compute_message_latencies(msgs_dict):
-    # Compute message latencies and propagation times througout the network
+    # Compute message latencies and propagation times throughout the network
     pbar = tqdm(msgs_dict.items())
-    for msg_id, msg_data in pbar:
-        # NOTE: Carefull here as I am assuming that every message is published once ...
+    for msg_hash, msg_data in pbar:
+        # NOTE: Careful here as I am assuming that every message is published once ...
         if len(msg_data['published']) > 1:
             analysis_logger.G_LOGGER.warning('Several publishers of message %s')
 
         published_ts = int(msg_data['published'][0]['ts'])
         peer_id = msg_data['published'][0]['peer_id']
 
-        pbar.set_description('Computing latencies of message %s' % msg_id)
+        pbar.set_description('Computing latencies of message %s' % msg_hash)
 
         # Compute latencies
         latencies = []
         for received_data in msg_data['received']:
             # Skip self
             if received_data['peer_id'] == peer_id:
+                analysis_logger.G_LOGGER.warning('Message %s received by the same node that published it' % msg_hash)
                 continue
             # NOTE: We are getting some negative latencies meaning that the message appears to be received before it was sent ...
             # I assume this must be because those are the nodes that got the message injected in the first place
@@ -102,16 +102,18 @@ def compute_message_latencies(msgs_dict):
             peer_id = msg_data['published'][0]['peer_id']
             latencies.append(latency)
 
-        msgs_dict[msg_id]['latencies'] = latencies
+        msgs_dict[msg_hash]['latencies'] = latencies
 
 
 def compute_propagation_times(msgs_dict):
     msg_propagation_times = []
     pbar = tqdm(msgs_dict.items())
 
-    for msg_id, msg_data in pbar:
-        pbar.set_description('Computing propagation time of message %s' % msg_id)
-        msg_propagation_times.append(round(max(msg_data['latencies']) / 1000000))
+    for msg_hash, msg_data in pbar:
+        pbar.set_description('Computing propagation time of message %s' % msg_hash)
+        # todo check Why do we round here
+        # msg_propagation_times.append(round(max(msg_data['latencies']) / 1000000))
+        msg_propagation_times.append(max(msg_data['latencies']) / 1000000)
 
     return msg_propagation_times
 
@@ -151,3 +153,11 @@ def analyze_containers(topology, simulation_path):
         file.close()
 
     return node_logs, msgs_dict, min_tss, max_tss
+
+
+def inject_metric_in_dict(metrics, key_name, title, y_label, metric_name, values):
+    metrics[key_name] = {}
+    metrics[key_name]["title"] = title
+    metrics[key_name]["y_label"] = y_label
+    metrics[key_name]["metric_name"] = metric_name
+    metrics[key_name]["values"] = values

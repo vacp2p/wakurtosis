@@ -134,10 +134,15 @@ elif [ "$metrics_infra" = "host-proc" ]; then
     kurtosis  --cli-log-level $loglevel  enclave inspect $enclave_name > $kinspect
     sh ./monitoring/host-proc/host-proc.sh  $wls_cid $odir $signal_fifo &
 elif [ "$metrics_infra" = "container-proc" ]; then
-    echo "Jordi's measurement infra's epilogue goes here"
+    echo "Starting monitoring with probes in the containers"
     # Start process level monitoring (in background, will wait to WSL to be created)
-    #sudo -E python3 ./monitoring/monitor.py & ? 
-    #monitor_pid=$! ?
+   docker run \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v $(pwd)/monitoring/container-proc/:/cproc-mon/ \
+    -v $(pwd)/config/config.json:/cproc-mon/config/config.json \
+    container-proc:latest &
+ 
+    monitor_pid=$!
 fi
 ##################### END
 
@@ -170,7 +175,7 @@ echo "Simulation took $DIFF1 + $DIFF2 = $(( $END2 - $START)) secs"
 ##################### END
 
 # give time for the messages to settle down before we collect the logs
-#sleep 60
+sleep 60
 
 ##################### GATHER CONFIG, LOGS & METRICS
 # dump logs
@@ -191,19 +196,32 @@ elif [ "$metrics_infra" = "host-proc" ]; then
     echo "Copying the host-proc data"
     cp -r ./monitoring/host-proc/stats  ${enclave_name}_logs/host-proc-data
 elif [ "$metrics_infra" = "container-proc" ]; then
-    echo "Jordi's data copy goes here"
-    #echo -e "Waiting monitoring to finish ..." ?
-    #wait $monitor_pid ?
+    echo -e "Waiting monitoring to finish ..."
+    wait $monitor_pid
+    echo "Copying the container-proc measurements"
+    cp ./monitoring/container-proc/cproc_metrics.json "./${enclave_name}_logs/cproc_metrics.json" > /dev/null 2>&1
+    # \rm -r ./monitoring/container-proc/cproc_metrics.json > /dev/null 2>&1
 fi
 
 # Copy simulation results
-# docker cp "$wls_cid:/wls/summary.json" "./${enclave_name}_logs" > /dev/null 2>&1
 docker cp "$wls_cid:/wls/messages.json" "./${enclave_name}_logs"
 docker cp "$wls_cid:/wls/network_topology/network_data.json" "./${enclave_name}_logs"
 
 echo "- Metrics Infra:  $metrics_infra" > ./${enclave_name}_logs/run_args
 echo "- Enclave name:  $enclave_name" >> ./${enclave_name}_logs/run_args
 echo "- Configuration file:  $wakurtosis_config_file" >> ./${enclave_name}_logs/run_args
+
+# Run analysis
+if jq -e ."plotting" >/dev/null 2>&1 "./config/${wakurtosis_config_file}";
+then
+    if [ "$metrics_infra" = "container-proc" ];
+    then
+        docker run --network "host" -v "$(pwd)/wakurtosis_logs:/simulation_data/" --add-host=host.docker.internal:host-gateway analysis src/main.py -i container-proc >/dev/null 2>&1
+    elif [ "$metrics_infra" = "cadvisor" ]; then
+        prometheus_port=$(kurtosis enclave inspect wakurtosis | grep "\<prometheus\>" | awk '{print $6}' | awk -F':' '{print $2}')
+        docker run --network "host" -v "$(pwd)/wakurtosis_logs:/simulation_data/" --add-host=host.docker.internal:host-gateway analysis src/main.py -i cadvisor -p "$prometheus_port" >/dev/null 2>&1
+    fi
+fi
 
 echo "Done."
 ##################### END

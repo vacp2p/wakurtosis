@@ -1,6 +1,6 @@
 {
-  "general":{
-    "prng_seed" : 1
+  "general": {
+    "prng_seed": 1
   },
   "kurtosis": {
     "enclave_name": "wakurtosis",
@@ -9,13 +9,16 @@
     "interconnection_batch": 10
   },
   "gennet": {
-    "num_nodes": 3,
+    "num_nodes": 9,
     "fanout": 3,
     "num_topics": 1,
     "num_partitions": 1,
     "num_subnets": 1,
     "container_size": "1",
-    "node_type_distribution": { "nwaku:relay:metrics:rpc":100, "gowaku:rln:dnsdisc:dns":0 },
+    "node_type_distribution": {
+      "nwaku:relay:rpc:metrics": 100,
+      "gowaku:rln:dnsdisc:dns": 0
+    },
     "network_type": "newmanwattsstrogatz",
     "output_dir": "network_data",
     "benchmark": "False"
@@ -35,7 +38,19 @@
     "container_str_pattern": "waku",
     "process_str_pattern": "waku",
     "sampling_interval_s": 1,
-    "probe_filename" : "./monitoring/probe.sh",
-    "metrics_filename" : "./monitoring/metrics.json"
-   }
+    "probe_filename": "./probe.sh",
+    "metrics_filename": "./cproc_metrics.json"
+  },
+  "plotting": {
+    "by_node": [
+      "container_cpu_load_average_10s",
+      "container_memory_usage_bytes"
+    ],
+    "by_simulation": [
+        "container_network_receive_bytes_total",
+        "container_network_transmit_bytes_total",
+        "container_fs_reads_bytes_total",
+        "container_fs_writes_bytes_total"
+    ]
+  }
 }

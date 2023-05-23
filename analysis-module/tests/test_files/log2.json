@@ -1,0 +1,55 @@
+INF 2023-05-05 10:07:15.792+00:00 mounting relay protocol                    topics="waku node" tid=1 file=waku_node.nim:520
+DBG 2023-05-05 10:07:15.792+00:00 init waku relay                            topics="waku relay" tid=1 file=protocol.nim:68
+INF 2023-05-05 10:07:15.792+00:00 relay mounted successfully                 topics="waku node" tid=1 file=waku_node.nim:542
+DBG 2023-05-05 10:07:15.792+00:00 subscribe                                  topics="waku node" tid=1 file=waku_node.nim:433 pubsubTopic=topic_S
+INF 2023-05-05 10:07:15.793+00:00 mounting libp2p ping protocol              topics="waku node" tid=1 file=waku_node.nim:959
+INF 2023-05-05 10:07:15.793+00:00 Starting Waku node                         topics="waku node" tid=1 file=waku_node.nim:1075 version=v0.15.0-23-g67db35
+INF 2023-05-05 10:07:15.793+00:00 PeerInfo                                   topics="waku node" tid=1 file=waku_node.nim:1078 peerId=16U*5KpGua addrs=@[]
+INF 2023-05-05 10:07:15.793+00:00 Listening on                               topics="waku node" tid=1 file=waku_node.nim:1085 full=[/ip4/0.0.0.0/tcp/60000/p2p/16Uiu2HAmKs8nzp9zrdKfv9JGbdYg91S7D92SkkQhJ6TNuJ5KpGua]
+INF 2023-05-05 10:07:15.793+00:00 DNS: discoverable ENR                      topics="waku node" tid=1 file=waku_node.nim:1086 enr=enr:-Iu4QMPWKj0K-62Z5EfbHPIEmNuxjhkTY6TJ_H2NuNh3tMzYGOENq7hKMuA1JVTFf9ELDi1YgdJA2bUAkwnq4gz1HC4BgmlkgnY0gmlwhAAAAACJc2VjcDI1NmsxoQNrHlMyoVE75h5eX3N7TSOy8B6b4UeS_ILbIvJY-veBPYN0Y3CC6mCFd2FrdTIB
+INF 2023-05-05 10:07:15.793+00:00 starting relay protocol                    topics="waku node" tid=1 file=waku_node.nim:492
+DBG 2023-05-05 10:07:15.793+00:00 start                                      topics="waku relay" tid=1 file=protocol.nim:116
+INF 2023-05-05 10:07:15.793+00:00 relay started successfully                 topics="waku node" tid=1 file=waku_node.nim:513
+DBG 2023-05-05 10:07:15.793+00:00 start                                      topics="waku relay" tid=1 file=protocol.nim:116
+INF 2023-05-05 10:07:15.793+00:00 Node started successfully                  topics="waku node" tid=1 file=waku_node.nim:1104
+DBG 2023-05-05 10:07:15.793+00:00 Starting relay connectivity loop           topics="waku node peer_manager" tid=1 file=peer_manager.nim:489
+INF 2023-05-05 10:07:15.793+00:00 Relay peer connections                     topics="waku node peer_manager" tid=1 file=peer_manager.nim:411 connectedPeers=0 targetConnectedPeers=50 notConnectedPeers=0 outsideBackoffPeers=0
+DBG 2023-05-05 10:07:15.793+00:00 Starting prune peerstore loop              topics="waku node peer_manager" tid=1 file=peer_manager.nim:482
+DBG 2023-05-05 10:07:15.793+00:00 subscribe                                  topics="waku node rest relay_api" tid=1 file=waku_node.nim:444 pubsubTopic=topic_S
+DBG 2023-05-05 10:07:15.793+00:00 subscribe                                  topics="waku node rest relay_api" tid=1 file=protocol.nim:132 pubsubTopic=topic_S
+INF 2023-05-05 10:07:15.793+00:00 Starting metrics HTTP server               topics="waku node metrics" tid=1 file=waku_metrics.nim:29 serverIp=0.0.0.0 serverPort=8008
+INF 2023-05-05 10:07:15.793+00:00 Metrics HTTP server started                topics="waku node metrics" tid=1 file=waku_metrics.nim:36 serverIp=0.0.0.0 serverPort=8008
+DBG 2023-05-05 10:07:19.786+00:00 get_waku_v2_debug_v1_info                  topics="waku node jsonrpc debug_api" tid=1 file=handlers.nim:21
+DBG 2023-05-05 10:07:30.723+00:00 Incoming WakuRelay connection              topics="waku relay" tid=1 file=protocol.nim:50 connection=16U*4ZwUxQ:6454d562f837b39597b9ab03 protocol=/vac/waku/relay/2.0.0
+INF 2023-05-05 10:07:30.794+00:00 Relay peer connections                     topics="waku node peer_manager" tid=1 file=peer_manager.nim:411 connectedPeers=1 targetConnectedPeers=50 notConnectedPeers=0 outsideBackoffPeers=0
+DBG 2023-05-05 10:07:30.811+00:00 Incoming WakuRelay connection              topics="waku relay" tid=1 file=protocol.nim:50 connection=16U*4ZwUxQ:6454d562f837b39597b9ab05 protocol=/vac/waku/relay/2.0.0
+DBG 2023-05-05 10:07:34.863+00:00 Incoming WakuRelay connection              topics="waku relay" tid=1 file=protocol.nim:50 connection=16U*MMKSHQ:6454d566f837b39597b9ab0b protocol=/vac/waku/relay/2.0.0
+DBG 2023-05-05 10:07:34.959+00:00 Incoming WakuRelay connection              topics="waku relay" tid=1 file=protocol.nim:50 connection=16U*MMKSHQ:6454d566f837b39597b9ab0d protocol=/vac/waku/relay/2.0.0
+DBG 2023-05-05 10:07:35.008+00:00 post_waku_v2_admin_v1_peers                topics="waku node jsonrpc admin_api" tid=1 file=handlers.nim:52
+DBG 2023-05-05 10:07:35.008+00:00 Dialing peer                               topics="waku node peer_manager" tid=1 file=peer_manager.nim:101 wireAddr=@[/ip4/82.68.192.4/tcp/60000] peerId=16U*4ZwUxQ failedAttempts=0
+DBG 2023-05-05 10:07:35.051+00:00 Dialing peer                               topics="waku node peer_manager" tid=1 file=peer_manager.nim:101 wireAddr=@[/ip4/82.68.192.7/tcp/60000] peerId=16U*MMKSHQ failedAttempts=0
+TRC 2023-05-05 10:07:39.967+00:00 waku.relay received                        topics="waku node" tid=1 file=waku_node.nim:395 peerId=16U*5KpGua pubsubTopic=topic_S hash=0x1220498a4a96d695ed3b9e74199a02164e158252a7774b53ef783774c4e2d4a99fcf receivedTime=1683281259967774720
+TRC 2023-05-05 10:07:39.970+00:00 waku.relay received                        topics="waku node" tid=1 file=waku_node.nim:395 peerId=16U*5KpGua pubsubTopic=topic_S hash=0x12203225437be14dbedeaf29ec89353bb41dbb3f795f94b982b28fffb01beffcd922 receivedTime=1683281259970201088
+DBG 2023-05-05 10:07:40.281+00:00 post_waku_v2_relay_v1_message              topics="waku node jsonrpc relay_api" tid=1 file=handlers.nim:77
+TRC 2023-05-05 10:07:40.281+00:00 publish                                    topics="waku node" tid=1 file=protocol.nim:160 pubsubTopic=topic_S
+TRC 2023-05-05 10:07:40.281+00:00 waku.relay received                        topics="waku node" tid=1 file=waku_node.nim:395 peerId=16U*5KpGua pubsubTopic=topic_S hash=0x12200d76cbc0ba1da64ddb4537f9658f257ce879e4cec9a5e0bf14c21c0a41942ad1 receivedTime=1683281260281698048
+TRC 2023-05-05 10:07:40.281+00:00 waku.relay published                       topics="waku node" tid=1 file=waku_node.nim:484 peerId=16U*5KpGua pubsubTopic=topic_S hash=0x12200d76cbc0ba1da64ddb4537f9658f257ce879e4cec9a5e0bf14c21c0a41942ad1 publishTime=1683281260281901056
+TRC 2023-05-05 10:07:40.322+00:00 waku.relay received                        topics="waku node" tid=1 file=waku_node.nim:395 peerId=16U*5KpGua pubsubTopic=topic_S hash=0x122029b5f6d094cc4cdbea01861812c4ac33c69cac55302f216cf8a4d9f276257ded receivedTime=1683281260322366976
+TRC 2023-05-05 10:07:40.821+00:00 waku.relay received                        topics="waku node" tid=1 file=waku_node.nim:395 peerId=16U*5KpGua pubsubTopic=topic_S hash=0x1220ebaa398fb70fd5d75df57ffbeacdba8ccf0957d43c7b634e12c5c3bbe03b22ad receivedTime=1683281260821294080
+TRC 2023-05-05 10:07:40.985+00:00 waku.relay received                        topics="waku node" tid=1 file=waku_node.nim:395 peerId=16U*5KpGua pubsubTopic=topic_S hash=0x12200888a86ff1d02cf84bc92f6eee6baf27347847b900f6dc9f12bbba3deca2522f receivedTime=1683281260985957376
+DBG 2023-05-05 10:07:41.049+00:00 post_waku_v2_relay_v1_message              topics="waku node jsonrpc relay_api" tid=1 file=handlers.nim:77
+TRC 2023-05-05 10:07:41.049+00:00 publish                                    topics="waku node" tid=1 file=protocol.nim:160 pubsubTopic=topic_S
+TRC 2023-05-05 10:07:41.049+00:00 waku.relay received                        topics="waku node" tid=1 file=waku_node.nim:395 peerId=16U*5KpGua pubsubTopic=topic_S hash=0x1220601b82fb10a8975609ae1551481c369549c37836e2104c80b88c2b4fc9bc9496 receivedTime=1683281261049372416
+TRC 2023-05-05 10:07:41.049+00:00 waku.relay published                       topics="waku node" tid=1 file=waku_node.nim:484 peerId=16U*5KpGua pubsubTopic=topic_S hash=0x1220601b82fb10a8975609ae1551481c369549c37836e2104c80b88c2b4fc9bc9496 publishTime=1683281261049528832
+TRC 2023-05-05 10:07:41.075+00:00 waku.relay received                        topics="waku node" tid=1 file=waku_node.nim:395 peerId=16U*5KpGua pubsubTopic=topic_S hash=0x12201bc5ec24014103df1f5ea5e36e742941e6d954530e60624bd191ea661db841db receivedTime=1683281261075706368
+TRC 2023-05-05 10:07:41.353+00:00 waku.relay received                        topics="waku node" tid=1 file=waku_node.nim:395 peerId=16U*5KpGua pubsubTopic=topic_S hash=0x12200c31d928bcad93c105330cc30623af7afc3bff1d170469492541e0ddbf90b40e receivedTime=1683281261353893888
+TRC 2023-05-05 10:07:41.430+00:00 waku.relay received                        topics="waku node" tid=1 file=waku_node.nim:395 peerId=16U*5KpGua pubsubTopic=topic_S hash=0x1220c6b6cdd5f3fcba7544f5b74491c07a0de0f5e02a34d5e112d804f4a5eff5559b receivedTime=1683281261430506496
+TRC 2023-05-05 10:07:41.624+00:00 waku.relay received                        topics="waku node" tid=1 file=waku_node.nim:395 peerId=16U*5KpGua pubsubTopic=topic_S hash=0x1220c02ef297a04f121d957679cecf12ab7bcf5a4a7325c2c41b405b950488a98b2d receivedTime=1683281261624496640
+TRC 2023-05-05 10:07:41.817+00:00 waku.relay received                        topics="waku node" tid=1 file=waku_node.nim:395 peerId=16U*5KpGua pubsubTopic=topic_S hash=0x1220323525214cc401cd6944d9db9a237b47e442ab6c19a9d205456d48fc61d0b96e receivedTime=1683281261817491456
+TRC 2023-05-05 10:07:41.819+00:00 waku.relay received                        topics="waku node" tid=1 file=waku_node.nim:395 peerId=16U*5KpGua pubsubTopic=topic_S hash=0x12209712985f998221fa811f92c54d2fbce7b7dd4adaa6da4859391b4ee906d6fd4c receivedTime=1683281261819732992
+TRC 2023-05-05 10:07:41.897+00:00 waku.relay received                        topics="waku node" tid=1 file=waku_node.nim:395 peerId=16U*5KpGua pubsubTopic=topic_S hash=0x1220e341c5260c491718eb9a390e7c35fa916c70b8d41fed7ca4d89f4defc72d7569 receivedTime=1683281261897427200
+DBG 2023-05-05 10:07:41.946+00:00 post_waku_v2_relay_v1_message              topics="waku node jsonrpc relay_api" tid=1 file=handlers.nim:77
+TRC 2023-05-05 10:07:41.946+00:00 publish                                    topics="waku node" tid=1 file=protocol.nim:160 pubsubTopic=topic_S
+TRC 2023-05-05 10:07:41.946+00:00 waku.relay received                        topics="waku node" tid=1 file=waku_node.nim:395 peerId=16U*5KpGua pubsubTopic=topic_S hash=0x1220690e1527b2991263463c3b67469fbc06c4a3891bd00a24c294e31d6742e2f3a5 receivedTime=1683281261946718976
+TRC 2023-05-05 10:07:41.946+00:00 waku.relay published                       topics="waku node" tid=1 file=waku_node.nim:484 peerId=16U*5KpGua pubsubTopic=topic_S hash=0x1220690e1527b2991263463c3b67469fbc06c4a3891bd00a24c294e31d6742e2f3a5 publishTime=1683281261946988544
+TRC 2023-05-05 10:07:41.973+00:00 waku.relay received

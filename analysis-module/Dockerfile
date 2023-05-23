@@ -28,4 +28,4 @@ ENV PATH="/opt/venv/bin:$PATH"
 ENV PYTHONPATH "${PYTHONPATH}:src"
 
 # Set the entrypoint
-ENTRYPOINT ["python", "src/main.py"]
+ENTRYPOINT ["python"]
