@@ -65,7 +65,6 @@ if [ "$metrics_infra" = "cadvisor" ]; then #CADVISOR
 
     # Set up Cadvisor
     docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev/disk/:/dev/disk:ro --volume=/sys:/sys:ro --volume=/etc/machine-id:/etc/machine-id:ro --publish=8080:8080 --detach=true --name=cadvisor --privileged --device=/dev/kmsg --network $enclave_prefix --ip=$last_ip gcr.io/cadvisor/cadvisor:v0.47.0
-    # docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev/disk/:/dev/disk:ro --volume=/sys:/sys:ro --volume=/etc/machine-id:/etc/machine-id:ro --publish=8080:8080 --detach=true --name=cadvisor --privileged --device=/dev/kmsg gcr.io/cadvisor/cadvisor
 elif  [ "$metrics_infra" = "dstats" ]; then # HOST-PROC
     odir=./monitoring/dstats/$stats_dir
     mkdir $odir
@@ -85,7 +84,6 @@ fi
 
 
 ##################### KURTOSIS RUN
-
 # Create the new enclave and run the simulation
 jobs=$(cat config/${wakurtosis_config_file} | jq -r ".kurtosis.jobs")
 echo -e "\nSetting up the enclave: $enclave_name"
@@ -102,26 +100,16 @@ echo -e "Enclave $enclave_name is up and running: took $DIFF1 secs to setup"
 sed -n '/Starlark code successfully run. No output was returned./,$p'  kurtosisrun_log.txt  > $kurtosis_inspect
 
 # Extract the WLS service name
-#wls_service_name=$(kurtosis --cli-log-level $loglevel enclave inspect $enclave_name | grep "\<wls\>" | awk '{print $1}')
-#echo -e "\n--> To see simulation logs run: kurtosis service logs $enclave_name $wls_service_name <--"
 wls_service_name=$(grep "\<wls\>" $kurtosis_inspect | awk '{print $1}')
 echo -e "\n--> To see simulation logs run: kurtosis service logs $enclave_name $wls_service_name <--"
-##################### END
-
-
-
-##################### EXTRACT WLS CID
 # Get the container prefix/suffix for the WLS service
 service_name=$(grep  $wls_service_name $kurtosis_inspect | awk '{print $2}')
-#service_name=$(kurtosis --cli-log-level $loglevel  enclave inspect $enclave_name | grep $wls_service_name | awk '{print $2}')
 service_uuid=$(grep $wls_service_name $kurtosis_inspect | awk '{print $1}')
-#service_uuid=$(kurtosis --cli-log-level $loglevel  enclave inspect --full-uuids $enclave_name | grep $wls_service_name | awk '{print $1}')
 
 # Construct the fully qualified container name that kurtosis has created
 wls_cid="$service_name--$service_uuid"
-echo "->$wls_cid<-"
+echo "The WLS_CID = $wls_cid"
 ##################### END
-#echo "$wls_cid == "$sn"--"$suuid
 
 
 ##################### MONITORING MODULE EPILOGUE: WLS SIGNALLING
@@ -133,14 +121,11 @@ elif [ "$metrics_infra" = "dstats" ]; then
     # collect container/node mapping via kurtosis
     kinspect=$odir/docker-kinspect.out
     cp $kurtosis_inspect $kinspect
-    #kurtosis  --cli-log-level $loglevel  enclave inspect $enclave_name > $kinspect
     sh ./monitoring/dstats/dstats.sh $wls_cid $odir &  # the process subtree takes care of itself
 elif [ "$metrics_infra" = "host-proc" ]; then
     echo "Starting host-proc measurements.."
     kinspect=$odir/docker-kinspect.out
     cp $kurtosis_inspect $kinspect
-    # collect container/node mapping via kurtosis
-    #kurtosis  --cli-log-level $loglevel  enclave inspect $enclave_name > $kinspect
     sh ./monitoring/host-proc/host-proc.sh  $wls_cid $odir $signal_fifo &
 elif [ "$metrics_infra" = "container-proc" ]; then
     echo "Starting monitoring with probes in the containers"
@@ -167,10 +152,6 @@ echo "Output of kurtosis run command written in kurtosisrun_log.txt"
 ##################### END
 
 
-# Get the container prefix/uffix for the WLS service
-#service_name="$(kurtosis --cli-log-level $loglevel  enclave inspect $enclave_name | grep $wls_service_name | awk '{print $2}')"
-#service_uuid="$(kurtosis --cli-log-level $loglevel  enclave inspect --full-uuids $enclave_name | grep $wls_service_name | awk '{print $1}')"
-
 
 ##################### WAIT FOR THE WLS TO FINISH
 # Wait for the container to halt; this will block
@@ -180,8 +161,6 @@ echo -e "Simulation ended with code $status_code Results in ./${enclave_name}_lo
 END2=$(date +%s)
 DIFF2=$(( $END2 - $END1 ))
 echo "Simulation took $DIFF1 + $DIFF2 = $(( $END2 - $START)) secs"
-
-
 ##################### END
 
 # give time for the messages to settle down before we collect the logs
@@ -192,7 +171,6 @@ sleep 60
 echo "Dumping Kurtosis logs"
 kurtosis enclave dump ${enclave_name} ${enclave_name}_logs > /dev/null 2>&1
 cp kurtosisrun_log.txt ${enclave_name}_logs
-
 # copy metrics data, config, network_data to the logs dir
 cp -r ./config ${enclave_name}_logs
 
@@ -226,7 +204,7 @@ if jq -e ."plotting" >/dev/null 2>&1 "./config/${wakurtosis_config_file}"; then
     if [ "$metrics_infra" = "container-proc" ]; then
         docker run --network "host" -v "$(pwd)/wakurtosis_logs:/simulation_data/" --add-host=host.docker.internal:host-gateway analysis src/main.py -i container-proc >/dev/null 2>&1
     elif [ "$metrics_infra" = "cadvisor" ]; then
-        prometheus_port=$(kurtosis enclave inspect wakurtosis | grep "\<prometheus\>" | awk '{print $6}' | awk -F':' '{print $2}')
+        prometheus_port=$(grep "\<prometheus\>" $kurtosis_inspect | awk '{print $6}' | awk -F':' '{print $2}')
         docker run --network "host" -v "$(pwd)/wakurtosis_logs:/simulation_data/" --add-host=host.docker.internal:host-gateway analysis src/main.py -i cadvisor -p "$prometheus_port" >/dev/null 2>&1
     fi
 fi
