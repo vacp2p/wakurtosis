@@ -44,7 +44,9 @@ docker rm cgennet > /dev/null 2>&1
 ##################### END
 
 
+kurtosis_run="kurtosis_run.log"
 kurtosis_inspect="kurtosis_inspect.log"
+
 usr=`id -u`
 grp=`id -g`
 stats_dir=stats
@@ -88,7 +90,7 @@ fi
 jobs=$(cat config/${wakurtosis_config_file} | jq -r ".kurtosis.jobs")
 echo -e "\nSetting up the enclave: $enclave_name"
 
-kurtosis_cmd="kurtosis --cli-log-level \"$loglevel\" run --full-uuids --enclave ${enclave_name} . '{\"wakurtosis_config_file\" : \"config/${wakurtosis_config_file}\"}' --parallelism ${jobs} > kurtosisrun_log.txt 2>&1"
+kurtosis_cmd="kurtosis --cli-log-level \"$loglevel\" run --full-uuids --enclave ${enclave_name} . '{\"wakurtosis_config_file\" : \"config/${wakurtosis_config_file}\"}' --parallelism ${jobs} > $kurtosis_run 2>&1"
 
 START=$(date +%s)
   eval $kurtosis_cmd
@@ -97,7 +99,7 @@ END1=$(date +%s)
 DIFF1=$(( $END1 - $START ))
 echo -e "Enclave $enclave_name is up and running: took $DIFF1 secs to setup"
 
-sed -n '/Starlark code successfully run. No output was returned./,$p'  kurtosisrun_log.txt  > $kurtosis_inspect
+sed -n '/Starlark code successfully run. No output was returned./,$p'  $kurtosis_run  > $kurtosis_inspect
 
 # Extract the WLS service name
 wls_service_name=$(grep "\<wls\>" $kurtosis_inspect | awk '{print $1}')
@@ -148,7 +150,7 @@ fi
 grafana_host=$(grep "\<grafana\>" $kurtosis_inspect | awk '{print $6}')
 
 echo -e "\n--> Statistics in Grafana server at http://$grafana_host/ <--"
-echo "Output of kurtosis run command written in kurtosisrun_log.txt"
+echo "Output of kurtosis run command written in $kurtosis_run"
 ##################### END
 
 
@@ -170,7 +172,7 @@ sleep 60
 # dump logs
 echo "Dumping Kurtosis logs"
 kurtosis enclave dump ${enclave_name} ${enclave_name}_logs > /dev/null 2>&1
-cp kurtosisrun_log.txt ${enclave_name}_logs
+cp $kurtosis_run $kurtosis_inspect ${enclave_name}_logs
 # copy metrics data, config, network_data to the logs dir
 cp -r ./config ${enclave_name}_logs
 
