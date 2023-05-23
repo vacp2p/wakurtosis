@@ -34,8 +34,7 @@ echo -e "\nRunning network generation"
 docker run --name cgennet -v ${dir}/config/:/config:ro gennet --config-file /config/${wakurtosis_config_file} --traits-dir /config/traits
 err=$?
 
-if [ $err != 0 ]
-then
+if [ $err != 0 ] then
   echo "Gennet failed with error code $err"
   exit
 fi
@@ -212,10 +211,8 @@ echo "- Enclave name:  $enclave_name" >> ./${enclave_name}_logs/run_args
 echo "- Configuration file:  $wakurtosis_config_file" >> ./${enclave_name}_logs/run_args
 
 # Run analysis
-if jq -e ."plotting" >/dev/null 2>&1 "./config/${wakurtosis_config_file}";
-then
-    if [ "$metrics_infra" = "container-proc" ];
-    then
+if jq -e ."plotting" >/dev/null 2>&1 "./config/${wakurtosis_config_file}"; then
+    if [ "$metrics_infra" = "container-proc" ]; then
         docker run --network "host" -v "$(pwd)/wakurtosis_logs:/simulation_data/" --add-host=host.docker.internal:host-gateway analysis src/main.py -i container-proc >/dev/null 2>&1
     elif [ "$metrics_infra" = "cadvisor" ]; then
         prometheus_port=$(kurtosis enclave inspect wakurtosis | grep "\<prometheus\>" | awk '{print $6}' | awk -F':' '{print $2}')
