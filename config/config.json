@@ -38,8 +38,8 @@
     "container_str_pattern": "waku",
     "process_str_pattern": "waku",
     "sampling_interval_s": 1,
-    "probe_filename": "./monitoring/probe.sh",
-    "metrics_filename": "./monitoring/metrics.json"
+    "probe_filename": "./probe.sh",
+    "metrics_filename": "./cproc_metrics.json"
   },
   "plotting": {
     "by_node": [

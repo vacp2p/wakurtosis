@@ -68,12 +68,13 @@ docker rm cgennet > /dev/null 2>&1
 
 
 ##################### HOST PROCFS MONITOR : PROLOGUE
-usr=`id -u`
-grp=`id -g`
-odir=./stats
-signal_fifo=/tmp/hostproc-signal.fifo   # do not create fifo under ./stats, or inside the repo
 if [ "$metrics_infra" = "host-proc" ];
 then
+    usr=`id -u`
+    grp=`id -g`
+    odir=./stats
+    signal_fifo=/tmp/hostproc-signal.fifo   # do not create fifo under ./stats, or inside the repo
+
     rclist=$odir/docker-rc-list.out
     cd monitoring/host-proc
     mkdir -p $odir
@@ -138,13 +139,18 @@ fi
 
 
 
-##################### DOCKER PROCFS MONITOR
+##################### Container-Proc MONITOR
 if [ "$metrics_infra" = "container-proc" ];
 then
-    echo "Jordi's measurement infra goes here"
+    echo "Starting monitoring with probes in the containers"
     # Start process level monitoring (in background, will wait to WSL to be created)
-    #sudo -E python3 ./monitoring/monitor.py & ?
-    #monitor_pid=$! ?
+   docker run \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v $(pwd)/monitoring/container-proc/:/cproc-mon/ \
+    -v $(pwd)/config/config.json:/cproc-mon/config/config.json \
+    container-proc:latest &
+ 
+    monitor_pid=$!
 fi
 ##################### END
 
@@ -177,7 +183,7 @@ echo "Simulation took $DIFF1 + $DIFF2 = $(( $END2 - $START)) secs"
 ##################### END
 
 # give time for the messages to settle down before we collect logs
-sleep 60
+# sleep 60
 
 ##################### GATHER CONFIG, LOGS & METRICS
 # dump logs
@@ -196,13 +202,14 @@ fi
 
 if [ "$metrics_infra" = "container-proc" ];
 then
-    echo "Jordi's data copy goes here"
-    #echo -e "Waiting monitoring to finish ..." ?
-    #wait $monitor_pid ?
+    echo -e "Waiting monitoring to finish ..."
+    wait $monitor_pid
+    echo "Copying the container-proc measurements"
+    cp ./monitoring/container-proc/cproc_metrics.json "./${enclave_name}_logs/cproc_metrics.json" > /dev/null 2>&1
+    # \rm -r ./monitoring/container-proc/cproc_metrics.json > /dev/null 2>&1
 fi
 
 # Copy simulation results
-# docker cp "$wls_cid:/wls/summary.json" "./${enclave_name}_logs" > /dev/null 2>&1
 docker cp "$wls_cid:/wls/messages.json" "./${enclave_name}_logs"
 docker cp "$wls_cid:/wls/network_topology/network_data.json" "./${enclave_name}_logs"
 
@@ -213,9 +220,13 @@ echo "- Configuration file:  $wakurtosis_config_file" >> ./${enclave_name}_logs/
 # Run analysis
 if jq -e ."plotting" >/dev/null 2>&1 "./config/${wakurtosis_config_file}";
 then
-    echo "Analyzing and plotting data into wakurtosis_logs..."
-    prometheus_port=$(kurtosis enclave inspect wakurtosis | grep "\<prometheus\>" | awk '{print $6}' | awk -F':' '{print $2}')
-    docker run --network "host" -v "$(pwd)/wakurtosis_logs:/simulation_data/" --add-host=host.docker.internal:host-gateway analysis src/main.py -p "$prometheus_port" >/dev/null 2>&1
+    if [ "$metrics_infra" = "container-proc" ];
+    then
+        docker run --network "host" -v "$(pwd)/wakurtosis_logs:/simulation_data/" --add-host=host.docker.internal:host-gateway analysis src/main.py -i container-proc >/dev/null 2>&1
+    elif [ "$metrics_infra" = "cadvisor" ]; then
+        prometheus_port=$(kurtosis enclave inspect wakurtosis | grep "\<prometheus\>" | awk '{print $6}' | awk -F':' '{print $2}')
+        docker run --network "host" -v "$(pwd)/wakurtosis_logs:/simulation_data/" --add-host=host.docker.internal:host-gateway analysis src/main.py -i cadvisor -p "$prometheus_port" >/dev/null 2>&1
+    fi
 fi
 
 echo "Done."

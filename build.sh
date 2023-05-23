@@ -13,7 +13,12 @@ sudo apt install kurtosis-cli=$kurtosis_version
 sudo apt-mark hold kurtosis-cli
 sudo rm /etc/apt/sources.list.d/kurtosis.list
 
-# Build Gennet & WLS docker images
+# Build the analysis docker image
+cd analysis-module
+sh ./build.sh
+cd ..
+
+# Build Gennet, WLS and Container-Proc monitoring docker images
 
 cd gennet-module
 sh ./build_docker.sh
@@ -23,9 +28,10 @@ cd wls-module
 docker build -t wls:0.0.1 .
 cd ..
 
-cd analysis-module
-docker build -t analysis .
+cd ./monitoring/container-proc
+sh ./build.sh
 cd ..
+
 
 git clone git@github.com:waku-org/go-waku.git
 cd go-waku

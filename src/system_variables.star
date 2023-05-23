@@ -1,5 +1,5 @@
 # Waku Configuration
-NWAKU_IMAGE = "statusteam/nim-waku:nwaku-trace2"
+NWAKU_IMAGE = "statusteam/nim-waku:nwaku-trace3"
 GOWAKU_IMAGE = "gowaku"
 
 # If changing this, you'll likely need to change it as well in gennet
