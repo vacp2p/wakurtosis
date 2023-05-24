@@ -191,13 +191,13 @@ elif [ "$metrics_infra" = "container-proc" ]; then
     # \rm -r ./monitoring/container-proc/cproc_metrics.json > /dev/null 2>&1
 fi
 
-# Copy simulation results
-docker cp "$wls_cid:/wls/messages.json" "./${enclave_name}_logs"
-docker cp "$wls_cid:/wls/network_topology/network_data.json" "./${enclave_name}_logs"
-
 echo "- Metrics Infra:  $metrics_infra" > ./${enclave_name}_logs/run_args
 echo "- Enclave name:  $enclave_name" >> ./${enclave_name}_logs/run_args
 echo "- Configuration file:  $wakurtosis_config_file" >> ./${enclave_name}_logs/run_args
+
+# Copy simulation results
+docker cp "$wls_cid:/wls/network_topology/network_data.json" "./${enclave_name}_logs"
+docker cp "$wls_cid:/wls/messages.json" "./${enclave_name}_logs"
 
 # Run analysis
 if jq -e ."plotting" >/dev/null 2>&1 "./config/${wakurtosis_config_file}"; then
