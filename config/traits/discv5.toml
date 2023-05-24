@@ -10,7 +10,7 @@
 #                               nodes it communicates with. This option allows to
 #                               enable/disable this functionality [=false].
 
-discv5-discovery=false
+discv5-discovery=true
 #discv5-udp-port=
-#discv5-bootstrap-node=
+discv5-bootstrap-node={{.bootstrap}}
 #discv5-enr-auto-update=
