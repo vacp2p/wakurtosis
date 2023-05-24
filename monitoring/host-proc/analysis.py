@@ -7,6 +7,8 @@ from pathlib import Path
 
 import time
 
+import json
+
 import re
 
 import logging as log
@@ -87,7 +89,7 @@ class Plots(metaclass=Singleton):
     # jordi's log processing
     def compute_settling_times(self):
         ldir = str(self.log_dir)
-        topology_info = topology.load_topology(f'{ldir}/{vars.G_TOPOLOGY_FILE_NAME}')
+        topology_info = topology.load_json(f'{ldir}/{vars.G_TOPOLOGY_FILE_NAME}')
         topology.load_topics_into_topology(topology_info, f'{ldir}/config/topology_generated/')
         injected_msgs_dict = log_parser.load_messages(ldir)
         node_logs, msgs_dict, min_tss, max_tss = analysis.analyze_containers(topology_info, ldir)
@@ -137,12 +139,12 @@ class Plots(metaclass=Singleton):
         self.cluster_plot_helper(grp='Key', cols=self.cols)
         pp.savefig(plt.gcf())
         pp.close()
-        #plt.show()
+        plt.show()
 
     def set_panel_size(self, m, n, shareY=False):
         self.fig, self.axes = plt.subplots(m, n, layout='constrained', sharey=shareY)
 
-    def column_panel_helper(self, col, cdf=True):
+    def column_panel_helper(self, col, agg=True):
         self.set_panel_size(2, 2)
         #fig, axes = plt.subplots(2, 2, layout='constrained', sharey=False)
         self.fig.set_figwidth(12)
@@ -159,7 +161,7 @@ class Plots(metaclass=Singleton):
         self.axes[0,0].ticklabel_format(style='plain')
         self.axes[0,0].yaxis.grid(True)
         for key in self.keys:
-            if cdf:
+            if agg:
                 tmp = self.df[self.get_key() == key][col].values
             else:
                 tmp = self.df[self.get_key() == key][col].diff().dropna().values
@@ -216,7 +218,7 @@ class Plots(metaclass=Singleton):
                 loc='upper right', ncol=1, fontsize=8)
         pp.savefig(plt.gcf())
         pp.close()
-        #plt.show()
+        plt.show()
 
     def build_key2nodes(self):
         with open(self.kinspect_fname) as f:
@@ -250,11 +252,11 @@ class Plots(metaclass=Singleton):
         groups = self.df[grp].unique()
         groups.sort()
         xpdf = pd.DataFrame()
-        print(f'GG: {groups}, {xpdf}, {self.df.shape}')
+        #print(f'GG: {groups}, {xpdf}, {self.df.shape}')
         for g in groups:
             X =self.df.loc[self.df[grp] == g][cols]
             Xflat = X.values.flatten()
-            print(f'GGG: {g}, {X.shape}, {Xflat.shape}, {xpdf.shape}')
+            #print(f'GGG: {g}, {X.shape}, {Xflat.shape}, {xpdf.shape}')
             xpdf[g] = Xflat
             labels = kmeans.fit_predict(X)
             #TODO: plot better. it is not very interpretable now
@@ -270,9 +272,6 @@ class Plots(metaclass=Singleton):
         labels = kmeans.fit_predict(xpdf)
         self.axes[1,1].scatter(xpdf.iloc[:, 0], xpdf.iloc[:, 2], c=labels,  cmap='plasma')
         #self.axes[1,1].scatter(x=range(0, len(labels)), y=labels, marker='.')
-
-
-        #plt.show()
 
     def compare_plots(self):
         pass
@@ -312,7 +311,6 @@ class DStats(Plots, metaclass=Singleton):
                             "PIDS"          : "PIDS"
                             }
         self.cols = ["CPUPerc", "MemUse","NetRecv", "NetSent", "BlockR", "BlockW"]
-        self.process_dstats_data()
 
     # remove the formatting artefacts
     def pre_process(self):
@@ -341,7 +339,7 @@ class DStats(Plots, metaclass=Singleton):
         self.set_keys()
 
     # build df from csv
-    def process_dstats_data(self):
+    def process_data(self):
         log.info(f'processing {self.dstats_fname}...')
         self.pre_process()
         self.df = pd.read_csv(self.dstats_fname, header=0,  comment='#', skipinitialspace = True,
@@ -353,13 +351,13 @@ class DStats(Plots, metaclass=Singleton):
         self.remove_incomplete_samples(grp='Key', err='--')
         self.df.to_csv(f'{self.oprefix}-dstats-cleaned.csv', sep='/')
 
-    def plot_column_panels(self, cdf):
+    def plot_column_panels(self, agg):
         self.column_panel_helper("CPUPerc")
         self.column_panel_helper("MemUse")
-        self.column_panel_helper("NetSent", cdf)
-        self.column_panel_helper("NetRecv", cdf)
-        self.column_panel_helper("BlockR", cdf)
-        self.column_panel_helper("BlockW", cdf)
+        self.column_panel_helper("NetSent", agg)
+        self.column_panel_helper("NetRecv", agg)
+        self.column_panel_helper("BlockR", agg)
+        self.column_panel_helper("BlockW", agg)
 
 
 class HostProc(Plots, metaclass=Singleton):
@@ -408,7 +406,6 @@ class HostProc(Plots, metaclass=Singleton):
         self.cols = ['VmPeak', 'VmSize', 'VmHWM', 'VmRSS', 'VmData', 'VmStk',
                             'RxBytes', 'RxPackets', 'TxBytes', 'TxPackets', 'NetRX', 'NetWX',
                             'InOctets', 'OutOctets', 'BLKR', 'BLKW']
-        self.process_host_proc_data()
 
     '''def build_key2nodes(self):
         for key in self.df["Key"]:
@@ -416,7 +413,7 @@ class HostProc(Plots, metaclass=Singleton):
             #self.df[Node][self.df.Key=key].unique()
     '''
 
-    def process_host_proc_data(self):
+    def process_data(self):
         if not path_ok(Path(self.fname)):
             sys.exit(0)
         self.df = pd.read_csv(self.fname, header=0,  comment='#', skipinitialspace = True,
@@ -451,7 +448,7 @@ class HostProc(Plots, metaclass=Singleton):
         self.set_keys()
         self.df.fillna(0)
 
-    def plot_column_panels(self, cdf):
+    def plot_column_panels(self, agg):
         self.column_panel_helper("CPUPERC")
         self.column_panel_helper("VmSize")
         self.column_panel_helper("VmPeak")
@@ -459,17 +456,40 @@ class HostProc(Plots, metaclass=Singleton):
         #self.column_panel_helper("VmHWM") - HighWaterMark
         self.column_panel_helper("VmData")
         self.column_panel_helper("VmStk")
-        self.column_panel_helper("RxBytes", cdf)
-        self.column_panel_helper("TxBytes", cdf)
-        self.column_panel_helper("NetRX", cdf)
-        self.column_panel_helper("NetWX", cdf)
-        self.column_panel_helper("InOctets", cdf)
-        self.column_panel_helper("OutOctets", cdf)
-        self.column_panel_helper("BLKR", cdf)
-        self.column_panel_helper("BLKW", cdf)
+        self.column_panel_helper("RxBytes", agg)
+        self.column_panel_helper("TxBytes", agg)
+        self.column_panel_helper("NetRX", agg)
+        self.column_panel_helper("NetWX", agg)
+        self.column_panel_helper("InOctets", agg)
+        self.column_panel_helper("OutOctets", agg)
+        self.column_panel_helper("BLKR", agg)
+        self.column_panel_helper("BLKW", agg)
 
-    def plot_clusters(self, grp, cdf, axes):
+    def plot_clusters(self, grp, agg, axes):
         self.cluster_plot_helper(col=['CPUPERC', 'VmPeak', 'VmRSS', 'VmSize', 'VmHWM', 'VmData'], grp=grp, axes=axes)
+
+def _config_file_callback(ctx: typer.Context, param: typer.CallbackParam, cfile: str):
+    if cfile:
+        typer.echo(f"Loading config file: {os.path.basename(cfile)}")
+        ctx.default_map = ctx.default_map or {}  # Init the default map
+        try:
+            with open(cfile, 'r') as f:  # Load config file
+                conf = json.load(f)
+                if "plotting" not in conf:
+                    print(f"No plotting is requested in {cfile}. Skipping plotting.")
+                    sys.exit(0)
+                # Merge config and default_map
+                if "dstats" in conf["plotting"]:
+                    ctx.default_map.update(conf["plotting"]["dstats"])
+                elif "host-proc" in conf["plotting"]:
+                    ctx.default_map.update(conf["plotting"]["host-proc"])
+                else:
+                    print(f"No dstats/host-proc params in config. Sticking to defaults")
+                # TODO : type-check and sanity-check the values in config.json
+            ctx.default_map.update(conf["plotting"])  # Merge config and default_map
+        except Exception as ex:
+            raise typer.BadParameter(str(ex))
+    return cfile
 
 # instantiate typer and set the commands
 app = typer.Typer()
@@ -477,17 +497,20 @@ app = typer.Typer()
 # process / plot docker-procfs.out
 @app.command()
 def host_proc(log_dir: Path,
-            oprefix:str = typer.Option("out", help="Specify the prefix for the plot pdfs"),
-            cdf: bool = typer.Option(True, help="Specify whether to accumulate or dis-aggregate")):
+            out_prefix: str = typer.Option("out", help="Specify the prefix for the plot pdfs"),
+            aggregate: bool = typer.Option(True, help="Specify whether to aggregate"),
+            config_file: str = typer.Option("", callback=_config_file_callback, is_eager=True,
+                help="Set the input config file (JSON)")):
     if not path_ok(log_dir, True):
         sys.exit(0)
 
-    host_proc = HostProc(log_dir, oprefix)
+    host_proc = HostProc(log_dir, out_prefix)
+    host_proc.process_data()
     host_proc.compute_settling_times()
     host_proc.build_cluster_index('ContainerID')
     #host_proc.plot_clusters('ContainerID', cdf)
-    host_proc.plot_column_panels(cdf)
     host_proc.plot_settling_times()
+    host_proc.plot_column_panels(aggregate)
     df = host_proc.get_df()
 
     print(f'Done: {log_dir}')
@@ -496,19 +519,21 @@ def host_proc(log_dir: Path,
 # process / plot docker-dstats.out
 @app.command()
 def dstats(log_dir: Path,
-            oprefix:str = typer.Option("out", help="Specify the prefix for the plot pdfs"),
-            cdf: bool = typer.Option(True, help="Specify the prefix for the plots")):
+            out_prefix: str = typer.Option("out", help="Specify the prefix for the plot pdfs"),
+            aggregate: bool = typer.Option(True, help="Specify whether to aggregate"),
+            config_file: str = typer.Option("", callback=_config_file_callback, is_eager=True,
+             help="Set the input config file (JSON)")):
     if not path_ok(log_dir, True):
         sys.exit(0)
 
-    dstats = DStats(log_dir, oprefix)
+    dstats = DStats(log_dir, out_prefix)
+    dstats.process_data()
     dstats.compute_settling_times()
     dstats.plot_settling_times()
-    dstats.plot_column_panels(cdf)
+    dstats.plot_column_panels(aggregate)
     df = dstats.get_df()
 
     print(f'Done: {log_dir}')
-
 
 
 if __name__ == "__main__":
