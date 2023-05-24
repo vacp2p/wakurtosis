@@ -7,10 +7,10 @@ grafana = import_module(vars.GRAFANA_MODULE)
 args_parser = import_module(vars.ARGUMENT_PARSER_MODULE)
 wls = import_module(vars.WLS_MODULE)
 nodes = import_module(vars.NODE_BUILDERS_MODULE)
+nwaku_builder = import_module(vars.NWAKU_BUILDER_MODULE)
 
 
 def run(plan, args):
-
     # Load global config file
     config_file = args_parser.get_configuration_file_name(plan, args)
     config_json = read_file(src=config_file)
@@ -23,8 +23,13 @@ def run(plan, args):
     network_topology = read_file(src=vars.TOPOLOGIES_LOCATION + vars.DEFAULT_TOPOLOGY_FILE)
     network_topology = json.decode(network_topology)
 
-    # Set up nodes
-    nodes.instantiate_services(plan, network_topology, False)
+    # Set up node (todo change discv address to empty)
+    bootstrap_node = nwaku_builder.instantiate_bootstrap_nwaku(plan, "node-bootstrap",
+                                                               "bootstrap.toml", False)
+    # Get node address
+
+    # Use address in other node toml files
+    nodes.instantiate_services(plan, network_topology, False, False)
 
     # Set up prometheus + grafana
     prometheus_service = prometheus.set_up_prometheus(plan, network_topology)

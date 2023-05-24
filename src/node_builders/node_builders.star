@@ -5,7 +5,7 @@ vars = import_module("github.com/logos-co/wakurtosis/src/system_variables.star")
 files = import_module(vars.FILE_HELPERS_MODULE)
 dispatchers = import_module(vars.DISPATCHERS_MODULE)
 
-def instantiate_services(plan, network_topology, testing):
+def instantiate_services(plan, network_topology, discovery, testing):
     """
     As we will need to access for the service information later, we are adding Starlark info into
     the network topology.:
@@ -43,6 +43,9 @@ def instantiate_services(plan, network_topology, testing):
             in zip(config_file_names, nodes_in_service)
         ]
 
+        #if discovery:
+            # add bootstrap node to tomls
+
         service_builder(nodes_in_service, all_services_configuration, config_file_names,
                         config_files_artifact_ids, service_id, network_topology)
 
@@ -68,13 +71,13 @@ def interconnect_nodes(plan, topology_information, interconnection_batch):
                         for peer in peers[i:i + interconnection_batch]]
 
             connect_node_to_peers(plan, nodes_in_topology[node_id][vars.GENNET_NODE_CONTAINER_KEY],
-                                      node_id, vars.RPC_PORT_ID, peer_ids)
+                                      node_id, vars.WAKU_RPC_PORT_ID, peer_ids)
 
 
 
 def _add_service_info_to_topology(plan, all_services_information, network_topology):
     for node_id, node_info in network_topology[vars.GENNET_NODES_KEY].items():
-        node_rpc_port_id = vars.RPC_PORT_ID + vars.ID_STR_SEPARATOR + node_id
+        node_rpc_port_id = vars.WAKU_RPC_PORT_ID + vars.ID_STR_SEPARATOR + node_id
 
         image = network_topology[vars.GENNET_NODES_KEY][node_id][vars.GENNET_IMAGE_KEY]
         peer_id_getter = dispatchers.service_info_dispatcher[image]
