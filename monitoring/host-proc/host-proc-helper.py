@@ -14,69 +14,74 @@ from pathlib import Path
 #from procfs import Proc
 from collections import defaultdict
 
+# define singleton 
+class Singleton(type):
+    _instances = {}
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+        return cls._instances[cls]
 
-# pulls system-wide jiffies
-def get_system_cpu(f):
-    f.seek(0)
-    return sum(float(s) for s in f.readline().split()[2:])
+class Parser(metaclass=Singleton):
+    def __init__(self, csize):
+        self.csize = csize
 
+    # pulls system-wide jiffies
+    def system_cpu(self, f):
+        f.seek(0)
+        return sum(float(s) for s in f.readline().split()[2:])
 
-# pulls per-process user/system jiffies
-def get_process_cpu(f):
-    f.seek(0)
-    rbuff = f.readline().split()
-    ptot = rbuff[13] + rbuff[14]
-    return float(ptot)
+    # pulls per-process user/system jiffies
+    def process_cpu(self, f):
+        f.seek(0)
+        rbuff = f.readline().split()
+        ptot = rbuff[13] + rbuff[14]
+        return float(ptot)
 
+    # pulls VmPeak, VmSize, VmRSS stats per wakunode
+    def mem_metrics(self, f):
+        f.seek(0)
+        rbuff = f.readlines()
+        lst = [16, 17, 21, 25, 26] #VmPeak, VmSize, VmRSS, VmData, VmStack
+        out = [' '.join(rbuff[i].replace("\n", " ").replace(":", "").split()) for i in lst]
+        res = ' '.join(out)
+        return res
 
-# pulls VmPeak, VmSize, VmRSS stats per wakunode
-def get_mem_metrics(f):
-    f.seek(0)
-    rbuff = f.readlines()
-    lst = [16, 17, 20, 21, 25, 26] #VmPeak, VmSize, VmHWM, VmRSS, VmData, VmStack
-    out = [' '.join(rbuff[i].replace("\n", " ").replace(":", "").split()) for i in lst]
-    res = ' '.join(out)
-    return res
+    # pulls Rx/Tx Bytes and Packers per wakunode
+    def net1_metrics(self, f, host_if):
+        f.seek(0)
+        rbuff = f.readlines()
+        out = [line.strip().split() for line in rbuff if "eth0" in line]        # docker
+        if out == []:
+            out = [line.strip().split() for line in rbuff if host_if in line]     # host
+        out = out[0]
+        res = f'{out[0]} RxBytes {out[1]} RxPackets {out[2]} TxBytes {out[9]} TxPackets {out[10]}'
+        return res
 
+    # TODO: reconcile with net1 and net3
+    # pulls Rx/Tx Bytes per wakunode
+    def net2_metrics(self, f, veth="eth0"):
+        f.seek(0)
+        rbuff = f.readlines()
+        ra = rbuff[3].split()
+        res = f'InOctets {ra[7]} OutOctets {ra[8]}'
+        return f'{veth} {res}'
 
-# pulls Rx/Tx Bytes and Packers per wakunode
-def get_net1_metrics(f, host_if):
-    f.seek(0)
-    rbuff = f.readlines()
-    out = [line.strip().split() for line in rbuff if "eth0" in line]        # docker
-    if out == []:
-        out = [line.strip().split() for line in rbuff if host_if in line]     # host
-    out = out[0]
-    res = f'{out[0]} RxBytes {out[1]} RxPackets {out[2]} TxBytes {out[9]} TxPackets {out[10]}'
-    return res
+    # pulls Rx/Tx Bytes per wakunode
+    def net3_metrics(self, frx, ftx, veth="eth0"):
+        frx.seek(0)
+        ftx.seek(0)
+        return f'{veth} NETRX {frx.read().strip()} NETWX {ftx.read().strip()}'
 
-
-# TODO: reconcile with net1 and net3
-# pulls Rx/Tx Bytes per wakunode
-def get_net2_metrics(f, veth="eth0"):
-    f.seek(0)
-    rbuff = f.readlines()
-    ra = rbuff[3].split()
-    res = f'InOctets {ra[7]} OutOctets {ra[8]}'
-    return f'{veth} {res}'
-
-
-# pulls Rx/Tx Bytes per wakunode
-def get_net3_metrics(frx, ftx, veth="eth0"):
-    frx.seek(0)
-    ftx.seek(0)
-    return f'{veth} NETRX {frx.read().strip()} NETWX {ftx.read().strip()}'
-
-
-# pulls the disk read/write bytes per wakunodes
-# TODO: demonise block reads: UNIX sockets/IPC/MSG QUEUES
-def get_blk_metrics(f):
-    f.seek(0)
-    rbuff = f.readlines()
-    #lst = [4, 5]
-    lst = [0, 1] if csize == 1 else [4, 5]
-    res = ''.join([rbuff[i].replace("\n", " ").replace("259:0 ", "") for i in lst])
-    return res
+    # pulls the disk read/write bytes per wakunodes
+    # TODO: demonise block reads if cszie > 1: UNIX sockets/IPC/MSG QUEUES
+    def blk_metrics(self, f):
+        f.seek(0)
+        rbuff = f.readlines()
+        lst = [4, 5]
+        #lst = [0, 1] if self.csize == 1 else [4, 5]
+        res = ''.join([rbuff[i].replace("\n", " ").replace("259:0 ", "") for i in lst])
+        return res
 
 
 class MetricsCollector:
@@ -85,6 +90,7 @@ class MetricsCollector:
         self.prefix = prefix
         self.procfs_sampling_interval = sampling_interval
         self.pid2procfds = defaultdict(dict)
+        self.parser = Parser(csize)
 
 
         self.docker_ps_fname =  os.environ["DPS_FNAME"]
@@ -139,12 +145,11 @@ class MetricsCollector:
             self.pid2procfds[pid]["net2"] =  open(f'/proc/{pid}/net/netstat')
             self.pid2procfds[pid]["net3rx"] =  open(f'/sys/class/net/{self.pid2veth[pid]}/statistics/rx_bytes')
             self.pid2procfds[pid]["net3tx"] =  open(f'/sys/class/net/{self.pid2veth[pid]}/statistics/tx_bytes')
-            # require SUDO only if csize != 1
-            self.pid2procfds[pid]["blk"]  = open((f'/sys/fs/cgroup/blkio/docker'
-                                                  f'/{self.pid2did[pid]}/'
-                                                  f'blkio.throttle.io_service_bytes'
-                                             )) if self.csize == 1 else open(f'/proc/{pid}/io')
-            #self.pid2procfds[pid]["blk"] =  open(f'/proc/{pid}/io') 
+            #self.pid2procfds[pid]["blk"]  = open((f'/sys/fs/cgroup/blkio/docker'
+            #                                      f'/{self.pid2did[pid]}/'
+            #                                      f'blkio.throttle.io_service_bytes'
+            #                                 )) if self.csize == 1 else open(f'/proc/{pid}/io')
+            self.pid2procfds[pid]["blk"] =  open(f'/proc/{pid}/io') # require SUDO
         self.procfs_fd = open(self.procout_fname, "a")
         t2 = time.time()
         log.info((f'Metrics: populate_file_handles took {t2-t1:.5f} secs '
@@ -167,16 +172,16 @@ class MetricsCollector:
     def procfs_collector(self):
         for pid in self.docker_pids:
             veth = self.pid2veth[pid]
-            sys_ctot = get_system_cpu(self.pid2procfds[0]["cpu"])
-            pid_ctot = get_process_cpu(self.pid2procfds[pid]["cpu"])
+            sys_ctot = self.parser.system_cpu(self.pid2procfds[0]["cpu"])
+            pid_ctot = self.parser.process_cpu(self.pid2procfds[pid]["cpu"])
             cpu_perc = (pid_ctot - self.last_pid_ctot[pid]) / (sys_ctot - self.last_sys_ctot[pid])
             self.last_sys_ctot[pid], self.last_pid_ctot[pid] = sys_ctot, pid_ctot
-            mem = get_mem_metrics(self.pid2procfds[pid]["mem"])
-            net1 = get_net1_metrics(self.pid2procfds[pid]["net1"], self.host_if)
-            net2 = get_net2_metrics(self.pid2procfds[pid]["net2"], veth) # SNMP MIB
-            net3 = get_net3_metrics(self.pid2procfds[pid]["net3rx"],
+            mem = self.parser.mem_metrics(self.pid2procfds[pid]["mem"])
+            net1 = self.parser.net1_metrics(self.pid2procfds[pid]["net1"], self.host_if)
+            net2 = self.parser.net2_metrics(self.pid2procfds[pid]["net2"], veth) # SNMP MIB
+            net3 = self.parser.net3_metrics(self.pid2procfds[pid]["net3rx"],
                     self.pid2procfds[pid]["net3tx"], veth) # sysfs/cgroup stats
-            blk = get_blk_metrics(self.pid2procfds[pid]["blk"]) # Read, Write
+            blk = self.parser.blk_metrics(self.pid2procfds[pid]["blk"]) # Read, Write
             out = ( f'SAMPLE_{self.procfs_sample_cnt} '
                     f'{pid} {self.pid2node_name[pid]} {time.time()} '
                     f'{self.pid2did[pid]} {self.pid2kdid[pid]} '
@@ -200,8 +205,8 @@ class MetricsCollector:
     def set_last_cpu_totals(self):
         log.info("Metrics: set last_cpu_totals")
         for pid in self.docker_pids:
-            self.last_sys_ctot[pid] = get_system_cpu(self.pid2procfds[0]["cpu"])
-            self.last_pid_ctot[pid] = get_process_cpu(self.pid2procfds[pid]["cpu"])
+            self.last_sys_ctot[pid] = self.parser.system_cpu(self.pid2procfds[0]["cpu"])
+            self.last_pid_ctot[pid] = self.parser.process_cpu(self.pid2procfds[pid]["cpu"])
 
     # add headers and schedule /proc reader's first read
     def launch_procfs_monitor(self, wls_cid):
