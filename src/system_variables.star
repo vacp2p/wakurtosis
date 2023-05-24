@@ -5,8 +5,6 @@ GOWAKU_IMAGE = "gowaku"
 # If changing this, you'll likely need to change it as well in gennet
 ID_STR_SEPARATOR = "-"
 
-RPC_PORT_ID = "rpc"
-
 NODE_CONFIG_FILE_LOCATION = "github.com/logos-co/wakurtosis/config/topology_generated/"
 CONFIG_FILE_LOCATION = "github.com/logos-co/wakurtosis/config/"
 CONTAINER_NODE_CONFIG_FILE_LOCATION = "/node/configuration_file/"
@@ -19,6 +17,7 @@ WLS_KEY = "wls"
 INTERCONNECTION_BATCH_KEY = "interconnection_batch"
 
 # Waku Configuration
+WAKU_RPC_PORT_ID = "rpc"
 WAKU_RPC_PORT_PROTOCOL = "TCP"
 WAKU_RPC_PORT_NUMBER = 8545
 WAKU_LIBP2P_PORT_ID = "libp2p"

@@ -43,13 +43,13 @@ def test_send_json_rpc(plan, test_node, test_node_info):
     service_id = test_node_info[vars.GENNET_NODE_CONTAINER_KEY]
 
     # Automatically waits for 200
-    call_protocols.send_json_rpc(plan, service_id, vars.RPC_PORT_ID+vars.ID_STR_SEPARATOR+test_node,
+    call_protocols.send_json_rpc(plan, service_id, vars.WAKU_RPC_PORT_ID+vars.ID_STR_SEPARATOR+test_node,
                        vars.POST_RELAY_MESSAGE_METHOD, params)
 
 
 def test_get_wakunode_peer_id(plan, test_node, test_node_info, expected_ids):
     service_id = test_node_info[vars.GENNET_NODE_CONTAINER_KEY]
-    peer_id = waku.get_wakunode_peer_id(plan, service_id, vars.RPC_PORT_ID+vars.ID_STR_SEPARATOR+test_node)
+    peer_id = waku.get_wakunode_peer_id(plan, service_id, vars.WAKU_RPC_PORT_ID+vars.ID_STR_SEPARATOR+test_node)
     plan.print("Peer ID for " + test_node + ": " + peer_id)
     plan.assert(value=peer_id, assertion="==", target_value=expected_ids[test_node])
 

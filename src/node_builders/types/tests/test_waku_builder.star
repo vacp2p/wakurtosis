@@ -11,7 +11,7 @@ def test_prepare_waku_ports_in_service(plan):
     ports = waku_builders.prepare_waku_ports_in_service(["test1", "test2"], topology)
 
     for node_name in ["test1", "test2"]:
-        plan.assert(value=str(ports[vars.RPC_PORT_ID+vars.ID_STR_SEPARATOR+node_name].number),
+        plan.assert(value=str(ports[vars.WAKU_RPC_PORT_ID+vars.ID_STR_SEPARATOR+node_name].number),
             assertion="==", target_value = str(vars.WAKU_RPC_PORT_NUMBER +
                                            topology["nodes"][node_name][vars.GENNET_PORT_SHIFT_KEY]))
         plan.assert(value=str(ports[vars.PROMETHEUS_PORT_ID+vars.ID_STR_SEPARATOR+node_name].number),
@@ -33,7 +33,7 @@ def test_prepare_waku_config_files_in_service(plan):
 
 def test_add_waku_ports_info_to_topology(plan):
     network_topology = {"nodes": {"test1": {}, "test2": {}}}
-    service_struct_1 = struct(ports={vars.RPC_PORT_ID+"-test1": PortSpec(number=1),
+    service_struct_1 = struct(ports={vars.WAKU_RPC_PORT_ID+"-test1": PortSpec(number=1),
                                      vars.WAKU_LIBP2P_PORT_ID+"-test1": PortSpec(number=2),
                                      vars.PROMETHEUS_PORT_ID+"-test1": PortSpec(number=3)})
 
@@ -43,7 +43,7 @@ def test_add_waku_ports_info_to_topology(plan):
 
     waku_builders.add_waku_ports_info_to_topology(network_topology, services, node_info1, "test1")
 
-    plan.assert(value=str(network_topology["nodes"]["test1"]["ports"][vars.RPC_PORT_ID+"-test1"][0]),
+    plan.assert(value=str(network_topology["nodes"]["test1"]["ports"][vars.WAKU_RPC_PORT_ID+"-test1"][0]),
                 assertion="==", target_value=str(1))
     plan.assert(value=str(network_topology["nodes"]["test1"]["ports"][vars.WAKU_LIBP2P_PORT_ID+"-test1"][0]),
                 assertion="==", target_value=str(2))

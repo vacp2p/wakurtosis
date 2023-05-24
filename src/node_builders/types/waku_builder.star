@@ -8,9 +8,9 @@ def prepare_waku_ports_in_service(node_names, network_topology):
     for node_name in node_names:
         node_info = network_topology[vars.GENNET_NODES_KEY][node_name]
 
-        prepared_ports[vars.RPC_PORT_ID + vars.ID_STR_SEPARATOR + node_name] = \
-            PortSpec(number=vars.WAKU_RPC_PORT_NUMBER + node_info[vars.GENNET_PORT_SHIFT_KEY],
-                     transport_protocol=vars.WAKU_RPC_PORT_PROTOCOL)
+    prepared_ports[vars.WAKU_RPC_PORT_ID + vars.ID_STR_SEPARATOR + node_name] = \
+        PortSpec(number=vars.WAKU_RPC_PORT_NUMBER + node_info[vars.GENNET_PORT_SHIFT_KEY],
+                 transport_protocol=vars.WAKU_RPC_PORT_PROTOCOL)
 
         prepared_ports[vars.PROMETHEUS_PORT_ID + vars.ID_STR_SEPARATOR + node_name] = \
             PortSpec(number=vars.PROMETHEUS_PORT_NUMBER + node_info[vars.GENNET_PORT_SHIFT_KEY],
@@ -32,7 +32,7 @@ def prepare_waku_config_files_in_service(node_names, artifact_ids):
 
 
 def add_waku_ports_info_to_topology(network_topology, all_services_information, node_info, node_id):
-    waku_rpc_port_id = vars.RPC_PORT_ID + vars.ID_STR_SEPARATOR + node_id
+    waku_rpc_port_id = vars.WAKU_RPC_PORT_ID + vars.ID_STR_SEPARATOR + node_id
     libp2p_port_id = vars.WAKU_LIBP2P_PORT_ID + vars.ID_STR_SEPARATOR + node_id
     prometheus_port_id = vars.PROMETHEUS_PORT_ID + vars.ID_STR_SEPARATOR + node_id
 
