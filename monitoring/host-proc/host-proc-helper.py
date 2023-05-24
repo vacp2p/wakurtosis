@@ -19,7 +19,6 @@ from collections import defaultdict
 def get_system_cpu(f):
     f.seek(0)
     return sum(float(s) for s in f.readline().split()[2:])
-    #return f'{rbuff[0].strip()}'
 
 
 # pulls per-process user/system jiffies
@@ -28,8 +27,6 @@ def get_process_cpu(f):
     rbuff = f.readline().split()
     ptot = rbuff[13] + rbuff[14]
     return float(ptot)
-    #lst = [-3, -2]  # user jiffies, system jiffies
-    #return f'{rbuff[-3]} {rbuff[-2]}'
 
 
 # pulls VmPeak, VmSize, VmRSS stats per wakunode
@@ -53,6 +50,7 @@ def get_net1_metrics(f, host_if):
     res = f'{out[0]} RxBytes {out[1]} RxPackets {out[2]} TxBytes {out[9]} TxPackets {out[10]}'
     return res
 
+
 # TODO: reconcile with net1 and net3
 # pulls Rx/Tx Bytes per wakunode
 def get_net2_metrics(f, veth="eth0"):
@@ -61,6 +59,7 @@ def get_net2_metrics(f, veth="eth0"):
     ra = rbuff[3].split()
     res = f'InOctets {ra[7]} OutOctets {ra[8]}'
     return f'{veth} {res}'
+
 
 # pulls Rx/Tx Bytes per wakunode
 def get_net3_metrics(frx, ftx, veth="eth0"):
@@ -74,13 +73,15 @@ def get_net3_metrics(frx, ftx, veth="eth0"):
 def get_blk_metrics(f):
     f.seek(0)
     rbuff = f.readlines()
-    lst = [4, 5]        #lst = [0, 1] if csize == 1 else [4, 5]
+    #lst = [4, 5]
+    lst = [0, 1] if csize == 1 else [4, 5]
     res = ''.join([rbuff[i].replace("\n", " ").replace("259:0 ", "") for i in lst])
     return res
 
 
 class MetricsCollector:
-    def __init__(self, prefix, sampling_interval):
+    def __init__(self, csize, prefix, sampling_interval):
+        self.csize = csize
         self.prefix = prefix
         self.procfs_sampling_interval = sampling_interval
         self.pid2procfds = defaultdict(dict)
@@ -90,7 +91,6 @@ class MetricsCollector:
         self.docker_inspect_fname =  os.environ["DINSPECT_FNAME"]
         self.ps_pids_fname = os.environ["PIDLIST_FNAME"]
         self.docker_pid2veth_fname = os.environ["ID2VETH_FNAME"]
-        #self.docker_dids = []
 
         self.docker_pids = []
         self.docker_npids = len(self.docker_pids)
@@ -139,11 +139,12 @@ class MetricsCollector:
             self.pid2procfds[pid]["net2"] =  open(f'/proc/{pid}/net/netstat')
             self.pid2procfds[pid]["net3rx"] =  open(f'/sys/class/net/{self.pid2veth[pid]}/statistics/rx_bytes')
             self.pid2procfds[pid]["net3tx"] =  open(f'/sys/class/net/{self.pid2veth[pid]}/statistics/tx_bytes')
-            #blk = ((f'/sys/fs/cgroup/blkio/docker'
-            #        f'/{self.pid2did[pid]}/'
-            #        f'blkio.throttle.io_service_bytes'
-            #     )) if self.csize == 1 else f'/proc/{pid}/io'
-            self.pid2procfds[pid]["blk"] =  open(f'/proc/{pid}/io') # require SUDO
+            # require SUDO only if csize != 1
+            self.pid2procfds[pid]["blk"]  = open((f'/sys/fs/cgroup/blkio/docker'
+                                                  f'/{self.pid2did[pid]}/'
+                                                  f'blkio.throttle.io_service_bytes'
+                                             )) if self.csize == 1 else open(f'/proc/{pid}/io')
+            #self.pid2procfds[pid]["blk"] =  open(f'/proc/{pid}/io') 
         self.procfs_fd = open(self.procout_fname, "a")
         t2 = time.time()
         log.info((f'Metrics: populate_file_handles took {t2-t1:.5f} secs '
@@ -195,6 +196,7 @@ class MetricsCollector:
                 f'{elapsed/50-self.procfs_sampling_interval:.5f} secs'))
             self.last_tstamp = tstamp
 
+    # keep track of cpu stats from last run
     def set_last_cpu_totals(self):
         log.info("Metrics: set last_cpu_totals")
         for pid in self.docker_pids:
@@ -233,6 +235,7 @@ class MetricsCollector:
                      self.procfs_collector, ())
         self.procfs_scheduler.run()
 
+    # build the pid to kurtosis did map from docker ps
     def build_pid2kdid(self):
         did2kdid = {}
         with open(self.docker_ps_fname) as f:
@@ -249,14 +252,6 @@ class MetricsCollector:
         with open(self.ps_pids_fname) as f:
             self.ps_pids = f.read().strip().split("\n")
 
-        #lsof_fname, lsof_cmd = 'docker-lof', f'lsof -i > docker-lsof'
-        #subprocess.run(lsof_cmd, shell=True)
-        #with open(lsof_fname) as f:
-        #    self.ps_pids = f.read().strip().split("\n")
-
-        #self.docker_pids = [pid for pid in self.ps_pids if self.pid_exists(pid)]
-        #log.debug((f'{self.docker_pids}:{len(self.docker_pids)} <- '
-        #            f'{self.ps_pids}:{len(self.ps_pids)}'))
         for pid in self.ps_pids:
             if not self.pid_exists(pid):  # assert that these pids are live
                 continue
@@ -269,12 +264,12 @@ class MetricsCollector:
                 self.pid2node_name[pid] = line.split("--config-file=")[1].split('/')[3]
             did = ""
             self.docker_pids.append(pid)
+            # FORMAT
             #'/proc/{pid}/cmdline  = /usr/bin/wakunode--rpc-address=0.0.0.0
                                     #--metrics-server-address=0.0.0.0
                                     #--log-level=TRACE
                                     #--config-file=/node/configuration_file/node-6/node-6.toml
                                     #--ports-shift=2m
-
             with open(f'/proc/{pid}/mountinfo') as f: # or /proc/{pid}/cgroup
                 line = f.readline()
                 while line:
@@ -341,9 +336,14 @@ class MetricsCollector:
 # ensure sampling_interval > 0
 def _sinterval_callback(ctx: typer, Context, sinterval: int):
     if sinterval <= 0:
-        raise ValueError(f"sampling_interval must be > 0")
+        raise ValueError(f"sampling-interval must be > 0")
     return sinterval
 
+# ensure container_size > 0
+def _csize_callback(ctx: typer, Context, csize: int):
+    if csize <= 0:
+        raise ValueError(f"container-size must be > 0")
+    return csize
 
 # does not return
 def main(ctx: typer.Context,
@@ -353,10 +353,8 @@ def main(ctx: typer.Context,
             help="Specify the path for find the data files"),
         local_if: str = typer.Option("eth0",
             help="Specify the local interface to account non-docker nw stats"),
-        #signal_fifo: Path = typer.Option(
-        #    ..., exists=True, file_okay=True, dir_okay=False, writable=True, resolve_path=True),
-        #container_size: int = typer.Option(1, callback=_csize_callback,
-        #    help="Specify the number of wakunodes per container"),
+        container_size: int = typer.Option(1, callback=_csize_callback,
+            help="Specify the number of wakunodes per container"),
         sampling_interval: int = typer.Option(1, callback=_sinterval_callback,
             help="Set the sampling interval in secs")):
 
@@ -365,7 +363,9 @@ def main(ctx: typer.Context,
                         datefmt="%H:%M:%S")
 
     log.info("Metrics: setting up")
-    metrics = MetricsCollector(prefix=prefix, sampling_interval=sampling_interval)
+    metrics = MetricsCollector(csize=container_size,
+                        prefix=prefix,
+                        sampling_interval=sampling_interval)
 
     log.info("Metrics: processing system and container metadata...")
     metrics.process_metadata()
