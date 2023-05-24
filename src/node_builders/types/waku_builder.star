@@ -6,21 +6,33 @@ def prepare_waku_ports_in_service(node_names, network_topology):
     prepared_ports = {}
 
     for node_name in node_names:
-        node_info = network_topology[vars.GENNET_NODES_KEY][node_name]
+        prepare_single_node_waku_ports(node_name, network_topology, prepared_ports)
+
+    return prepared_ports
+
+
+def prepare_single_node_waku_ports(node_name, network_topology, prepared_ports):
+
+    node_info = network_topology[vars.GENNET_NODES_KEY][node_name]
 
     prepared_ports[vars.WAKU_RPC_PORT_ID + vars.ID_STR_SEPARATOR + node_name] = \
         PortSpec(number=vars.WAKU_RPC_PORT_NUMBER + node_info[vars.GENNET_PORT_SHIFT_KEY],
                  transport_protocol=vars.WAKU_RPC_PORT_PROTOCOL)
 
-        prepared_ports[vars.PROMETHEUS_PORT_ID + vars.ID_STR_SEPARATOR + node_name] = \
-            PortSpec(number=vars.PROMETHEUS_PORT_NUMBER + node_info[vars.GENNET_PORT_SHIFT_KEY],
-                transport_protocol=vars.PROMETHEUS_PORT_PROTOCOL)
+    prepared_ports[vars.PROMETHEUS_PORT_ID + vars.ID_STR_SEPARATOR + node_name] = \
+        PortSpec(number=vars.PROMETHEUS_PORT_NUMBER + node_info[vars.GENNET_PORT_SHIFT_KEY],
+                 transport_protocol=vars.PROMETHEUS_PORT_PROTOCOL)
 
-        prepared_ports[vars.WAKU_LIBP2P_PORT_ID + vars.ID_STR_SEPARATOR + node_name] = \
-            PortSpec(number=vars.WAKU_LIBP2P_PORT + node_info[vars.GENNET_PORT_SHIFT_KEY],
-                transport_protocol=vars.WAKU_LIBP2P_PORT_PROTOCOL)
+    prepared_ports[vars.WAKU_LIBP2P_PORT_ID + vars.ID_STR_SEPARATOR + node_name] = \
+        PortSpec(number=vars.WAKU_LIBP2P_PORT + node_info[vars.GENNET_PORT_SHIFT_KEY],
+                 transport_protocol=vars.WAKU_LIBP2P_PORT_PROTOCOL)
 
-    return prepared_ports
+    prepared_ports[vars.WAKU_DISCV5_PORT_ID + vars.ID_STR_SEPARATOR + node_name] = \
+        PortSpec(number=vars.WAKU_DISCV5_PORT_NUMBER + node_info[vars.GENNET_PORT_SHIFT_KEY],
+                 transport_protocol=vars.WAKU_DISCV5_PORT_PROTOCOL)
+
+
+
 
 def prepare_waku_config_files_in_service(node_names, artifact_ids):
     prepared_files = {}
