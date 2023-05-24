@@ -8,6 +8,7 @@ from pathlib import Path
 import time
 
 import json
+import networkx as nx
 
 import re
 
@@ -458,6 +459,34 @@ class HostProc(Plots, metaclass=Singleton):
     def plot_clusters(self, grp, agg, axes):
         self.cluster_plot_helper(col=['CPUPERC', 'VmPeak', 'VmRSS', 'VmSize', 'VmHWM', 'VmData'], grp=grp, axes=axes)
 
+class ProcessNetwork:
+    def __init__(self, jf):
+        self.G = nx.empty_graph()
+        self.json_fname = jf
+
+    def read_graph(self):
+        with open(self.json_fname) as f:
+            js_graph = json.load(f)
+            for src in js_graph['nodes'].keys():
+                for dst  in js_graph['nodes'][src]['static_nodes']:
+                    self.G.add_edge(src, dst)
+
+    def plot_graph(self):
+        fig, grid = plt.subplots(1, 2, layout='constrained')
+        nx.draw(self.G, ax=grid[0], pos=nx.kamada_kawai_layout(self.G), with_labels=True)
+
+        degree_sequence = sorted((d for n, d in self.G.degree()), reverse=True)
+        grid[1].bar(*np.unique(degree_sequence, return_counts=True))
+        grid[1].set_title("Degree histogram")
+        grid[1].set_xlabel("Degree")
+        grid[1].set_ylabel("# of Nodes")
+        plt.show()
+
+    def plot_degree_dist(self, G):
+        degrees = [G.degree(n) for n in G.nodes()]
+        plt.hist(degrees)
+        plt.show()
+
 # sanity check config file
 def _config_file_callback(ctx: typer.Context, param: typer.CallbackParam, cfile: str):
     if cfile:
@@ -494,6 +523,10 @@ def host_proc(log_dir: Path, # <- mandatory path
     if not path_ok(log_dir, True):
         sys.exit(0)
 
+    net = ProcessNetwork(f'{os.path.abspath(log_dir)}/config/topology_generated/network_data.json')
+    net.read_graph()
+    net.plot_graph()
+    sys.exit()
     host_proc = HostProc(log_dir, out_prefix)
     host_proc.process_data()
     host_proc.compute_settling_times()
@@ -503,7 +536,7 @@ def host_proc(log_dir: Path, # <- mandatory path
     host_proc.plot_column_panels(aggregate)
     df = host_proc.get_df()
 
-    print(f'Done: {log_dir}')
+    log.info(f'Done: {log_dir}')
 
 
 # process / plot docker-dstats.out
@@ -523,7 +556,7 @@ def dstats(log_dir: Path, # <- mandatory path
     dstats.plot_column_panels(aggregate)
     df = dstats.get_df()
 
-    print(f'Done: {log_dir}')
+    log.info(f'Done: {log_dir}')
 
 
 if __name__ == "__main__":
