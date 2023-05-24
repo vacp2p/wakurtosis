@@ -76,7 +76,7 @@ class Human2BytesConverter(metaclass=Singleton):
         return np.nan
 
 
-# Base class for plots and common API
+# Base class for plots and common helpers
 class Plots(metaclass=Singleton):
     def __init__(self, log_dir, oprefix):
         self.log_dir, self.oprefix = log_dir, oprefix
@@ -86,7 +86,7 @@ class Plots(metaclass=Singleton):
         self.grp2idx, self.idx2grp = {}, {}
         self.fig, self.axes = "", ""
 
-    # jordi's log processing
+    # log processing
     def compute_settling_times(self):
         ldir = str(self.log_dir)
         topology_info = topology.load_json(f'{ldir}/{vars.G_TOPOLOGY_FILE_NAME}')
@@ -252,11 +252,9 @@ class Plots(metaclass=Singleton):
         groups = self.df[grp].unique()
         groups.sort()
         xpdf = pd.DataFrame()
-        #print(f'GG: {groups}, {xpdf}, {self.df.shape}')
         for g in groups:
             X =self.df.loc[self.df[grp] == g][cols]
             Xflat = X.values.flatten()
-            #print(f'GGG: {g}, {X.shape}, {Xflat.shape}, {xpdf.shape}')
             xpdf[g] = Xflat
             labels = kmeans.fit_predict(X)
             #TODO: plot better. it is not very interpretable now
@@ -268,10 +266,8 @@ class Plots(metaclass=Singleton):
         labels = ['{}{}'.format( ' ', k) for i, k in enumerate(self.keys)]
         self.axes[0,1].set_yticklabels(labels)
 
-        #print(xpdf.shape, xpdf.columns)
         labels = kmeans.fit_predict(xpdf)
         self.axes[1,1].scatter(xpdf.iloc[:, 0], xpdf.iloc[:, 2], c=labels,  cmap='plasma')
-        #self.axes[1,1].scatter(x=range(0, len(labels)), y=labels, marker='.')
 
     def compare_plots(self):
         pass
@@ -407,12 +403,6 @@ class HostProc(Plots, metaclass=Singleton):
                             'RxBytes', 'RxPackets', 'TxBytes', 'TxPackets', 'NetRX', 'NetWX',
                             'InOctets', 'OutOctets', 'BLKR', 'BLKW']
 
-    '''def build_key2nodes(self):
-        for key in self.df["Key"]:
-            self.key2nodes[key] = self.df.loc[self.df['Key'] == key, 'NodeName'].unique()
-            #self.df[Node][self.df.Key=key].unique()
-    '''
-
     def process_data(self):
         if not path_ok(Path(self.fname)):
             sys.exit(0)
@@ -468,6 +458,7 @@ class HostProc(Plots, metaclass=Singleton):
     def plot_clusters(self, grp, agg, axes):
         self.cluster_plot_helper(col=['CPUPERC', 'VmPeak', 'VmRSS', 'VmSize', 'VmHWM', 'VmData'], grp=grp, axes=axes)
 
+# sanity check config file
 def _config_file_callback(ctx: typer.Context, param: typer.CallbackParam, cfile: str):
     if cfile:
         typer.echo(f"Loading config file: {os.path.basename(cfile)}")
@@ -485,8 +476,7 @@ def _config_file_callback(ctx: typer.Context, param: typer.CallbackParam, cfile:
                     ctx.default_map.update(conf["plotting"]["host-proc"])
                 else:
                     print(f"No dstats/host-proc params in config. Sticking to defaults")
-                # TODO : type-check and sanity-check the values in config.json
-            ctx.default_map.update(conf["plotting"])  # Merge config and default_map
+            #ctx.default_map.update(conf["plotting"])  # Merge config and default_map
         except Exception as ex:
             raise typer.BadParameter(str(ex))
     return cfile
@@ -496,7 +486,7 @@ app = typer.Typer()
 
 # process / plot docker-procfs.out
 @app.command()
-def host_proc(log_dir: Path,
+def host_proc(log_dir: Path, # <- mandatory path
             out_prefix: str = typer.Option("out", help="Specify the prefix for the plot pdfs"),
             aggregate: bool = typer.Option(True, help="Specify whether to aggregate"),
             config_file: str = typer.Option("", callback=_config_file_callback, is_eager=True,
@@ -518,7 +508,7 @@ def host_proc(log_dir: Path,
 
 # process / plot docker-dstats.out
 @app.command()
-def dstats(log_dir: Path,
+def dstats(log_dir: Path, # <- mandatory path
             out_prefix: str = typer.Option("out", help="Specify the prefix for the plot pdfs"),
             aggregate: bool = typer.Option(True, help="Specify whether to aggregate"),
             config_file: str = typer.Option("", callback=_config_file_callback, is_eager=True,
