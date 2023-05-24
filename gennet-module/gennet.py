@@ -411,6 +411,9 @@ def generate_and_write_files(ctx: typer, G):
     json_dump[NODES_JSON]["bootstrap"]["node_log"] = "bootstrap.log"
     json_dump[NODES_JSON]["bootstrap"]["port_shift"] = 0
     json_dump[NODES_JSON]["bootstrap"]["container_id"] = "bootstrap"
+    write_toml(ctx.params["output_dir"], "bootstrap", generate_toml(traits_dir, ["bootstrap"],
+                                                                    ["nwaku", "discv5", "metrics",
+                                                                     "rpc"]))
 
     write_json(ctx.params["output_dir"], json_dump)  # network wide json
 
