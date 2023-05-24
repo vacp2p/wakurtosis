@@ -7,24 +7,23 @@ if [ "$#" -eq 0 ]; then
     exit 1
 fi
 
-dir=$(pwd)
-
-# Parse args
+# get the args
 metrics_infra=${1:-"cadvisor"}
 enclave_name=${2:-"wakurtosis"}
 wakurtosis_config_file=${3:-"config.json"}
 
+dir=$(pwd)
 loglevel="error"
 echo "- Metrics Infra: " $metrics_infra
 echo "- Enclave name: " $enclave_name
 echo "- Configuration file: " $wakurtosis_config_file
 
-# Cleanup previous runs
+# cleanup previous runs
 echo -e "\Cleaning up previous runs"
 sh ./cleanup.sh $enclave_name
 echo -e "\Done cleaning up previous runs"
 
-#make sure the prometheus and grafana configs are readable
+# make sure the prometheus and grafana configs are readable
 chmod  a+r monitoring/prometheus.yml  monitoring/configuration/config/grafana.ini  ./monitoring/configuration/config/provisioning/dashboards/dashboard.yaml
 ##################### END
 
@@ -38,7 +37,7 @@ if [ $err != 0 ]; then
   echo "Gennet failed with error code $err"
   exit
 fi
-# Copy the network generated TODO: remove this extra copy
+# copy the network generated TODO: remove this extra copy
 docker cp cgennet:/gennet/network_data ${dir}/config/topology_generated
 docker rm cgennet > /dev/null 2>&1
 ##################### END
@@ -53,19 +52,19 @@ stats_dir=stats
 signal_fifo=/tmp/hostproc-signal.fifo   # do not create fifo under ./stats, or inside the repo
 ##################### MONITORING MODULE PROLOGUES
 if [ "$metrics_infra" = "cadvisor" ]; then #CADVISOR
-    # Preparing enclave
+    # prepare the enclave
     echo "Preparing the enclave..."
     kurtosis  --cli-log-level $loglevel  enclave add --name ${enclave_name}
     enclave_prefix=$(kurtosis --cli-log-level $loglevel  enclave inspect --full-uuids $enclave_name | grep UUID: | awk '{print $2}')
     echo "Enclave network: "$enclave_prefix
 
-    # Get enclave last IP
+    # get the last IP of the enclave
     subnet="$(docker network inspect $enclave_prefix | jq -r '.[].IPAM.Config[0].Subnet')"
     echo "Enclave subnetork: $subnet"
     last_ip="$(ipcalc $subnet | grep HostMax | awk '{print $2}')"
     echo "cAdvisor IP: $last_ip"
 
-    # Set up Cadvisor
+    # set up the cadvisor
     docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev/disk/:/dev/disk:ro --volume=/sys:/sys:ro --volume=/etc/machine-id:/etc/machine-id:ro --publish=8080:8080 --detach=true --name=cadvisor --privileged --device=/dev/kmsg --network $enclave_prefix --ip=$last_ip gcr.io/cadvisor/cadvisor:v0.47.0
 elif  [ "$metrics_infra" = "dstats" ]; then # HOST-PROC
     odir=./monitoring/dstats/$stats_dir
@@ -80,7 +79,6 @@ elif  [ "$metrics_infra" = "host-proc" ]; then # HOST-PROC
 elif  [ "$metrics_infra" = "container-proc" ]; then # CONTAINER-PROC
   #Jordi's metrics module prologue
     echo "Jordi's measurement infra  prologue goes here"
-
 fi
 ##################### END
 
@@ -98,19 +96,19 @@ END1=$(date +%s)
 
 DIFF1=$(( $END1 - $START ))
 echo -e "Enclave $enclave_name is up and running: took $DIFF1 secs to setup"
-
 sed -n '/Starlark code successfully run. No output was returned./,$p'  $kurtosis_run  > $kurtosis_inspect
 
 # Extract the WLS service name
 wls_service_name=$(grep "\<wls\>" $kurtosis_inspect | awk '{print $1}')
-echo -e "\n--> To see simulation logs run: kurtosis service logs $enclave_name $wls_service_name <--"
+echo "\n--> To see simulation logs run: kurtosis service logs $enclave_name $wls_service_name <--"
+
 # Get the container prefix/suffix for the WLS service
 service_name=$(grep  $wls_service_name $kurtosis_inspect | awk '{print $2}')
 service_uuid=$(grep $wls_service_name $kurtosis_inspect | awk '{print $1}')
 
 # Construct the fully qualified container name that kurtosis has created
 wls_cid="$service_name--$service_uuid"
-echo "The WLS_CID = $wls_cid"
+#echo "The WLS_CID = $wls_cid"
 ##################### END
 
 
@@ -137,7 +135,6 @@ elif [ "$metrics_infra" = "container-proc" ]; then
     -v $(pwd)/monitoring/container-proc/:/cproc-mon/ \
     -v $(pwd)/config/config.json:/cproc-mon/config/config.json \
     container-proc:latest &
- 
     monitor_pid=$!
 fi
 ##################### END
@@ -165,10 +162,11 @@ DIFF2=$(( $END2 - $END1 ))
 echo "Simulation took $DIFF1 + $DIFF2 = $(( $END2 - $START)) secs"
 ##################### END
 
+
+##################### GATHER CONFIG, LOGS & METRICS
 # give time for the messages to settle down before we collect the logs
 sleep 60
 
-##################### GATHER CONFIG, LOGS & METRICS
 # dump logs
 echo "Dumping Kurtosis logs"
 kurtosis enclave dump ${enclave_name} ${enclave_name}_logs > /dev/null 2>&1
