@@ -79,13 +79,14 @@ class Human2BytesConverter(metaclass=Singleton):
 
 # Base class for plots and common helpers
 class Plots(metaclass=Singleton):
-    def __init__(self, log_dir, oprefix):
+    def __init__(self, log_dir, oprefix, jf):
         self.log_dir, self.oprefix = log_dir, oprefix
         self.df, self.n, self.keys, self.cols = pd.DataFrame(), 0, [], []
         self.col2title, self.col2units, self.key2nodes = {}, {}, {}
         self.msg_settling_times, self.msg_injection_times = {}, {}
         self.grp2idx, self.idx2grp = {}, {}
         self.fig, self.axes = "", ""
+        self.json_fname, self.G = jf, nx.empty_graph()
 
     # log processing
     def compute_settling_times(self):
@@ -122,8 +123,6 @@ class Plots(metaclass=Singleton):
 
     def plot_settling_times(self):
         self.set_panel_size(2, 2, False)
-        self.fig.set_figwidth(12)
-        self.fig.set_figheight(10)
         self.fig.suptitle(f'Settling Time: {len(self.msg_propagation_times)} messages')
         self.fig.supylabel("msecs")
 
@@ -144,12 +143,12 @@ class Plots(metaclass=Singleton):
 
     def set_panel_size(self, m, n, shareY=False):
         self.fig, self.axes = plt.subplots(m, n, layout='constrained', sharey=shareY)
+        self.fig.set_figwidth(12)
+        self.fig.set_figheight(10)
 
     def column_panel_helper(self, col, agg=True):
         self.set_panel_size(2, 2)
         #fig, axes = plt.subplots(2, 2, layout='constrained', sharey=False)
-        self.fig.set_figwidth(12)
-        self.fig.set_figheight(10)
         self.fig.suptitle(self.col2title[col])
         self.fig.supylabel(self.col2units[col])
 
@@ -276,11 +275,87 @@ class Plots(metaclass=Singleton):
     def phase_plots_helper(self, grp, col):
         pass
 
+    def read_network(self):
+        with open(self.json_fname) as f:
+            js_graph = json.load(f)
+            for src in js_graph['nodes'].keys():
+                for dst  in js_graph['nodes'][src]['static_nodes']:
+                    self.G.add_edge(src, dst)
+
+    def plot_network(self):
+        self.set_panel_size(1, 2)
+        #fig, grid = plt.subplots(1, 2, layout='constrained')
+        nx.draw(self.G, ax=self.axes[0], pos=nx.kamada_kawai_layout(self.G), with_labels=True)
+
+        degree_sequence = sorted((d for n, d in self.G.degree()), reverse=True)
+        #x, y = np.unique(degree_sequence, return_counts=True)
+        w = np.ones(len(degree_sequence))/len(degree_sequence)
+        hist, bin_edges = np.histogram(degree_sequence, weights=w, density=False)
+        width = (bin_edges[1] - bin_edges[0])
+        self.axes[1].bar(x=bin_edges[:-1], height=hist, align='center',
+                width=width, edgecolor='k', facecolor='green', alpha=0.5)
+        self.axes[1].set_xticks(range(max(degree_sequence)+1))
+        #self.axes[1].bar(x, y, width=0.8, align='center')
+        #self.axes[1].hist(degree_sequence, weights=w, density=False, width=0.5)
+        self.axes[1].set_title("Degree histogram")
+        self.axes[1].set_xlabel("Degree")
+        self.axes[1].set_ylabel("% of Nodes")
+        #self.axes[1].hist(degree_sequence)
+
+        #by_degree = [[] for i in range(x[-1]+1)]
+        #for node, degree in self.G.degree():
+        #    by_degree[degree].append(self.df[self.df.NodeName == node])
+        plt.show()
+
+    def deg_col_panel_helper(self, col):
+        self.set_panel_size(1, 2, shareY=True)
+        self.fig.suptitle(self.col2title[col])
+        self.fig.supylabel(self.col2units[col])
+
+        degree_sequence = sorted((d for n, d in self.G.degree()), reverse=True)
+        x, y = np.unique(degree_sequence, return_counts=True)
+        by_degree = [[] for i in range(x[-1]+1)]
+        for node, degree in self.G.degree():
+            curr = self.df[self.df.NodeName == node][col].values
+            if len(by_degree[degree]) == 0 :
+                by_degree[degree]=self.df[self.df.NodeName == node][col].values
+            else :
+                np.append(by_degree[degree], self.df[self.df.NodeName == node][col].values)
+        legends = []
+        for node, degree in self.G.degree():
+            d = by_degree[degree]
+            w = np.ones(len(d))/len(d)
+            hist, bin_edges = np.histogram(d, weights=w, density=False)
+            width = (bin_edges[1] - bin_edges[0])
+            legends.append(self.axes[0].bar(x=bin_edges[:-1], height=hist, align='center',
+                width=width, edgecolor='k', alpha=0.5))
+            #w = np.ones(len(by_degree[degree]))/len(by_degree[degree])
+            ##N, bins, patches = plt.hist(x=by_degree[degree], density=True, bins=10, alpha=0.25)
+            #N, bins, patches = self.axes[0].hist(by_degree[degree], weights=w,
+             #       density=False, bins=20, alpha=0.25, width=0.48)
+            #self.axes[0].set_title("Degree histogram")
+            #self.axes[0].set_ylabel("% of Nodes")
+        self.axes[0].legend(legends, x, scatterpoints=1,
+                        loc='upper left', ncol=3,
+                        fontsize=8)
+        #print(len(by_degree), by_degree,  x)
+        d = self.df[col]
+        w = np.ones(len(d))/len(d)
+        hist, bin_edges = np.histogram(d, weights=w, density=False)
+        width = (bin_edges[1] - bin_edges[0])
+        self.axes[1].bar(x=bin_edges[:-1], height=hist, align='center',
+                width=width, edgecolor='k', facecolor='green', alpha=0.5)
+        #self.axes[1].set_xticks(range(int(max(d))))
+        #N, bins, patches = self.axes[1].hist(d, weights=np.ones(len(d))/len(d),
+        #            density=False, bins=20, alpha=0.85, width=0.48)
+        plt.show()
+
+
 
 # handle docker stats
 class DStats(Plots, metaclass=Singleton):
-    def __init__(self, log_dir, oprefix):
-        Plots.__init__(self, log_dir, oprefix)
+    def __init__(self, log_dir, oprefix, jf):
+        Plots.__init__(self, log_dir, oprefix, jf)
         self.dstats_fname = f'{log_dir}/dstats-data/docker-stats.out'
         self.kinspect_fname = f'{log_dir}/dstats-data/docker-kinspect.out'
         self.col2title = {  "ContainerID"   : "Docker ID",
@@ -358,15 +433,14 @@ class DStats(Plots, metaclass=Singleton):
 
 
 class HostProc(Plots, metaclass=Singleton):
-    def __init__(self, log_dir, oprefix):
-        Plots.__init__(self, log_dir, oprefix)
+    def __init__(self, log_dir, oprefix, jf):
+        Plots.__init__(self, log_dir, oprefix, jf)
         self.fname = f'{log_dir}/host-proc-data/docker-proc.out'
         self.kinspect_fname = f'{log_dir}/host-proc-data/docker-kinspect.out'
         self.col2title = {  'CPUPERC'   : 'CPU Utilisation',
                             'VmPeak'    : 'Peak Virtual Memory Usage',
                             'VmSize'    : 'Current Virtual Memory Usage',
                             'VmRSS'     : 'Peak Physical Memory Usage',
-                            'VmHWM'     : 'Current Physical Memory Usage',
                             'VmData'    : 'Size of Data Segment',
                             'VmStk'     : 'Size of Stack Segment',
                             'RxBytes'   : 'Network1: Received Bytes',
@@ -382,8 +456,7 @@ class HostProc(Plots, metaclass=Singleton):
                         }
         self.col2units = {  'CPUPERC'   : '%',
                             'VmPeak'    : 'MiB',
-                           'VmSize'     : 'MiB',
-                           'VmHWM'      : 'MiB',
+                            'VmSize'     : 'MiB',
                             'VmRSS'     : 'MiB',
                             'VmData'    : 'MiB',
                             'VmStk'     : 'MiB',
@@ -400,7 +473,7 @@ class HostProc(Plots, metaclass=Singleton):
                         }
                     #'CPU-SYS', 'cpu', 'cpu0', 'cpu1', 'cpu2', 'cpu3',
                     #'cpu4', 'cpu5', 'cpu6', 'cpu7', 'cpu8', 'cpu9', 'CPUUTIME', 'CPUSTIME'
-        self.cols = ['VmPeak', 'VmSize', 'VmHWM', 'VmRSS', 'VmData', 'VmStk',
+        self.cols = ['VmPeak', 'VmSize', 'VmRSS', 'VmData', 'VmStk',
                             'RxBytes', 'RxPackets', 'TxBytes', 'TxPackets', 'NetRX', 'NetWX',
                             'InOctets', 'OutOctets', 'BLKR', 'BLKW']
 
@@ -410,8 +483,9 @@ class HostProc(Plots, metaclass=Singleton):
         self.df = pd.read_csv(self.fname, header=0,  comment='#', skipinitialspace = True,
         #self.df = pd.read_fwf(self.fname, header=0,  comment='#', skipinitialspace = True)
                 delimiter=r"\s+",
-                usecols= ['EpochId', 'PID', 'TimeStamp', 'ContainerName', 'ContainerID', 'NodeName',
-                    'VmPeak', 'VmPeakUnit', 'VmSize', 'VmSizeUnit', 'VmHWM', 'VmHWMUnit',
+                usecols= ['EpochId', 'PID', 'TimeStamp',
+                    'ContainerName', 'ContainerID', 'NodeName',
+                    'VmPeak', 'VmPeakUnit', 'VmSize', 'VmSizeUnit',
                     'VmRSS', 'VmRSSUnit', 'VmData','VmDataUnit', 'VmStk', 'VmStkUnit',
                     'HostVIF', 'RxBytes', 'RxPackets', 'TxBytes', 'TxPackets',
                     'VETH', 'InOctets', 'OutOctets',
@@ -427,7 +501,7 @@ class HostProc(Plots, metaclass=Singleton):
 
     def post_process(self):
         #h2b = Human2BytesConverter()
-        for size in ['VmPeak', 'VmSize', 'VmHWM','VmRSS', 'VmData','VmStk']:
+        for size in ['VmPeak', 'VmSize','VmRSS', 'VmData','VmStk']:
             self.df[size] = self.df[size].map(lambda x: x/1024) # MiBs
         for size in ['RxBytes', 'TxBytes', 'InOctets','OutOctets', 'NetRX','NetWX']:
             self.df[size] = self.df[size].map(lambda x: x/(1024*1024)) # MiBs
@@ -456,36 +530,12 @@ class HostProc(Plots, metaclass=Singleton):
         self.column_panel_helper("BLKR", agg)
         self.column_panel_helper("BLKW", agg)
 
+    def plot_deg_col_panels(self):
+        self.deg_col_panel_helper("VmPeak")
+
     def plot_clusters(self, grp, agg, axes):
-        self.cluster_plot_helper(col=['CPUPERC', 'VmPeak', 'VmRSS', 'VmSize', 'VmHWM', 'VmData'], grp=grp, axes=axes)
+        self.cluster_plot_helper(col=['CPUPERC', 'VmPeak', 'VmRSS', 'VmSize', 'VmData'], grp=grp, axes=axes)
 
-class ProcessNetwork:
-    def __init__(self, jf):
-        self.G = nx.empty_graph()
-        self.json_fname = jf
-
-    def read_graph(self):
-        with open(self.json_fname) as f:
-            js_graph = json.load(f)
-            for src in js_graph['nodes'].keys():
-                for dst  in js_graph['nodes'][src]['static_nodes']:
-                    self.G.add_edge(src, dst)
-
-    def plot_graph(self):
-        fig, grid = plt.subplots(1, 2, layout='constrained')
-        nx.draw(self.G, ax=grid[0], pos=nx.kamada_kawai_layout(self.G), with_labels=True)
-
-        degree_sequence = sorted((d for n, d in self.G.degree()), reverse=True)
-        grid[1].bar(*np.unique(degree_sequence, return_counts=True))
-        grid[1].set_title("Degree histogram")
-        grid[1].set_xlabel("Degree")
-        grid[1].set_ylabel("# of Nodes")
-        plt.show()
-
-    def plot_degree_dist(self, G):
-        degrees = [G.degree(n) for n in G.nodes()]
-        plt.hist(degrees)
-        plt.show()
 
 # sanity check config file
 def _config_file_callback(ctx: typer.Context, param: typer.CallbackParam, cfile: str):
@@ -523,12 +573,13 @@ def host_proc(log_dir: Path, # <- mandatory path
     if not path_ok(log_dir, True):
         sys.exit(0)
 
-    net = ProcessNetwork(f'{os.path.abspath(log_dir)}/config/topology_generated/network_data.json')
-    net.read_graph()
-    net.plot_graph()
-    sys.exit()
-    host_proc = HostProc(log_dir, out_prefix)
+    jf = f'{os.path.abspath(log_dir)}/config/topology_generated/network_data.json'
+    host_proc = HostProc(log_dir, out_prefix, jf)
     host_proc.process_data()
+    host_proc.read_network()
+    host_proc.plot_network()
+    host_proc.plot_deg_col_panels()
+    sys.exit()
     host_proc.compute_settling_times()
     host_proc.build_cluster_index('ContainerID')
     #host_proc.plot_clusters('ContainerID', cdf)
@@ -549,8 +600,11 @@ def dstats(log_dir: Path, # <- mandatory path
     if not path_ok(log_dir, True):
         sys.exit(0)
 
-    dstats = DStats(log_dir, out_prefix)
+    jf = f'{os.path.abspath(log_dir)}/config/topology_generated/network_data.json'
+    dstats = DStats(log_dir, out_prefix, jf)
     dstats.process_data()
+    dstats.read_network()
+    dstats.plot_network()
     dstats.compute_settling_times()
     dstats.plot_settling_times()
     dstats.plot_column_panels(aggregate)
