@@ -9,12 +9,12 @@
     "interconnection_batch": 10
   },
   "gennet": {
-    "num_nodes": 9,
+    "num_nodes": 10,
     "fanout": 3,
     "num_topics": 1,
     "num_partitions": 1,
     "num_subnets": 1,
-    "container_size": "2",
+    "container_size": "1",
     "node_type_distribution": {
       "nwaku:relay:rpc:metrics": 100,
       "gowaku:rln:dnsdisc:dns": 0
@@ -44,7 +44,15 @@
   "plotting": {
     "host-proc": {
       "out_prefix" : "output",
-      "aggregate" : "True"
+      "aggregate" : "True",
+      "to_plot" : {
+        "Network": "True",
+        "ColPanel" : ["CPUPERC"],
+        "ValueCluster" : [],
+        "DegColPanel" : ["VmPeak"],
+        "SettlingTime" : "True",
+        "Compare" : "True"
+      }
     },
     "by_node": [
       "container_cpu_load_average_10s",
