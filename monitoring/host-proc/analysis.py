@@ -79,7 +79,7 @@ class Human2BytesConverter(metaclass=Singleton):
 
 # Base class for plots and common helpers
 class Plots(metaclass=Singleton):
-    def __init__(self, log_dir, oprefix, jf):
+    def __init__(self, log_dir, oprefix, jf, to_plot):
         self.log_dir, self.oprefix = log_dir, oprefix
         self.df, self.n, self.keys, self.cols = pd.DataFrame(), 0, [], []
         self.col2title, self.col2units, self.key2nodes = {}, {}, {}
@@ -87,9 +87,10 @@ class Plots(metaclass=Singleton):
         self.grp2idx, self.idx2grp = {}, {}
         self.fig, self.axes = "", ""
         self.json_fname, self.G = jf, nx.empty_graph()
+        self.to_plot, self.to_compare = to_plot, []
 
     # log processing
-    def compute_settling_times(self):
+    def compute_msg_settling_times(self):
         ldir = str(self.log_dir)
         topology_info = topology.load_json(f'{ldir}/{vars.G_TOPOLOGY_FILE_NAME}')
         topology.load_topics_into_topology(topology_info, f'{ldir}/config/topology_generated/')
@@ -100,9 +101,9 @@ class Plots(metaclass=Singleton):
                   f'Effective simulation time was {simulation_time_ms} ms.'))
         analysis.compute_message_delivery(msgs_dict, injected_msgs_dict)
         analysis.compute_message_latencies(msgs_dict)
-        self.msg_propagation_times = analysis.compute_propagation_times(msgs_dict)
+        self.msg_settling_times = analysis.compute_propagation_times(msgs_dict)
         self.msg_injection_times = analysis.compute_injection_times(injected_msgs_dict)
-        #print("message propagation_times: ", self.msg_propagation_times)
+        #print("message propagation_times: ", self.msg_settling_times)
 
     def get_key(self):
         return self.df.Key
@@ -111,6 +112,8 @@ class Plots(metaclass=Singleton):
         self.keys = self.df['Key'].unique()
         self.keys.sort()
 
+    def set_compare(self, lst):
+        self.to_compare = lst
 
     # extract the maximal complete sample set
     def remove_incomplete_samples(self, grp, err=''):
@@ -121,11 +124,10 @@ class Plots(metaclass=Singleton):
             minRows = rows if minRows > rows else minRows
         self.df = self.df.groupby(grp).head(minRows)
 
-    def plot_settling_times(self):
+    def plot_msg_settling_times(self):
         self.set_panel_size(2, 2, False)
-        self.fig.suptitle(f'Settling Time: {len(self.msg_propagation_times)} messages')
+        self.fig.suptitle(f'Settling Time: {len(self.msg_settling_times)} messages')
         self.fig.supylabel("msecs")
-
         pp = PdfPages(f'{self.oprefix}-settling-time.pdf')
         #axes[0].violinplot([0], showmedians=True)
         self.axes[0,0].set_xticks([x + 1 for x in range(len(self.keys))])
@@ -133,7 +135,7 @@ class Plots(metaclass=Singleton):
         self.axes[0,0].set_xlabel('TODO: revisit after Jordi added per-container settling times')
 
         #fig, axes = plt.subplots(2, 2, layout='constrained', sharey=True)
-        self.axes[1,0].violinplot(self.msg_propagation_times, showmedians=True)
+        self.axes[1,0].violinplot(self.msg_settling_times, showmedians=True)
         #axes[0].spines[['right', 'top']].set_visible(False)
         self.axes[1,0].axes.xaxis.set_visible(False)
         self.cluster_plot_helper(grp='Key', cols=self.cols)
@@ -145,6 +147,23 @@ class Plots(metaclass=Singleton):
         self.fig, self.axes = plt.subplots(m, n, layout='constrained', sharey=shareY)
         self.fig.set_figwidth(12)
         self.fig.set_figheight(10)
+
+    def plot_column_panels(self, agg):
+        for col in self.to_plot["ColPanel"]:
+            if col not in self.df.columns:
+                log.error(f"ColPanel: {col} is not in {self.df.columns}, skipping...")
+                continue
+            if col in ["CPUPerc", "MemUse"]:
+                self.column_panel_helper(col)
+            else:
+                self.column_panel_helper(col, agg)
+
+    def plot_deg_col_panels(self):
+        for col in self.to_plot["DegColPanel"]:
+            if col not in self.df.columns:
+                log.error(f"DegColPanel: {col} is not in {self.df.columns}, skipping...")
+                continue
+            self.deg_col_panel_helper(col) # only agg for now 
 
     def column_panel_helper(self, col, agg=True):
         self.set_panel_size(2, 2)
@@ -269,8 +288,27 @@ class Plots(metaclass=Singleton):
         labels = kmeans.fit_predict(xpdf)
         self.axes[1,1].scatter(xpdf.iloc[:, 0], xpdf.iloc[:, 2], c=labels,  cmap='plasma')
 
-    def compare_plots(self):
-        pass
+    def plot_compare(self):
+        self.set_panel_size(2, 3)
+        k, pp = 0, PdfPages(f'{self.oprefix}-compare.pdf')
+        for i in [0,1]:
+            for j in [0,1,2]:
+                col = self.to_compare[k]
+                print(k, col)
+                #self.axes[i,j].ticklabel_format(style='plain')
+                self.axes[i,j].yaxis.grid(True)
+                pc = self.axes[i,j].violinplot(dataset=self.df[col], showmeans=True)
+                self.axes[i,j].set_ylabel(self.col2units[col])
+                self.axes[i,j].set_title(self.col2title[col])
+                print(pc['bodies'])
+                for p in pc['bodies']:
+                    p.set_facecolor('green')
+                    p.set_edgecolor('k')
+                    p.set_alpha(0.5)
+                k += 1
+        pp.savefig(plt.gcf())
+        pp.close()
+        plt.show()
 
     def phase_plots_helper(self, grp, col):
         pass
@@ -284,7 +322,7 @@ class Plots(metaclass=Singleton):
 
     def plot_network(self):
         self.set_panel_size(1, 2)
-        #fig, grid = plt.subplots(1, 2, layout='constrained')
+        self.fig.suptitle("Network & Degree Distribution")
         nx.draw(self.G, ax=self.axes[0], pos=nx.kamada_kawai_layout(self.G), with_labels=True)
 
         degree_sequence = sorted((d for n, d in self.G.degree()), reverse=True)
@@ -301,7 +339,6 @@ class Plots(metaclass=Singleton):
         self.axes[1].set_xlabel("Degree")
         self.axes[1].set_ylabel("% of Nodes")
         #self.axes[1].hist(degree_sequence)
-
         #by_degree = [[] for i in range(x[-1]+1)]
         #for node, degree in self.G.degree():
         #    by_degree[degree].append(self.df[self.df.NodeName == node])
@@ -311,7 +348,6 @@ class Plots(metaclass=Singleton):
         self.set_panel_size(1, 2, shareY=True)
         self.fig.suptitle(self.col2title[col])
         self.fig.supylabel(self.col2units[col])
-
         degree_sequence = sorted((d for n, d in self.G.degree()), reverse=True)
         x, y = np.unique(degree_sequence, return_counts=True)
         by_degree = [[] for i in range(x[-1]+1)]
@@ -329,33 +365,22 @@ class Plots(metaclass=Singleton):
             width = (bin_edges[1] - bin_edges[0])
             legends.append(self.axes[0].bar(x=bin_edges[:-1], height=hist, align='center',
                 width=width, edgecolor='k', alpha=0.5))
-            #w = np.ones(len(by_degree[degree]))/len(by_degree[degree])
-            ##N, bins, patches = plt.hist(x=by_degree[degree], density=True, bins=10, alpha=0.25)
-            #N, bins, patches = self.axes[0].hist(by_degree[degree], weights=w,
-             #       density=False, bins=20, alpha=0.25, width=0.48)
-            #self.axes[0].set_title("Degree histogram")
-            #self.axes[0].set_ylabel("% of Nodes")
         self.axes[0].legend(legends, x, scatterpoints=1,
                         loc='upper left', ncol=3,
                         fontsize=8)
-        #print(len(by_degree), by_degree,  x)
         d = self.df[col]
         w = np.ones(len(d))/len(d)
         hist, bin_edges = np.histogram(d, weights=w, density=False)
         width = (bin_edges[1] - bin_edges[0])
         self.axes[1].bar(x=bin_edges[:-1], height=hist, align='center',
                 width=width, edgecolor='k', facecolor='green', alpha=0.5)
-        #self.axes[1].set_xticks(range(int(max(d))))
-        #N, bins, patches = self.axes[1].hist(d, weights=np.ones(len(d))/len(d),
-        #            density=False, bins=20, alpha=0.85, width=0.48)
         plt.show()
-
 
 
 # handle docker stats
 class DStats(Plots, metaclass=Singleton):
-    def __init__(self, log_dir, oprefix, jf):
-        Plots.__init__(self, log_dir, oprefix, jf)
+    def __init__(self, log_dir, oprefix, jf, to_plot):
+        Plots.__init__(self, log_dir, oprefix, jf, to_plot)
         self.dstats_fname = f'{log_dir}/dstats-data/docker-stats.out'
         self.kinspect_fname = f'{log_dir}/dstats-data/docker-kinspect.out'
         self.col2title = {  "ContainerID"   : "Docker ID",
@@ -402,11 +427,11 @@ class DStats(Plots, metaclass=Singleton):
         for percent in ["CPUPerc", "MemPerc"]:
             self.df[percent] = self.df[percent].str.replace('%','').astype(float)
         for size in ["MemUse", "MemTotal"]:
-            self.df[size] = self.df[size].map(lambda x: h2b.convert(x.strip())/(1024*1024)) # MiBs
+            self.df[size] = self.df[size].map(lambda x:h2b.convert(x.strip())/(1024*1024)) # MiB
         for size in ["NetRecv", "NetSent"]:
-            self.df[size] = self.df[size].map(lambda x: h2b.convert(x.strip())/(1024*1024)) # MiBs
+            self.df[size] = self.df[size].map(lambda x:h2b.convert(x.strip())/(1024*1024)) # MiB
         for size in ["BlockR", "BlockW"]:
-            self.df[size] = self.df[size].map(lambda x: h2b.convert(x.strip())/(1024*1024)) # MiBs
+            self.df[size] = self.df[size].map(lambda x:h2b.convert(x.strip())/(1024*1024)) # MiB
         self.df['Key'] = self.df['ContainerName'].map(lambda x: x.split("--")[0])
         self.set_keys()
 
@@ -414,27 +439,19 @@ class DStats(Plots, metaclass=Singleton):
     def process_data(self):
         log.info(f'processing {self.dstats_fname}...')
         self.pre_process()
-        self.df = pd.read_csv(self.dstats_fname, header=0,  comment='#', skipinitialspace = True,
-                                delimiter='/',
-                                usecols=["ContainerID", "ContainerName",
+        self.df = pd.read_csv(self.dstats_fname, header=0,  comment='#',
+                            skipinitialspace = True, delimiter='/',
+                            usecols=["ContainerID", "ContainerName",
                                     "CPUPerc", "MemUse", "MemTotal", "MemPerc",
                                     "NetRecv", "NetSent", "BlockR","BlockW",  "PIDS"])
         self.post_process()
         self.remove_incomplete_samples(grp='Key', err='--')
         self.df.to_csv(f'{self.oprefix}-dstats-cleaned.csv', sep='/')
 
-    def plot_column_panels(self, agg):
-        self.column_panel_helper("CPUPerc")
-        self.column_panel_helper("MemUse")
-        self.column_panel_helper("NetSent", agg)
-        self.column_panel_helper("NetRecv", agg)
-        self.column_panel_helper("BlockR", agg)
-        self.column_panel_helper("BlockW", agg)
-
 
 class HostProc(Plots, metaclass=Singleton):
-    def __init__(self, log_dir, oprefix, jf):
-        Plots.__init__(self, log_dir, oprefix, jf)
+    def __init__(self, log_dir, oprefix, jf, to_plot):
+        Plots.__init__(self, log_dir, oprefix, jf, to_plot)
         self.fname = f'{log_dir}/host-proc-data/docker-proc.out'
         self.kinspect_fname = f'{log_dir}/host-proc-data/docker-kinspect.out'
         self.col2title = {  'CPUPERC'   : 'CPU Utilisation',
@@ -471,8 +488,6 @@ class HostProc(Plots, metaclass=Singleton):
                             'BLKR'      : 'MiB',
                             'BLKW'      : 'MiB'
                         }
-                    #'CPU-SYS', 'cpu', 'cpu0', 'cpu1', 'cpu2', 'cpu3',
-                    #'cpu4', 'cpu5', 'cpu6', 'cpu7', 'cpu8', 'cpu9', 'CPUUTIME', 'CPUSTIME'
         self.cols = ['VmPeak', 'VmSize', 'VmRSS', 'VmData', 'VmStk',
                             'RxBytes', 'RxPackets', 'TxBytes', 'TxPackets', 'NetRX', 'NetWX',
                             'InOctets', 'OutOctets', 'BLKR', 'BLKW']
@@ -480,9 +495,8 @@ class HostProc(Plots, metaclass=Singleton):
     def process_data(self):
         if not path_ok(Path(self.fname)):
             sys.exit(0)
-        self.df = pd.read_csv(self.fname, header=0,  comment='#', skipinitialspace = True,
-        #self.df = pd.read_fwf(self.fname, header=0,  comment='#', skipinitialspace = True)
-                delimiter=r"\s+",
+        self.df = pd.read_csv(self.fname, header=0,  comment='#',
+                skipinitialspace = True, delimiter=r"\s+",
                 usecols= ['EpochId', 'PID', 'TimeStamp',
                     'ContainerName', 'ContainerID', 'NodeName',
                     'VmPeak', 'VmPeakUnit', 'VmSize', 'VmSizeUnit',
@@ -493,8 +507,6 @@ class HostProc(Plots, metaclass=Singleton):
                     'VETH',  'InOctets', 'OutOctets',
                     'BLKR', 'BLKW',
                     'CPUPERC'])
-                    #'CPU-SYS', 'cpu', 'cpu0', 'cpu1', 'cpu2', 'cpu3',
-                   #'cpu4', 'cpu5', 'cpu6', 'cpu7', 'cpu8', 'cpu9', 'CPUUTIME', 'CPUSTIME'])
         self.post_process()
         self.remove_incomplete_samples(grp='Key')
         self.df.to_csv(f'{self.oprefix}-host-proc-cleaned.csv', sep='/')
@@ -513,26 +525,6 @@ class HostProc(Plots, metaclass=Singleton):
         self.set_keys()
         self.df.fillna(0)
 
-    def plot_column_panels(self, agg):
-        self.column_panel_helper("CPUPERC")
-        self.column_panel_helper("VmSize")
-        self.column_panel_helper("VmPeak")
-        self.column_panel_helper("VmRSS")
-        #self.column_panel_helper("VmHWM") - HighWaterMark
-        self.column_panel_helper("VmData")
-        self.column_panel_helper("VmStk")
-        self.column_panel_helper("RxBytes", agg)
-        self.column_panel_helper("TxBytes", agg)
-        self.column_panel_helper("NetRX", agg)
-        self.column_panel_helper("NetWX", agg)
-        self.column_panel_helper("InOctets", agg)
-        self.column_panel_helper("OutOctets", agg)
-        self.column_panel_helper("BLKR", agg)
-        self.column_panel_helper("BLKW", agg)
-
-    def plot_deg_col_panels(self):
-        self.deg_col_panel_helper("VmPeak")
-
     def plot_clusters(self, grp, agg, axes):
         self.cluster_plot_helper(col=['CPUPERC', 'VmPeak', 'VmRSS', 'VmSize', 'VmData'], grp=grp, axes=axes)
 
@@ -549,10 +541,8 @@ def _config_file_callback(ctx: typer.Context, param: typer.CallbackParam, cfile:
                     print(f"No plotting is requested in {cfile}. Skipping plotting.")
                     sys.exit(0)
                 # Merge config and default_map
-                if "dstats" in conf["plotting"]:
-                    ctx.default_map.update(conf["plotting"]["dstats"])
-                elif "host-proc" in conf["plotting"]:
-                    ctx.default_map.update(conf["plotting"]["host-proc"])
+                if ctx.command.name in conf["plotting"]:
+                    ctx.default_map.update(conf["plotting"][ctx.command.name])
                 else:
                     print(f"No dstats/host-proc params in config. Sticking to defaults")
             #ctx.default_map.update(conf["plotting"])  # Merge config and default_map
@@ -565,7 +555,7 @@ app = typer.Typer()
 
 # process / plot docker-procfs.out
 @app.command()
-def host_proc(log_dir: Path, # <- mandatory path
+def host_proc(ctx: typer.Context, log_dir: Path, # <- mandatory path
             out_prefix: str = typer.Option("out", help="Specify the prefix for the plot pdfs"),
             aggregate: bool = typer.Option(True, help="Specify whether to aggregate"),
             config_file: str = typer.Option("", callback=_config_file_callback, is_eager=True,
@@ -573,19 +563,28 @@ def host_proc(log_dir: Path, # <- mandatory path
     if not path_ok(log_dir, True):
         sys.exit(0)
 
+    if "to_plot"  in ctx.default_map:
+        to_plot =  ctx.default_map["to_plot"]
     jf = f'{os.path.abspath(log_dir)}/config/topology_generated/network_data.json'
-    host_proc = HostProc(log_dir, out_prefix, jf)
+    host_proc = HostProc(log_dir, out_prefix, jf, to_plot)
     host_proc.process_data()
-    host_proc.read_network()
-    host_proc.plot_network()
-    host_proc.plot_deg_col_panels()
-    sys.exit()
-    host_proc.compute_settling_times()
-    host_proc.build_cluster_index('ContainerID')
+    if "Network" in to_plot and to_plot["Network"]:
+        host_proc.read_network()
+        host_proc.plot_network()
+    if "ColPanel" in to_plot:
+        host_proc.plot_column_panels(aggregate)
+    if "ValueCluster" in to_plot:
+        # TODO: find interpretable cluster plot
+        host_proc.build_cluster_index('ContainerID')
+    if "DegColPanel" in to_plot:
+        host_proc.plot_deg_col_panels()
+    if "SettlingTime" in to_plot and to_plot["SettlingTime"]:
+        host_proc.compute_msg_settling_times()
+        host_proc.plot_msg_settling_times()
+    if "Compare" in to_plot and to_plot["Compare"]:
+        host_proc.set_compare(['CPUPERC', 'VmPeak', 'NetRX', 'NetWX', 'BLKR', 'BLKW'])
+        host_proc.plot_compare()
     #host_proc.plot_clusters('ContainerID', cdf)
-    host_proc.plot_settling_times()
-    host_proc.plot_column_panels(aggregate)
-    df = host_proc.get_df()
 
     log.info(f'Done: {log_dir}')
 
@@ -600,15 +599,26 @@ def dstats(log_dir: Path, # <- mandatory path
     if not path_ok(log_dir, True):
         sys.exit(0)
 
+    if "to_plot"  in ctx.default_map:
+        to_plot =  ctx.default_map["to_plot"]
     jf = f'{os.path.abspath(log_dir)}/config/topology_generated/network_data.json'
-    dstats = DStats(log_dir, out_prefix, jf)
+    dstats = DStats(log_dir, out_prefix, jf, to_plot)
     dstats.process_data()
-    dstats.read_network()
-    dstats.plot_network()
-    dstats.compute_settling_times()
-    dstats.plot_settling_times()
-    dstats.plot_column_panels(aggregate)
-    df = dstats.get_df()
+    if "Network" in to_plot and to_plot["Network"]:
+        dstats.read_network()
+        dstats.plot_network()
+    if "ColPanel" in to_plot:
+        dstats.plot_column_panels(aggregate)
+    if "ValueCluster" in to_plot:
+        dstats.build_cluster_index('ContainerID')
+    if "DegCluster" in to_plot:
+        dstats.plot_deg_col_panels()
+    if "SettlingTime" in to_plot and to_plot["SettlingTime"]:
+        dstats.compute_msg_settling_times()
+        dstats.plot_msg_settling_times()
+    if "Compare" in to_plot and to_plot["Compare"]:
+        dstats.set_compare(["CPUPerc", "MemUse", "NetRecv", "NetSent", "BlockR", "BlockW"])
+        dstats.plot_compare()
 
     log.info(f'Done: {log_dir}')
 
