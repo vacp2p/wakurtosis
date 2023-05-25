@@ -220,7 +220,7 @@ class MetricsCollector:
         # write the df column names
         self.procfs_fd.write((f'EpochId PID NodeName TimeStamp ContainerID ContainerName '
                 f'MEM VmPeakKey VmPeak VmPeakUnit VmSizeKey VmSize VmSizeUnit '
-                f'VmHWMKey VmHWM VmHWMUnit VmRSSKey VmRSS VmRSSUnit '
+                f'VmRSSKey VmRSS VmRSSUnit '
                 f'VmDataKey VmData VmDataUnit VmStkKey VmStk VmStkUnit '
                 f'NET HostVIF RxBytesKey RxBytes RxPacketsKey RxPackets '
                 f'TxBytesKey TxBytes TxPacketsKey TxPackets '
