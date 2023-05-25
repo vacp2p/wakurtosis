@@ -203,13 +203,9 @@ docker cp "$wls_cid:/wls/messages.json" "./${enclave_name}_logs"
 if jq -e ."plotting" >/dev/null 2>&1 "./config/${wakurtosis_config_file}"; then
     if [ "$metrics_infra" = "dstats" ]; then
         docker run --network "host" -v "$(pwd)/wakurtosis_logs:/simulation_data/" --add-host=host.docker.internal:host-gateway analysis src/main.py -i dstats >/dev/null 2>&1
-    elif [ "$metrics_infra" = "cadvisor" ]; then
-        docker run --network "host" -v "$(pwd)/wakurtosis_logs:/simulation_data/" --add-host=host.docker.internal:host-gateway analysis src/main.py -i host-proc >/dev/null 2>&1
-    elif [ "$metrics_infra" = "cadvisor" ]; then
-
     elif [ "$metrics_infra" = "host-proc" ]; then
-
-    elif [ "$metrics_infra" = "cadvisor" ]; then
+        docker run --network "host" -v "$(pwd)/wakurtosis_logs:/simulation_data/" --add-host=host.docker.internal:host-gateway analysis src/main.py -i host-proc >/dev/null 2>&1
+    elif [ "$metrics_infra" = "container-proc" ]; then
         docker run --network "host" -v "$(pwd)/wakurtosis_logs:/simulation_data/" --add-host=host.docker.internal:host-gateway analysis src/main.py -i container-proc >/dev/null 2>&1
     elif [ "$metrics_infra" = "cadvisor" ]; then
         prometheus_port=$(grep "\<prometheus\>" $kurtosis_inspect | awk '{print $6}' | awk -F':' '{print $2}')
