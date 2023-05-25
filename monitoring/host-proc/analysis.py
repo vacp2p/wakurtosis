@@ -17,7 +17,6 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
-
 from sklearn.cluster import KMeans
 
 #from collections import defaultdict
@@ -47,7 +46,7 @@ def path_ok(path : Path, isDir=False):
     if isDir and not stat.S_ISDIR(mode):
         log.error(f'Directory expected: "{path}" is not a directory')
         return False
-    # lay off permission checks; resolve them lazily with open
+    # lay off the permission checks; resolve them lazily with open
     return True
 
 
@@ -550,8 +549,30 @@ def _config_file_callback(ctx: typer.Context, param: typer.CallbackParam, cfile:
             raise typer.BadParameter(str(ex))
     return cfile
 
+
 # instantiate typer and set the commands
 app = typer.Typer()
+
+
+def cmd_helper(metric_infra, to_plot, agg, to_compare):
+    metric_infra.process_data()
+    if "Network" in to_plot and to_plot["Network"]:
+        metric_infra.read_network()
+        metric_infra.plot_network()
+    if "ColPanel" in to_plot:
+        metric_infra.plot_column_panels(agg)
+    if "ValueCluster" in to_plot:
+        # TODO: find interpretable cluster plot
+        metric_infra.build_cluster_index('ContainerID')
+    if "DegColPanel" in to_plot:
+        metric_infra.plot_deg_col_panels()
+    if "SettlingTime" in to_plot and to_plot["SettlingTime"]:
+        metric_infra.compute_msg_settling_times()
+        metric_infra.plot_msg_settling_times()
+    if "Compare" in to_plot and to_plot["Compare"]:
+        metric_infra.set_compare(to_compare)
+        metric_infra.plot_compare()
+
 
 # process / plot docker-procfs.out
 @app.command()
@@ -563,35 +584,18 @@ def host_proc(ctx: typer.Context, log_dir: Path, # <- mandatory path
     if not path_ok(log_dir, True):
         sys.exit(0)
 
-    if "to_plot"  in ctx.default_map:
+    if "to_plot" in ctx.default_map:
         to_plot =  ctx.default_map["to_plot"]
     jf = f'{os.path.abspath(log_dir)}/config/topology_generated/network_data.json'
-    host_proc = HostProc(log_dir, out_prefix, jf, to_plot)
-    host_proc.process_data()
-    if "Network" in to_plot and to_plot["Network"]:
-        host_proc.read_network()
-        host_proc.plot_network()
-    if "ColPanel" in to_plot:
-        host_proc.plot_column_panels(aggregate)
-    if "ValueCluster" in to_plot:
-        # TODO: find interpretable cluster plot
-        host_proc.build_cluster_index('ContainerID')
-    if "DegColPanel" in to_plot:
-        host_proc.plot_deg_col_panels()
-    if "SettlingTime" in to_plot and to_plot["SettlingTime"]:
-        host_proc.compute_msg_settling_times()
-        host_proc.plot_msg_settling_times()
-    if "Compare" in to_plot and to_plot["Compare"]:
-        host_proc.set_compare(['CPUPERC', 'VmPeak', 'NetRX', 'NetWX', 'BLKR', 'BLKW'])
-        host_proc.plot_compare()
-    #host_proc.plot_clusters('ContainerID', cdf)
-
+    host_proc = HostProc(log_dir, f'{out_prefix}-host-proc', jf, to_plot)
+    cmd_helper(host_proc, to_plot, agg=aggregate,
+            to_compare=['CPUPERC', 'VmPeak', 'NetRX', 'NetWX', 'BLKR', 'BLKW'])
     log.info(f'Done: {log_dir}')
 
 
 # process / plot docker-dstats.out
 @app.command()
-def dstats(log_dir: Path, # <- mandatory path
+def dstats(ctx: typer.Context, log_dir: Path, # <- mandatory path
             out_prefix: str = typer.Option("out", help="Specify the prefix for the plot pdfs"),
             aggregate: bool = typer.Option(True, help="Specify whether to aggregate"),
             config_file: str = typer.Option("", callback=_config_file_callback, is_eager=True,
@@ -599,27 +603,12 @@ def dstats(log_dir: Path, # <- mandatory path
     if not path_ok(log_dir, True):
         sys.exit(0)
 
-    if "to_plot"  in ctx.default_map:
+    if "to_plot" in ctx.default_map:
         to_plot =  ctx.default_map["to_plot"]
     jf = f'{os.path.abspath(log_dir)}/config/topology_generated/network_data.json'
-    dstats = DStats(log_dir, out_prefix, jf, to_plot)
-    dstats.process_data()
-    if "Network" in to_plot and to_plot["Network"]:
-        dstats.read_network()
-        dstats.plot_network()
-    if "ColPanel" in to_plot:
-        dstats.plot_column_panels(aggregate)
-    if "ValueCluster" in to_plot:
-        dstats.build_cluster_index('ContainerID')
-    if "DegCluster" in to_plot:
-        dstats.plot_deg_col_panels()
-    if "SettlingTime" in to_plot and to_plot["SettlingTime"]:
-        dstats.compute_msg_settling_times()
-        dstats.plot_msg_settling_times()
-    if "Compare" in to_plot and to_plot["Compare"]:
-        dstats.set_compare(["CPUPerc", "MemUse", "NetRecv", "NetSent", "BlockR", "BlockW"])
-        dstats.plot_compare()
-
+    dstats = DStats(log_dir, f'{out_prefix}-dstats', jf, to_plot)
+    cmd_helper(dstats, to_plot, agg=aggregate,
+            to_compare=["CPUPerc", "MemUse", "NetRecv", "NetSent", "BlockR", "BlockW"])
     log.info(f'Done: {log_dir}')
 
 
