@@ -40,45 +40,24 @@ def _prepare_nwaku_cmd_in_service(nwakunode_names, config_files, network_topolog
     return [prepared_cmd]
 
 
-def instantiate_bootstrap_nwaku(plan, node_name, config_file, testing):
+def instantiate_bootstrap_nwaku_service(plan, service_name):
     prepared_ports = {}
-    prepared_ports[vars.WAKU_RPC_PORT_ID + vars.ID_STR_SEPARATOR + node_name] = \
-        PortSpec(number=vars.WAKU_RPC_PORT_NUMBER,
-                 transport_protocol=vars.WAKU_RPC_PORT_PROTOCOL)
+    waku_builder.prepare_single_node_waku_ports(prepared_ports, service_name, 0, True)
 
-    prepared_ports[vars.PROMETHEUS_PORT_ID + vars.ID_STR_SEPARATOR + node_name] = \
-        PortSpec(number=vars.PROMETHEUS_PORT_NUMBER,
-                 transport_protocol=vars.PROMETHEUS_PORT_PROTOCOL)
-
-    prepared_ports[vars.WAKU_LIBP2P_PORT_ID + vars.ID_STR_SEPARATOR + node_name] = \
-        PortSpec(number=vars.WAKU_LIBP2P_PORT,
-                 transport_protocol=vars.WAKU_LIBP2P_PORT_PROTOCOL)
-
-    prepared_ports[vars.WAKU_DISCV5_PORT_ID + vars.ID_STR_SEPARATOR + node_name] = \
-        PortSpec(number=vars.WAKU_DISCV5_PORT_NUMBER,
-                 transport_protocol=vars.WAKU_DISCV5_PORT_PROTOCOL)
-
-    artifact_id = files.get_toml_configuration_artifact(plan, config_file, "bootstrap-toml", testing)
-    prepared_files = waku_builder.prepare_waku_config_files_in_service([node_name],
-                                                                       [artifact_id])
     prepared_cmd = ""
     prepared_cmd += vars.NWAKU_ENTRYPOINT + " "
-    # todo Change invalid address in discv5
-    #prepared_cmd += vars.WAKUNODE_CONFIGURATION_FILE_FLAG + \
-    #                vars.CONTAINER_NODE_CONFIG_FILE_LOCATION + node_name + "/" + config_file
+    prepared_cmd += "--discv5-discovery=true"
 
     add_service_config = ServiceConfig(
         image=vars.NWAKU_IMAGE,
         ports=prepared_ports,
-        files=prepared_files,
         entrypoint=vars.GENERAL_ENTRYPOINT,
         cmd=[prepared_cmd]
     )
 
     service = plan.add_service(
-        service_name="node-bootstrap",
+        service_name=service_name,
         config=add_service_config
     )
 
     return service
-
