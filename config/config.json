@@ -47,7 +47,7 @@
       "aggregate" : "True",
       "to_plot" : {
         "Network": "True",
-        "ColPanel" : ["CPUPERC"],
+        "ColPanel" : ["CPUPERC", "NetRX"],
         "ValueCluster" : [],
         "DegColPanel" : ["VmPeak"],
         "SettlingTime" : "True",
