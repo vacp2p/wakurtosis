@@ -273,13 +273,11 @@ class Plots(metaclass=Singleton):
         for i in [0,1]:
             for j in [0,1,2]:
                 col = self.to_compare[k]
-                print(k, col)
                 #self.axes[i,j].ticklabel_format(style='plain')
                 self.axes[i,j].yaxis.grid(True)
                 pc = self.axes[i,j].violinplot(dataset=self.df[col], showmeans=True)
                 self.axes[i,j].set_ylabel(self.col2units[col])
                 self.axes[i,j].set_title(self.col2title[col])
-                print(pc['bodies'])
                 for p in pc['bodies']:
                     p.set_facecolor('green')
                     p.set_edgecolor('k')
@@ -516,13 +514,13 @@ def _config_file_callback(ctx: typer.Context, param: typer.CallbackParam, cfile:
             with open(cfile, 'r') as f:  # Load config file
                 conf = json.load(f)
                 if "plotting" not in conf:
-                    print(f"No plotting is requested in {cfile}. Skipping plotting.")
+                    log.error(f"No plotting is requested in {cfile}. Skipping plotting.")
                     sys.exit(0)
                 # Merge config and default_map
                 if ctx.command.name in conf["plotting"]:
                     ctx.default_map.update(conf["plotting"][ctx.command.name])
                 else:
-                    print(f"No dstats/host-proc params in config. Sticking to defaults")
+                    log.info(f"No dstats/host-proc params in config. Sticking to defaults")
             #ctx.default_map.update(conf["plotting"])  # Merge config and default_map
         except Exception as ex:
             raise typer.BadParameter(str(ex))
@@ -538,7 +536,6 @@ def cmd_helper(metric_infra, to_plot, agg, to_compare):
     if "Network" in to_plot and to_plot["Network"]:
         metric_infra.read_network()
         metric_infra.plot_network()
-        print("nw done")
     if "ColPanel" in to_plot and to_plot["ColPanel"]:
         metric_infra.plot_column_panels(agg)
     if "ValueCluster" in to_plot and to_plot["ValueCluster"]:
