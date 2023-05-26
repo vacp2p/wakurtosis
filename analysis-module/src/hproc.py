@@ -564,8 +564,7 @@ def host_proc(ctx: typer.Context, log_dir: Path, # <- mandatory path
     if not path_ok(log_dir, True):
         sys.exit(0)
 
-    if "to_plot" in ctx.default_map:
-        to_plot =  ctx.default_map["to_plot"]
+    to_plot = ctx.default_map["to_plot"] if ctx.default_map and "to_plot" in ctx.default_map else []
     jf = f'{os.path.abspath(log_dir)}/config/topology_generated/network_data.json'
     host_proc = HostProc(log_dir, f'{out_prefix}-host-proc', jf, to_plot)
     cmd_helper(host_proc, to_plot, agg=aggregate,
