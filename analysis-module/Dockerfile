@@ -28,4 +28,5 @@ ENV PATH="/opt/venv/bin:$PATH"
 ENV PYTHONPATH "${PYTHONPATH}:src"
 
 # Set the entrypoint
+# `docker run -it analysis /bin/sh` vs `docker run -it --entrypoint /bin/sh  analysis` ?
 ENTRYPOINT ["python"]
