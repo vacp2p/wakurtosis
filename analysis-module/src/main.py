@@ -8,6 +8,7 @@ from src import log_parser
 from src import analysis
 from src import analysis_logger
 from src import cproc
+from src import hproc
 from src import cadvisor
 from src import plotting
 from src import plotting_configurations
@@ -41,13 +42,17 @@ if __name__ == "__main__":
     msg_injection_times = analysis.compute_injection_times(injected_msgs_dict)
 
     """ Generate stats depending on the type of measurements infrastructure """
+    # 0xFugue: NOTE: too limiting; no CLI, no pandas, no independent config.json/log_dir 
+    """if infra_type == 'dstats':
+        hproc.run_dstats(simulation_config, simulation_path, msgs_dict, node_logs, msg_propagation_times, msg_injection_times, min_tss, max_tss)
+    elif infra_type == 'host-proc':
+        hproc.run_hproc(simulation_config, simulation_path, msgs_dict, node_logs, msg_propagation_times, msg_injection_times, min_tss, max_tss)"""
     if infra_type == 'container-proc':
         cproc.run(simulation_config, simulation_path, msgs_dict, node_logs, msg_propagation_times, msg_injection_times, min_tss, max_tss)
     elif infra_type == 'cadvisor':
         cadvisor.run(simulation_config, metrics, topology_info, msg_propagation_times, msg_injection_times, min_tss, max_tss, prom_port)
     else:
         analysis_logger.G_LOGGER.error(f'Unknown infrastructure type: {infra_type}')
-    
         analysis.inject_metric_in_dict(plotting_configurations.plotting_config, "propagation",
                                     "Propagation Time (per message)", "Propagation Time (ms)",
                                     "msg_propagation_times", msg_propagation_times)

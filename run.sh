@@ -202,9 +202,11 @@ docker cp "$wls_cid:/wls/messages.json" "./${enclave_name}_logs"
 # Run analysis
 if jq -e ."plotting" >/dev/null 2>&1 "./config/${wakurtosis_config_file}"; then
     if [ "$metrics_infra" = "dstats" ]; then
-        docker run --network "host" -v "$(pwd)/wakurtosis_logs:/simulation_data/" --add-host=host.docker.internal:host-gateway analysis src/main.py -i dstats >/dev/null 2>&1
+        docker run --name "dstats" --network "host" -v "$(pwd)/wakurtosis_logs:/simulation_data/" --add-host=host.docker.internal:host-gateway analysis src/hproc.py dstats /simulation_data/ --config-file /simulation_data/config/config.json  
+        docker cp dstats:/analysis/output-dstats-compare.pdf wakurtosis_logs/analysis.pdf
     elif [ "$metrics_infra" = "host-proc" ]; then
-        docker run --network "host" -v "$(pwd)/wakurtosis_logs:/simulation_data/" --add-host=host.docker.internal:host-gateway analysis src/main.py -i host-proc >/dev/null 2>&1
+        docker run --name "host-proc" --network "host" -v "$(pwd)/wakurtosis_logs:/simulation_data/" --add-host=host.docker.internal:host-gateway analysis src/hproc.py host-proc /simulation_data/ --config-file /simulation_data/config/config.json
+        docker cp host-proc:/analysis/output-host-proc-compare.pdf wakurtosis_logs/analysis.pdf
     elif [ "$metrics_infra" = "container-proc" ]; then
         docker run --network "host" -v "$(pwd)/wakurtosis_logs:/simulation_data/" --add-host=host.docker.internal:host-gateway analysis src/main.py -i container-proc >/dev/null 2>&1
     elif [ "$metrics_infra" = "cadvisor" ]; then
