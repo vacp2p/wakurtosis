@@ -424,7 +424,7 @@ class DStats(Plots, metaclass=Singleton):
                                     "NetRecv", "NetSent", "BlockR","BlockW",  "PIDS"])
         self.post_process()
         self.remove_incomplete_samples(grp='Key', err='--')
-        self.df.to_csv(f'{self.oprefix}-dstats-cleaned.csv', sep='/')
+        self.df.to_csv(f'{self.oprefix}-cleaned.csv', sep='/')
 
 
 class HostProc(Plots, metaclass=Singleton):
@@ -487,7 +487,7 @@ class HostProc(Plots, metaclass=Singleton):
                     'CPUPERC'])
         self.post_process()
         self.remove_incomplete_samples(grp='Key')
-        self.df.to_csv(f'{self.oprefix}-host-proc-cleaned.csv', sep='/')
+        self.df.to_csv(f'{self.oprefix}-cleaned.csv', sep='/')
 
     # normalise the units
     def post_process(self):
@@ -559,7 +559,7 @@ def cmd_helper(metric_infra, to_plot, agg, to_compare):
 # process / plot docker-procfs.out
 @app.command()
 def host_proc(ctx: typer.Context, log_dir: Path, # <- mandatory path
-            out_prefix: str = typer.Option("out", help="Specify the prefix for the plot pdfs"),
+            out_prefix: str = typer.Option("output", help="Specify the prefix for the plot pdfs"),
             aggregate: bool = typer.Option(True, help="Specify whether to aggregate"),
             config_file: str = typer.Option("", callback=_config_file_callback, is_eager=True,
                 help="Set the input config file (JSON)")):
@@ -577,7 +577,7 @@ def host_proc(ctx: typer.Context, log_dir: Path, # <- mandatory path
 # process / plot docker-dstats.out
 @app.command()
 def dstats(ctx: typer.Context, log_dir: Path, # <- mandatory path
-            out_prefix: str = typer.Option("out", help="Specify the prefix for the plot pdfs"),
+            out_prefix: str = typer.Option("output", help="Specify the prefix for the plot pdfs"),
             aggregate: bool = typer.Option(True, help="Specify whether to aggregate"),
             config_file: str = typer.Option("", callback=_config_file_callback, is_eager=True,
              help="Set the input config file (JSON)")):

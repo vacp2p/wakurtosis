@@ -42,7 +42,7 @@
     "metrics_filename": "./cproc_metrics.json"
   },
   "plotting": {
-    "host-proc": {
+    "dstats": {
       "out_prefix" : "output",
       "aggregate" : "True",
       "to_plot" : {
