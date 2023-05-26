@@ -533,6 +533,9 @@ app = typer.Typer()
 
 def cmd_helper(metric_infra, to_plot, agg, to_compare):
     metric_infra.process_data()
+    # always plot the compare plots; rest on demand
+    metric_infra.set_compare(to_compare)
+    metric_infra.plot_compare()
     if "Network" in to_plot and to_plot["Network"]:
         metric_infra.read_network()
         metric_infra.plot_network()
@@ -546,9 +549,7 @@ def cmd_helper(metric_infra, to_plot, agg, to_compare):
     if "SettlingTime" in to_plot and to_plot["SettlingTime"]:
         metric_infra.compute_msg_settling_times()
         metric_infra.plot_msg_settling_times()
-    if "Compare" in to_plot and to_plot["Compare"]:
-        metric_infra.set_compare(to_compare)
-        metric_infra.plot_compare()
+    #if "Compare" in to_plot and to_plot["Compare"]:
 
 
 # process / plot docker-procfs.out
