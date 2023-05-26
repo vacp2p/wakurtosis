@@ -73,7 +73,7 @@ class Plots(metaclass=Singleton):
         self.json_fname, self.G = jf, nx.empty_graph()
         self.to_plot, self.to_compare = to_plot, []
 
-    # log processing
+    # waku log processing
     def compute_msg_settling_times(self):
         ldir = str(self.log_dir)
         topology_info = topology.load_json(f'{ldir}/{vars.G_TOPOLOGY_FILE_NAME}')
@@ -96,6 +96,7 @@ class Plots(metaclass=Singleton):
         self.keys = self.df['Key'].unique()
         self.keys.sort()
 
+    # set the fields that go into the comparison panel
     def set_compare(self, lst):
         self.to_compare = lst
 
@@ -108,27 +109,27 @@ class Plots(metaclass=Singleton):
             minRows = rows if minRows > rows else minRows
         self.df = self.df.groupby(grp).head(minRows)
 
+    # plot the settling times, both network- and node-wise
     def plot_msg_settling_times(self):
         self.set_panel_size(2, 2, False)
         self.fig.suptitle(f'Settling Time: {len(self.msg_settling_times)} messages')
         self.fig.supylabel("msecs")
-        #axes[0].violinplot([0], showmedians=True)
         self.axes[0,0].set_xticks([x + 1 for x in range(len(self.keys))])
         #axes[0].set_xticks(ticks=[x + 1 for x in range(len(self.waku_cids))], labels=self.df["ContainerID"].unique())
         self.axes[0,0].set_xlabel('TODO: revisit after Jordi added per-container settling times')
 
-        #fig, axes = plt.subplots(2, 2, layout='constrained', sharey=True)
         self.axes[1,0].violinplot(self.msg_settling_times, showmedians=True)
-        #axes[0].spines[['right', 'top']].set_visible(False)
         self.axes[1,0].axes.xaxis.set_visible(False)
         plt.savefig(f'{self.oprefix}-settling-time.pdf', format="pdf", bbox_inches="tight")
         #plt.show()
 
+    # set the panel params
     def set_panel_size(self, m, n, shareY=False):
         self.fig, self.axes = plt.subplots(m, n, layout='constrained', sharey=shareY)
         self.fig.set_figwidth(12)
         self.fig.set_figheight(10)
 
+    # plot col panels for selected columns
     def plot_column_panels(self, agg):
         for col in self.to_plot["ColPanel"]:
             if col not in self.df.columns:
@@ -139,6 +140,7 @@ class Plots(metaclass=Singleton):
             else:
                 self.column_panel_helper(col, agg)
 
+    # plot degree/col panels for the given set of columns
     def plot_deg_col_panels(self):
         for col in self.to_plot["DegColPanel"]:
             if col not in self.df.columns:
@@ -146,9 +148,9 @@ class Plots(metaclass=Singleton):
                 continue
             self.deg_col_panel_helper(col) # only agg for now 
 
+    # plot the column panel
     def column_panel_helper(self, col, agg=True):
         self.set_panel_size(2, 2)
-        #fig, axes = plt.subplots(2, 2, layout='constrained', sharey=False)
         self.fig.suptitle(self.col2title[col])
         self.fig.supylabel(self.col2units[col])
 
@@ -167,8 +169,6 @@ class Plots(metaclass=Singleton):
             per_key_arr.append(tmp)
             all_arr = np.concatenate((all_arr, tmp), axis=0)
 
-        # NOTE: xticks are from self.df.Keys
-        #axes[0,0].set_xticks([x + 1 for x in range(len(self.keys))])
         self.axes[0,0].set_xticks([x + 1 for x in range(len(self.keys))])
         labels = [ '{}{}'.format( ' ', k) for i, k in enumerate(self.keys)]
         self.axes[0,0].set_xticklabels(labels)
@@ -218,6 +218,7 @@ class Plots(metaclass=Singleton):
         plt.savefig(f'{self.oprefix}-{col}.pdf')
         #plt.show()
 
+    # build the key2nodes: useful when $container_size$ > 1
     def build_key2nodes(self):
         with open(self.kinspect_fname) as f:
             for line in f:
@@ -234,15 +235,18 @@ class Plots(metaclass=Singleton):
                 elif "libp2p-node" in larray[0]:
                     self.key2nodes[key].append(larray[0].split("libp2p-")[1].replace(':', ''))
 
+    # export the df if needed
     def get_df(self):
         return self.df
 
+    # build indices or cluster plots
     def build_cluster_index(self, grp):
         lst = self.df[grp].unique()
         self.grp2idx =  { val : i for i, val in enumerate(lst)}
         self.idx2grp =  { i : val for i, val in enumerate(lst)}
         self.df[f'{grp}_idx'] = self.df[grp].map(lambda x: self.grp2idx[x])
 
+    # plot the cluster panel
     def cluster_plot_helper(self, grp, cols):
         self.build_cluster_index(grp)
         kmeans = KMeans(n_clusters=10, n_init='auto')
@@ -267,7 +271,8 @@ class Plots(metaclass=Singleton):
         labels = kmeans.fit_predict(xpdf)
         self.axes[1,1].scatter(xpdf.iloc[:, 0], xpdf.iloc[:, 2], c=labels,  cmap='plasma')
 
-    def plot_compare(self):
+    # plot the comparison panel
+    def plot_compare_panel(self):
         self.set_panel_size(2, 3)
         k = 0
         for i in [0,1]:
@@ -289,6 +294,7 @@ class Plots(metaclass=Singleton):
     def phase_plots_helper(self, grp, col):
         pass
 
+    # build the network from json
     def read_network(self):
         with open(self.json_fname) as f:
             js_graph = json.load(f)
@@ -296,30 +302,26 @@ class Plots(metaclass=Singleton):
                 for dst  in js_graph['nodes'][src]['static_nodes']:
                     self.G.add_edge(src, dst)
 
+    # plot the network and degree histogram
     def plot_network(self):
         self.set_panel_size(1, 2)
         self.fig.suptitle("Network & Degree Distribution")
         nx.draw(self.G, ax=self.axes[0], pos=nx.kamada_kawai_layout(self.G), with_labels=True)
 
         degree_sequence = sorted((d for n, d in self.G.degree()), reverse=True)
-        #x, y = np.unique(degree_sequence, return_counts=True)
         w = np.ones(len(degree_sequence))/len(degree_sequence)
         hist, bin_edges = np.histogram(degree_sequence, weights=w, density=False)
         width = (bin_edges[1] - bin_edges[0])
         self.axes[1].bar(x=bin_edges[:-1], height=hist, align='center',
                 width=width, edgecolor='k', facecolor='green', alpha=0.5)
         self.axes[1].set_xticks(range(max(degree_sequence)+1))
-        #self.axes[1].bar(x, y, width=0.8, align='center')
-        #self.axes[1].hist(degree_sequence, weights=w, density=False, width=0.5)
         self.axes[1].set_title("Degree histogram")
         self.axes[1].set_xlabel("Degree")
         self.axes[1].set_ylabel("% of Nodes")
-        #self.axes[1].hist(degree_sequence)
-        #by_degree = [[] for i in range(x[-1]+1)]
-        #for node, degree in self.G.degree():
-        #    by_degree[degree].append(self.df[self.df.NodeName == node])
+        plt.savefig(f'{self.oprefix}-network.pdf', format="pdf", bbox_inches="tight")
         #plt.show()
 
+    # plot the degree col panel
     def deg_col_panel_helper(self, col):
         self.set_panel_size(1, 2, shareY=True)
         self.fig.suptitle(self.col2title[col])
@@ -487,6 +489,7 @@ class HostProc(Plots, metaclass=Singleton):
         self.remove_incomplete_samples(grp='Key')
         self.df.to_csv(f'{self.oprefix}-host-proc-cleaned.csv', sep='/')
 
+    # normalise the units
     def post_process(self):
         #h2b = Human2BytesConverter()
         for size in ['VmPeak', 'VmSize','VmRSS', 'VmData','VmStk']:
@@ -501,6 +504,7 @@ class HostProc(Plots, metaclass=Singleton):
         self.set_keys()
         self.df.fillna(0)
 
+    # not very helpful plots atm
     def plot_clusters(self, grp, agg, axes):
         self.cluster_plot_helper(col=['CPUPERC', 'VmPeak', 'VmRSS', 'VmSize', 'VmData'], grp=grp, axes=axes)
 
@@ -530,7 +534,7 @@ def _config_file_callback(ctx: typer.Context, param: typer.CallbackParam, cfile:
 # instantiate typer and set the commands
 app = typer.Typer()
 
-
+# common cmd processor/plotter
 def cmd_helper(metric_infra, to_plot, agg, to_compare):
     metric_infra.process_data()
     # always plot the compare plots; rest on demand
