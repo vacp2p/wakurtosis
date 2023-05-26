@@ -6,7 +6,7 @@ apt-get install -y jq
 
 # Install the suitable kurtosis-cli
 required_version=0.70.2
-installed_version=`kurtosis version|grep -v WARN`
+installed_version=`kurtosis version | grep -v WARN`
 
 if [ "$installed_version" = "$required_version" ]; then
   echo "Kurtosis version is up to date : $installed_version"
@@ -38,9 +38,10 @@ cd ./monitoring/container-proc
 sh ./build.sh
 cd ..
 
+# enable as we start using go-waku
 
-git clone git@github.com:waku-org/go-waku.git
-cd go-waku
-docker build -t gowaku .
-cd ..
-rm -rf go-waku
+#git clone git@github.com:waku-org/go-waku.git
+#cd go-waku
+#docker build -t gowaku .
+#cd ..
+#rm -rf go-waku
