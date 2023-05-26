@@ -539,7 +539,7 @@ def cmd_helper(metric_infra, to_plot, agg, to_compare):
     metric_infra.process_data()
     # always plot the compare plots; rest on demand
     metric_infra.set_compare(to_compare)
-    metric_infra.plot_compare()
+    metric_infra.plot_compare_panel()
     if "Network" in to_plot and to_plot["Network"]:
         metric_infra.read_network()
         metric_infra.plot_network()
