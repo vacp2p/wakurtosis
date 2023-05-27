@@ -56,7 +56,7 @@ def instantiate_bootstrap_nwaku_service(plan, service_name):
     )
 
     service = plan.add_service(
-        service_name=service_name,
+        name=service_name,
         config=add_service_config
     )
 

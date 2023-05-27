@@ -33,7 +33,7 @@ def set_up_prometheus(plan, network_topology):
     )
 
     prometheus_service = plan.add_service(
-        service_name=vars.PROMETHEUS_SERVICE_NAME,
+        name=vars.PROMETHEUS_SERVICE_NAME,
         config=add_service_config
     )
 

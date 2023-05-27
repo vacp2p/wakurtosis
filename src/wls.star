@@ -71,7 +71,7 @@ def init(plan, network_topology, config_file):
         cmd=wls_cmd
     )
     wls_service = plan.add_service(
-        service_name=vars.WLS_SERVICE_NAME,
+        name=vars.WLS_SERVICE_NAME,
         config=add_service_config
     )
 
