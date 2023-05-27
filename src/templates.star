@@ -32,3 +32,9 @@ def  get_prometheus_template():
     """
 
     return template
+
+
+def get_enr_template():
+    template = "{{.enr}}"
+
+    return template
