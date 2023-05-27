@@ -46,7 +46,7 @@ def instantiate_bootstrap_nwaku_service(plan, service_name):
 
     prepared_cmd = ""
     prepared_cmd += vars.NWAKU_ENTRYPOINT + " "
-    prepared_cmd += "--discv5-discovery=true"
+    prepared_cmd += "--discv5-discovery=true --metrics-server=true"
 
     add_service_config = ServiceConfig(
         image=vars.NWAKU_IMAGE,
