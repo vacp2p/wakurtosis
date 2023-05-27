@@ -78,6 +78,10 @@ CONTAINER_DATASOURCES_GRAFANA = "/etc/grafana/provisioning/datasources/"
 CONTAINER_DATASOURCES_FILE_NAME_GRAFANA = "datasources.yaml"
 
 # Gennet topology Keys
+GENNET_KEY = "gennet"
+GENNET_IMAGE = "gennet"
+GENNET_SERVICE_NAME = "gennet"
+GENNET_CONFIG_ARTIFACT_NAME = "gennet-config"
 GENNET_NODES_KEY = "nodes"
 GENNET_PORT_SHIFT_KEY = "port_shift"
 GENNET_ALL_CONTAINERS_KEY = "containers"
@@ -131,6 +135,7 @@ ARGUMENT_PARSER_MODULE = "github.com/logos-co/wakurtosis/src/arguments_parser.st
 FILE_HELPERS_MODULE = "github.com/logos-co/wakurtosis/src/file_helpers.star"
 TEMPLATES_MODULE = "github.com/logos-co/wakurtosis/src/templates.star"
 WLS_MODULE = "github.com/logos-co/wakurtosis/src/wls.star"
+GENNET_MODULE = "github.com/logos-co/wakurtosis/src/gennet.star"
 CALL_PROTOCOLS = "github.com/logos-co/wakurtosis/src/call_protocols.star"
 NOMOS_MODULE = "github.com/logos-co/wakurtosis/src/nomos.star"
 
