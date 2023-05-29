@@ -297,7 +297,8 @@ class MetricsCollector:
         with open(self.docker_pid2veth_fname) as f:
             for line in f.readlines():
                 la = line.strip().split(":")
-                self.did2veth[la[0]]=la[1]
+                self.did2veth[la[0]]=la[1].strip().split(' ')[-1]
+                log.info(f'{la[0]}->{self.did2veth[la[0]]}')
         self.pid2veth = {pid : self.did2veth[self.pid2did[pid]] for pid in self.docker_pids}
 
     # build metadata for the runs: pid2did, did2veth, pid2veth
