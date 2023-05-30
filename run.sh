@@ -7,6 +7,8 @@ if [ "$#" -eq 0 ]; then
     exit 1
 fi
 
+#if ! [[ "$cms" =~ ^(cadvisor|dstats|host-proc|container-proc)$ ]]; then get_cms ; fi
+
 # get the args
 metrics_infra=${1:-"cadvisor"}
 enclave_name=${2:-"wakurtosis"}
@@ -17,6 +19,7 @@ loglevel="error"
 echo "- Metrics Infra: " $metrics_infra
 echo "- Enclave name: " $enclave_name
 echo "- Configuration file: " $wakurtosis_config_file
+
 
 # cleanup previous runs
 echo -e "\Cleaning up previous runs"
@@ -75,10 +78,10 @@ elif  [ "$metrics_infra" = "host-proc" ]; then # HOST-PROC
     mkdir $odir
     mkfifo $signal_fifo
     chmod 0777 $signal_fifo
+    # get the sudo sorted out in the main thread itself
+    echo "host-proc: need sudo rights, please enter the appropriate credentials at the prompt"
+    sudo echo "host-proc: got the credentials, starting the host-proc helper" # a dummy sudo cmd
     sudo sh ./monitoring/host-proc/host-proc-helper.sh $rclist $odir $usr $grp $signal_fifo &
-elif  [ "$metrics_infra" = "container-proc" ]; then # CONTAINER-PROC
-  #Jordi's metrics module prologue
-    echo "Jordi's measurement infra  prologue goes here"
 fi
 ##################### END
 
@@ -103,11 +106,11 @@ wls_service_name=$(grep "\<wls\>" $kurtosis_inspect | awk '{print $1}')
 echo "\n--> To see simulation logs run: kurtosis service logs $enclave_name $wls_service_name <--"
 
 # Get the container prefix/suffix for the WLS service
-service_name=$(grep  $wls_service_name $kurtosis_inspect | awk '{print $2}')
-service_uuid=$(grep $wls_service_name $kurtosis_inspect | awk '{print $1}')
+wls_sname=$(grep $wls_service_name $kurtosis_inspect | awk '{print $2}')
+wls_suuid=$(grep $wls_service_name $kurtosis_inspect | awk '{print $1}')
 
 # Construct the fully qualified container name that kurtosis has created
-wls_cid="$service_name--$service_uuid"
+wls_cid="$wls_sname--$wls_suuid"
 #echo "The WLS_CID = $wls_cid"
 ##################### END
 
@@ -177,7 +180,7 @@ cp -r ./config ${enclave_name}_logs
 
 ##################### MONITORING MODULE - COPY
 if [ "$metrics_infra" = "dstats" ]; then
-    # unfortunately no way to introduce a race-free finish signalling
+    # unfortunately there is no way to introduce a race-free finish signalling
     echo "dstats: copying the dstats data"
     cp -r ./monitoring/dstats/stats  ${enclave_name}_logs/dstats-data
 elif [ "$metrics_infra" = "host-proc" ]; then
@@ -202,10 +205,10 @@ docker cp "$wls_cid:/wls/messages.json" "./${enclave_name}_logs"
 # Run analysis
 if jq -e ."plotting" >/dev/null 2>&1 "./config/${wakurtosis_config_file}"; then
     if [ "$metrics_infra" = "dstats" ]; then
-        docker run --name "dstats" --network "host" -v "$(pwd)/wakurtosis_logs:/simulation_data/" --add-host=host.docker.internal:host-gateway analysis src/hproc.py dstats /simulation_data/ --config-file /simulation_data/config/config.json  
+        docker run --name "dstats" --network "host" -v "$(pwd)/wakurtosis_logs:/simulation_data/" --add-host=host.docker.internal:host-gateway analysis src/hproc.py dstats /simulation_data/ --config-file /simulation_data/config/config.json  >/dev/null 2>&1  
         docker cp dstats:/analysis/output-dstats-compare.pdf wakurtosis_logs/analysis.pdf
     elif [ "$metrics_infra" = "host-proc" ]; then
-        docker run --name "host-proc" --network "host" -v "$(pwd)/wakurtosis_logs:/simulation_data/" --add-host=host.docker.internal:host-gateway analysis src/hproc.py host-proc /simulation_data/ --config-file /simulation_data/config/config.json
+        docker run --name "host-proc" --network "host" -v "$(pwd)/wakurtosis_logs:/simulation_data/" --add-host=host.docker.internal:host-gateway analysis src/hproc.py host-proc /simulation_data/ --config-file /simulation_data/config/config.json  >/dev/null 2>&1
         docker cp host-proc:/analysis/output-host-proc-compare.pdf wakurtosis_logs/analysis.pdf
     elif [ "$metrics_infra" = "container-proc" ]; then
         docker run --network "host" -v "$(pwd)/wakurtosis_logs:/simulation_data/" --add-host=host.docker.internal:host-gateway analysis src/main.py -i container-proc >/dev/null 2>&1
