@@ -78,7 +78,7 @@ elif  [ "$metrics_infra" = "host-proc" ]; then # HOST-PROC
     chmod 0777 $signal_fifo
     # get the sudo sorted out in the main thread itself
     echo "host-proc: need sudo rights, please enter suitable credentials at the prompt"
-    sudo echo "host-proc: got the credentials, starting the host-proc helper" # a dummy sudo cmd
+    sudo echo "host-proc: got the credentials, starting the host-proc helper" # dummy sudo cmd
     sudo sh ./monitoring/host-proc/host-proc-helper.sh $rclist $odir $usr $grp $signal_fifo &
 fi
 ##################### END

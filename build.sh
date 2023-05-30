@@ -30,6 +30,14 @@ cd gennet-module
 sh ./build_docker.sh
 cd ..
 
+echo "host-proc: setup the venv @ /tmp/host-proc"
+python3 -m venv /tmp/host-proc
+. /tmp/host-proc/bin/activate
+python3 -m pip install -r monitoring/host-proc/requirements.txt
+deactivate
+echo "host-proc: venv is ready"
+
+
 cd wls-module
 docker build -t wls:0.0.1 .
 cd ..
