@@ -2,6 +2,7 @@ import typer
 import sys
 import os
 import stat
+import math
 from pathlib import Path
 import time
 import json
@@ -63,7 +64,7 @@ class Human2BytesConverter(metaclass=Singleton):
 
 # Base class for plots and common helpers
 class Plots(metaclass=Singleton):
-    def __init__(self, log_dir, oprefix, jf, to_plot):
+    def __init__(self, log_dir, oprefix, jf, to_plot, cfile):
         self.log_dir, self.oprefix = log_dir, oprefix
         self.df, self.n, self.keys, self.cols = pd.DataFrame(), 0, [], []
         self.col2title, self.col2units, self.key2nodes = {}, {}, {}
@@ -72,6 +73,7 @@ class Plots(metaclass=Singleton):
         self.fig, self.axes = "", ""
         self.json_fname, self.G = jf, nx.empty_graph()
         self.to_plot, self.to_compare = to_plot, []
+        self.run_summary, self.cfile = "", cfile
 
     # waku log processing
     def compute_msg_settling_times(self):
@@ -96,6 +98,19 @@ class Plots(metaclass=Singleton):
         self.keys = self.df['Key'].unique()
         self.keys.sort()
 
+    # set the summary for the run: to be used for plot title
+    def set_summary(self):
+        with open(self.cfile, 'r') as f:  # Load config file
+            conf = json.load(f)
+            minsize = int(conf["wls"]["min_packet_size"]/1024)
+            maxsize = int(conf["wls"]["max_packet_size"]/1024)
+            self.run_summary = (f'{conf["gennet"]["num_nodes"]}by'
+                                f'{conf["gennet"]["container_size"]}-'
+                                f'{conf["wls"]["message_rate"]}mps-'
+                                f'({minsize}-{maxsize})K-'
+                                f'{conf["wls"]["simulation_time"]}sec')
+        print(f'summary: {self.run_summary} (from {self.cfile})')
+
     # set the fields that go into the comparison panel
     def set_compare(self, lst):
         self.to_compare = lst
@@ -112,7 +127,8 @@ class Plots(metaclass=Singleton):
     # plot the settling times, both network- and node-wise
     def plot_msg_settling_times(self):
         self.set_panel_size(2, 2, False)
-        self.fig.suptitle(f'Settling Time: {len(self.msg_settling_times)} messages')
+        nmsgs = len(self.msg_settling_times)
+        self.fig.suptitle(f'Settling Time: {self.run_summary}, {nmsgs} msgs')
         self.fig.supylabel("msecs")
         self.axes[0,0].set_xticks([x + 1 for x in range(len(self.keys))])
         #axes[0].set_xticks(ticks=[x + 1 for x in range(len(self.waku_cids))], labels=self.df["ContainerID"].unique())
@@ -151,10 +167,10 @@ class Plots(metaclass=Singleton):
     # plot the column panel
     def column_panel_helper(self, col, agg=True):
         self.set_panel_size(2, 2)
-        self.fig.suptitle(self.col2title[col])
+        self.fig.suptitle(f'{self.col2title[col]}: {self.run_summary}')
         self.fig.supylabel(self.col2units[col])
 
-        per_key_arr, all_arr = [], []
+        per_key_arr = []
 
         self.build_key2nodes()
 
@@ -167,23 +183,23 @@ class Plots(metaclass=Singleton):
             else:
                 tmp = self.df[self.get_key() == key][col].diff().dropna().values
             per_key_arr.append(tmp)
-            all_arr = np.concatenate((all_arr, tmp), axis=0)
+            #all_arr = np.concatenate((all_arr, tmp), axis=0)
 
-        self.axes[0,0].set_xticks([x + 1 for x in range(len(self.keys))])
+        #self.axes[0,0].set_xticks([x + 1 for x in range(len(self.keys))])
         labels = [ '{}{}'.format( ' ', k) for i, k in enumerate(self.keys)]
-        self.axes[0,0].set_xticklabels(labels)
+        #self.axes[0,0].set_xticklabels(labels)
         legends = self.axes[0,0].violinplot(dataset=per_key_arr, showmeans=True)
-        text = ""
-        for key, nodes in self.key2nodes.items():
-            text += f'{key} {", ".join(nodes)}\n'
-        self.axes[0,0].text(0.675, 0.985, text, transform=self.axes[0,0].transAxes,
-                fontsize=7, verticalalignment='top')
+        #text = ""
+        #for key, nodes in self.key2nodes.items():
+        #    text += f'{key} {", ".join(nodes)}\n'
+        #self.axes[0,0].text(0.675, 0.985, text, transform=self.axes[0,0].transAxes,
+        #        fontsize=7, verticalalignment='top')
 
         # consolidated  violin plot
         self.axes[1,0].ticklabel_format(style='plain')
         self.axes[1,0].yaxis.grid(True)
         self.axes[1,0].set_xlabel('All Containers')
-        self.axes[1,0].violinplot(dataset=all_arr, showmeans=True)
+        self.axes[1,0].violinplot(self.df[col], showmeans=True)
         self.axes[1,0].set_xticks([])
         self.axes[1,0].axes.xaxis.set_visible(False)
 
@@ -195,9 +211,9 @@ class Plots(metaclass=Singleton):
         for i, key in enumerate(self.keys):
             y = per_key_arr[i]
             legends.append(self.axes[0,1].scatter(x=range(0, len(y)), y=y, marker='.'))
-        self.axes[0,1].legend(legends, self.keys, scatterpoints=1,
-                        loc='upper left', ncol=3,
-                        fontsize=8)
+        #self.axes[0,1].legend(legends, self.keys, scatterpoints=1,
+         #               loc='upper left', ncol=3,
+          #              fontsize=8)
 
         # consolidated/summed-up scatter plot
         self.axes[1,1].ticklabel_format(style='plain')
@@ -215,7 +231,7 @@ class Plots(metaclass=Singleton):
         self.axes[1,1].plot(out_avg, color='y')
         self.axes[1,1].legend([f'Total {self.col2title[col]}', f'Average {self.col2title[col]}'],
                 loc='upper right', ncol=1, fontsize=8)
-        plt.savefig(f'{self.oprefix}-{col}.pdf')
+        plt.savefig(f'{self.oprefix}-col-panel-{col}.pdf')
         #plt.show()
 
     # build the key2nodes: useful when $container_size$ > 1
@@ -274,6 +290,7 @@ class Plots(metaclass=Singleton):
     # plot the comparison panel
     def plot_compare_panel(self):
         self.set_panel_size(2, 3)
+        self.fig.suptitle(f'{self.run_summary}')
         k = 0
         for i in [0,1]:
             for j in [0,1,2]:
@@ -283,10 +300,10 @@ class Plots(metaclass=Singleton):
                 pc = self.axes[i,j].violinplot(dataset=self.df[col], showmeans=True)
                 self.axes[i,j].set_ylabel(self.col2units[col])
                 self.axes[i,j].set_title(self.col2title[col])
-                for p in pc['bodies']:
-                    p.set_facecolor('green')
-                    p.set_edgecolor('k')
-                    p.set_alpha(0.5)
+                #for p in pc['bodies']:
+                #    p.set_facecolor('green')
+                #    p.set_edgecolor('k')
+                #    p.set_alpha(0.5)
                 k += 1
         plt.savefig(f'{self.oprefix}-compare.pdf', format="pdf", bbox_inches="tight")
         #plt.show()
@@ -305,7 +322,7 @@ class Plots(metaclass=Singleton):
     # plot the network and degree histogram
     def plot_network(self):
         self.set_panel_size(1, 2)
-        self.fig.suptitle("Network & Degree Distribution")
+        self.fig.suptitle("Network & Degree Distribution:  {self.run_summary}")
         nx.draw(self.G, ax=self.axes[0], pos=nx.kamada_kawai_layout(self.G), with_labels=True)
 
         degree_sequence = sorted((d for n, d in self.G.degree()), reverse=True)
@@ -315,7 +332,7 @@ class Plots(metaclass=Singleton):
         self.axes[1].bar(x=bin_edges[:-1], height=hist, align='center',
                 width=width, edgecolor='k', facecolor='green', alpha=0.5)
         self.axes[1].set_xticks(range(max(degree_sequence)+1))
-        self.axes[1].set_title("Degree histogram")
+        self.axes[1].set_title("Normalised degree histogram")
         self.axes[1].set_xlabel("Degree")
         self.axes[1].set_ylabel("% of Nodes")
         plt.savefig(f'{self.oprefix}-network.pdf', format="pdf", bbox_inches="tight")
@@ -324,7 +341,7 @@ class Plots(metaclass=Singleton):
     # plot the degree col panel
     def deg_col_panel_helper(self, col):
         self.set_panel_size(1, 2, shareY=True)
-        self.fig.suptitle(self.col2title[col])
+        self.fig.suptitle(f'Conditional/Total Normalised Histograms for {self.col2title[col]} :  {self.run_summary}')
         self.fig.supylabel(self.col2units[col])
         degree_sequence = sorted((d for n, d in self.G.degree()), reverse=True)
         x, y = np.unique(degree_sequence, return_counts=True)
@@ -336,29 +353,33 @@ class Plots(metaclass=Singleton):
             else :
                 np.append(by_degree[degree], self.df[self.df.NodeName == node][col].values)
         legends = []
-        for node, degree in self.G.degree():
-            d = by_degree[degree]
+        for d in by_degree:
+            if len(d) == 0:
+                continue
             w = np.ones(len(d))/len(d)
             hist, bin_edges = np.histogram(d, weights=w, density=False)
             width = (bin_edges[1] - bin_edges[0])
             legends.append(self.axes[0].bar(x=bin_edges[:-1], height=hist, align='center',
-                width=width, edgecolor='k', alpha=0.5))
+                width=width,  edgecolor='k', alpha=0.75))
         self.axes[0].legend(legends, x, scatterpoints=1,
-                        loc='upper left', ncol=3,
+                        loc='upper left', ncol=5,
                         fontsize=8)
+        self.axes[0].set_title("Conditional Histogram (degree)")
         d = self.df[col]
         w = np.ones(len(d))/len(d)
         hist, bin_edges = np.histogram(d, weights=w, density=False)
         width = (bin_edges[1] - bin_edges[0])
         self.axes[1].bar(x=bin_edges[:-1], height=hist, align='center',
                 width=width, edgecolor='k', facecolor='green', alpha=0.5)
-        plt.show()
+        self.axes[1].set_title("Total Histogram")
+        plt.savefig(f'{self.oprefix}-deg-col-panel-{col}.pdf')
+        #plt.show()
 
 
 # handle docker stats
 class DStats(Plots, metaclass=Singleton):
-    def __init__(self, log_dir, oprefix, jf, to_plot):
-        Plots.__init__(self, log_dir, oprefix, jf, to_plot)
+    def __init__(self, log_dir, oprefix, jf, to_plot, cfile):
+        Plots.__init__(self, log_dir, oprefix, jf, to_plot, cfile)
         self.dstats_fname = f'{log_dir}/dstats-data/docker-stats.out'
         self.kinspect_fname = f'{log_dir}/dstats-data/docker-kinspect.out'
         self.col2title = {  "ContainerID"   : "Docker ID",
@@ -391,6 +412,7 @@ class DStats(Plots, metaclass=Singleton):
     def pre_process(self):
         if not path_ok(Path(self.dstats_fname)):
             sys.exit(0)
+        self.set_summary()
         regex = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
         with open(self.dstats_fname) as f:
             cleaned_txt = regex.sub('', f.read())
@@ -428,8 +450,8 @@ class DStats(Plots, metaclass=Singleton):
 
 
 class HostProc(Plots, metaclass=Singleton):
-    def __init__(self, log_dir, oprefix, jf, to_plot):
-        Plots.__init__(self, log_dir, oprefix, jf, to_plot)
+    def __init__(self, log_dir, oprefix, jf, to_plot, cfile):
+        Plots.__init__(self, log_dir, oprefix, jf, to_plot, cfile)
         self.fname = f'{log_dir}/host-proc-data/docker-proc.out'
         self.kinspect_fname = f'{log_dir}/host-proc-data/docker-kinspect.out'
         self.col2title = {  'CPUPERC'   : 'CPU Utilisation',
@@ -473,6 +495,7 @@ class HostProc(Plots, metaclass=Singleton):
     def process_data(self):
         if not path_ok(Path(self.fname)):
             sys.exit(0)
+        self.set_summary()
         self.df = pd.read_csv(self.fname, header=0,  comment='#',
                 skipinitialspace = True, delimiter=r"\s+",
                 usecols= ['EpochId', 'PID', 'TimeStamp',
@@ -568,7 +591,7 @@ def host_proc(ctx: typer.Context, log_dir: Path, # <- mandatory path
 
     to_plot = ctx.default_map["to_plot"] if ctx.default_map and "to_plot" in ctx.default_map else []
     jf = f'{os.path.abspath(log_dir)}/config/topology_generated/network_data.json'
-    host_proc = HostProc(log_dir, f'{out_prefix}-host-proc', jf, to_plot)
+    host_proc = HostProc(log_dir, f'{out_prefix}-host-proc', jf, to_plot, config_file)
     cmd_helper(host_proc, to_plot, agg=aggregate,
             to_compare=['CPUPERC', 'VmPeak', 'NetRX', 'NetWX', 'BLKR', 'BLKW'])
     log.info(f'Done: {log_dir}')
@@ -586,7 +609,7 @@ def dstats(ctx: typer.Context, log_dir: Path, # <- mandatory path
 
     to_plot = ctx.default_map["to_plot"] if ctx.default_map and "to_plot" in ctx.default_map else []
     jf = f'{os.path.abspath(log_dir)}/config/topology_generated/network_data.json'
-    dstats = DStats(log_dir, f'{out_prefix}-dstats', jf, to_plot)
+    dstats = DStats(log_dir, f'{out_prefix}-dstats', jf, to_plot, config_file)
     cmd_helper(dstats, to_plot, agg=aggregate,
             to_compare=["CPUPerc", "MemUse", "NetRecv", "NetSent", "BlockR", "BlockW"])
     log.info(f'Done: {log_dir}')
