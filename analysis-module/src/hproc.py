@@ -294,7 +294,6 @@ class Plots(metaclass=Singleton):
         for i in [0,1]:
             for j in [0,1,2]:
                 col = self.to_compare[k]
-                print(col, self.df[col].head())
                 #self.axes[i,j].ticklabel_format(style='plain')
                 self.axes[i,j].yaxis.grid(True)
                 pc = self.axes[i,j].violinplot(self.df[col], showmedians=True)
@@ -458,8 +457,8 @@ class HostProc(Plots, metaclass=Singleton):
         self.kinspect_fname = f'{log_dir}/host-proc-data/docker-kinspect.out'
         self.col2title = {  'CPUPerc'   : 'CPU Utilisation',
                             'VmPeak'    : 'Peak Virtual Memory Usage',
-                            #'VmSize'    : 'Current Virtual Memory Usage',
-                            'MemUse'    : 'Current Virtual Memory Usage',
+                            'MemUse'    : 'Peak Virtual Memory Usage',
+                            'VmSize'    : 'Current Virtual Memory Usage',
                             'VmRSS'     : 'Peak Physical Memory Usage',
                             'VmData'    : 'Size of Data Segment',
                             'VmStk'     : 'Size of Stack Segment',
@@ -477,6 +476,7 @@ class HostProc(Plots, metaclass=Singleton):
         self.col2units = {  'CPUPerc'   : '%',
                             'VmPeak'    : 'MiB',
                             'MemUse'    : 'MiB',
+                            'VmSize'    : 'MiB',
                             'VmRSS'     : 'MiB',
                             'VmData'    : 'MiB',
                             'VmStk'     : 'MiB',
@@ -491,7 +491,7 @@ class HostProc(Plots, metaclass=Singleton):
                             'BlockR'    : 'MiB',
                             'BlockW'    : 'MiB'
                         }
-        self.cols = ['CPUPerc', 'VmPeak', 'MemUse', 'VmRSS', 'VmData', 'VmStk',
+        self.cols = ['CPUPerc', 'VmPeak', 'MemUse', 'VmSize', 'VmRSS', 'VmData', 'VmStk',
                             'RxBytes', 'RxPackets', 'TxBytes', 'TxPackets', 'NetRecv', 'NetSent',
                             'InOctets', 'OutOctets', 'BlockR', 'BlockW']
 
@@ -503,7 +503,7 @@ class HostProc(Plots, metaclass=Singleton):
                 skipinitialspace = True, delimiter=r"\s+",
                 usecols= ['EpochId', 'PID', 'TimeStamp',
                     'ContainerName', 'ContainerID', 'NodeName',
-                    'VmPeak', 'VmPeakUnit', 'MemUse', 'MemUseUnit',
+                    'VmPeak', 'VmPeakUnit', 'VmSize', 'VmSizeUnit',
                     'VmRSS', 'VmRSSUnit', 'VmData','VmDataUnit', 'VmStk', 'VmStkUnit',
                     'HostVIF', 'NetSent', 'NetSentPkts', 'NetRecv', 'NetRecvPkts',
                     #'VETH', 'InOctets', 'OutOctets',
@@ -518,7 +518,7 @@ class HostProc(Plots, metaclass=Singleton):
     # normalise the units
     def post_process(self):
         #h2b = Human2BytesConverter()
-        for size in ['VmPeak', 'MemUse','VmRSS', 'VmData','VmStk']:
+        for size in ['VmPeak', 'VmSize','VmRSS', 'VmData','VmStk']:
             self.df[size] = self.df[size].map(lambda x: x/1024) # MiBs
         for size in ['NetRecv','NetSent']:
             self.df[size] = self.df[size].map(lambda x: x/(1024*1024)) # MiBs
@@ -526,6 +526,7 @@ class HostProc(Plots, metaclass=Singleton):
             self.df[size] = self.df[size].map(lambda x: x/(1024*1024)) # MiBs
         #self.df['Key'] = self.df['ContainerName'].map(lambda x: x.split("--")[0])
         self.df['Key'] = self.df['NodeName']#.map(lambda x: x.split("--")[0])
+        self.df['MemUse'] = self.df['VmPeak']
         self.build_key2nodes()
         #self.df.rename(columns={'NodeName': 'Key'}, inplace=True)
         self.set_keys()

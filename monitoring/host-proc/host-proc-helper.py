@@ -221,7 +221,7 @@ class MetricsCollector:
         # write the df column names
         self.procfs_fd.write((f'EpochId PID NodeName TimeStamp ContainerID ContainerName '
                 f'MEM VmPeakKey VmPeak VmPeakUnit '
-                f'MemUseKey MemUse MemUseUnit '
+                f'VmSizeKey VmSize VmSizeUnit '
                 f'VmRSSKey VmRSS VmRSSUnit '
                 f'VmDataKey VmData VmDataUnit '
                 f'VmStkKey VmStk VmStkUnit '
