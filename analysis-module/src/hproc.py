@@ -105,7 +105,8 @@ class Plots(metaclass=Singleton):
             minsize = int(conf["wls"]["min_packet_size"]/1024)
             maxsize = int(conf["wls"]["max_packet_size"]/1024)
             self.run_summary = (f'{conf["gennet"]["num_nodes"]}by'
-                                f'{conf["gennet"]["container_size"]}-'
+                                f'{conf["gennet"]["container_size"]}i'
+                                f'{conf["gennet"]["fanout"]}-'
                                 f'{conf["wls"]["message_rate"]}mps-'
                                 f'({minsize}-{maxsize})K-'
                                 f'{conf["wls"]["simulation_time"]}sec')
@@ -126,16 +127,16 @@ class Plots(metaclass=Singleton):
 
     # plot the settling times, both network- and node-wise
     def plot_msg_settling_times(self):
-        self.set_panel_size(2, 2, False)
+        self.set_panel_size(2, 1, False)
         nmsgs = len(self.msg_settling_times)
         self.fig.suptitle(f'Settling Time: {self.run_summary}, {nmsgs} msgs')
         self.fig.supylabel("msecs")
-        self.axes[0,0].set_xticks([x + 1 for x in range(len(self.keys))])
+        self.axes[0].set_xticks([x + 1 for x in range(len(self.keys))])
         #axes[0].set_xticks(ticks=[x + 1 for x in range(len(self.waku_cids))], labels=self.df["ContainerID"].unique())
-        self.axes[0,0].set_xlabel('TODO: revisit after Jordi added per-container settling times')
+        self.axes[0].set_xlabel('TODO: revisit after Jordi added per-container settling times')
 
-        self.axes[1,0].violinplot(self.msg_settling_times, showmedians=True)
-        self.axes[1,0].axes.xaxis.set_visible(False)
+        self.axes[1].violinplot(self.msg_settling_times, showmedians=True)
+        self.axes[1].axes.xaxis.set_visible(False)
         plt.savefig(f'{self.oprefix}-settling-time.pdf', format="pdf", bbox_inches="tight")
         #plt.show()
 
@@ -146,15 +147,15 @@ class Plots(metaclass=Singleton):
         self.fig.set_figheight(10)
 
     # plot col panels for selected columns
-    def plot_column_panels(self, agg):
+    def plot_col_panels(self, agg):
         for col in self.to_plot["ColPanel"]:
             if col not in self.df.columns:
                 log.error(f"ColPanel: {col} is not in {self.df.columns}, skipping...")
                 continue
             if col in ["CPUPerc", "MemUse"]:
-                self.column_panel_helper(col)
+                self.col_panel_helper(col)
             else:
-                self.column_panel_helper(col, agg)
+                self.col_panel_helper(col, agg)
 
     # plot degree/col panels for the given set of columns
     def plot_deg_col_panels(self):
@@ -165,14 +166,12 @@ class Plots(metaclass=Singleton):
             self.deg_col_panel_helper(col) # only agg for now 
 
     # plot the column panel
-    def column_panel_helper(self, col, agg=True):
+    def col_panel_helper(self, col, agg=True):
         self.set_panel_size(2, 2)
         self.fig.suptitle(f'{self.col2title[col]}: {self.run_summary}')
         self.fig.supylabel(self.col2units[col])
 
         per_key_arr = []
-
-        self.build_key2nodes()
 
         # per docker violin plot
         self.axes[0,0].ticklabel_format(style='plain')
@@ -188,7 +187,7 @@ class Plots(metaclass=Singleton):
         #self.axes[0,0].set_xticks([x + 1 for x in range(len(self.keys))])
         labels = [ '{}{}'.format( ' ', k) for i, k in enumerate(self.keys)]
         #self.axes[0,0].set_xticklabels(labels)
-        legends = self.axes[0,0].violinplot(dataset=per_key_arr, showmeans=True)
+        legends = self.axes[0,0].violinplot(dataset=per_key_arr, showmedians=True)
         #text = ""
         #for key, nodes in self.key2nodes.items():
         #    text += f'{key} {", ".join(nodes)}\n'
@@ -199,7 +198,7 @@ class Plots(metaclass=Singleton):
         self.axes[1,0].ticklabel_format(style='plain')
         self.axes[1,0].yaxis.grid(True)
         self.axes[1,0].set_xlabel('All Containers')
-        self.axes[1,0].violinplot(self.df[col], showmeans=True)
+        self.axes[1,0].violinplot(self.df[col], showmedians=True)
         self.axes[1,0].set_xticks([])
         self.axes[1,0].axes.xaxis.set_visible(False)
 
@@ -295,9 +294,10 @@ class Plots(metaclass=Singleton):
         for i in [0,1]:
             for j in [0,1,2]:
                 col = self.to_compare[k]
+                print(col, self.df[col].head())
                 #self.axes[i,j].ticklabel_format(style='plain')
                 self.axes[i,j].yaxis.grid(True)
-                pc = self.axes[i,j].violinplot(dataset=self.df[col], showmeans=True)
+                pc = self.axes[i,j].violinplot(self.df[col], showmedians=True)
                 self.axes[i,j].set_ylabel(self.col2units[col])
                 self.axes[i,j].set_title(self.col2title[col])
                 #for p in pc['bodies']:
@@ -322,7 +322,7 @@ class Plots(metaclass=Singleton):
     # plot the network and degree histogram
     def plot_network(self):
         self.set_panel_size(1, 2)
-        self.fig.suptitle("Network & Degree Distribution:  {self.run_summary}")
+        self.fig.suptitle(f'Network & Degree Distribution:  {self.run_summary}')
         nx.draw(self.G, ax=self.axes[0], pos=nx.kamada_kawai_layout(self.G), with_labels=True)
 
         degree_sequence = sorted((d for n, d in self.G.degree()), reverse=True)
@@ -392,7 +392,7 @@ class DStats(Plots, metaclass=Singleton):
                             "NetSent"       : "Network Sent",
                             "BlockR"        : "Block Reads",
                             "BlockW"        : "Block Writes",
-                            "PIDS"          : "Docker PIDS"
+                            "CPIDS"          : "Docker PIDS"
                             }
         self.col2units = {  "ContainerID"   : "ID",
                             "ContainerName" : "Name",
@@ -404,7 +404,7 @@ class DStats(Plots, metaclass=Singleton):
                             "NetSent"       : "MiB",
                             "BlockR"        : "MiB",
                             "BlockW"        : "MiB",
-                            "PIDS"          : "PIDS"
+                            "CPIDS"          : "PIDS"
                             }
         self.cols = ["CPUPerc", "MemUse","NetRecv", "NetSent", "BlockR", "BlockW"]
 
@@ -433,6 +433,8 @@ class DStats(Plots, metaclass=Singleton):
         for size in ["BlockR", "BlockW"]:
             self.df[size] = self.df[size].map(lambda x:h2b.convert(x.strip())/(1024*1024)) # MiB
         self.df['Key'] = self.df['ContainerName'].map(lambda x: x.split("--")[0])
+        self.build_key2nodes()
+        self.df['NodeName'] = self.df['Key'].map(lambda x: self.key2nodes[x][0])
         self.set_keys()
 
     # build df from csv
@@ -443,7 +445,7 @@ class DStats(Plots, metaclass=Singleton):
                             skipinitialspace = True, delimiter='/',
                             usecols=["ContainerID", "ContainerName",
                                     "CPUPerc", "MemUse", "MemTotal", "MemPerc",
-                                    "NetRecv", "NetSent", "BlockR","BlockW",  "PIDS"])
+                                    "NetRecv", "NetSent", "BlockR","BlockW",  "CPIDS"])
         self.post_process()
         self.remove_incomplete_samples(grp='Key', err='--')
         self.df.to_csv(f'{self.oprefix}-cleaned.csv', sep='/')
@@ -454,43 +456,44 @@ class HostProc(Plots, metaclass=Singleton):
         Plots.__init__(self, log_dir, oprefix, jf, to_plot, cfile)
         self.fname = f'{log_dir}/host-proc-data/docker-proc.out'
         self.kinspect_fname = f'{log_dir}/host-proc-data/docker-kinspect.out'
-        self.col2title = {  'CPUPERC'   : 'CPU Utilisation',
+        self.col2title = {  'CPUPerc'   : 'CPU Utilisation',
                             'VmPeak'    : 'Peak Virtual Memory Usage',
-                            'VmSize'    : 'Current Virtual Memory Usage',
+                            #'VmSize'    : 'Current Virtual Memory Usage',
+                            'MemUse'    : 'Current Virtual Memory Usage',
                             'VmRSS'     : 'Peak Physical Memory Usage',
                             'VmData'    : 'Size of Data Segment',
                             'VmStk'     : 'Size of Stack Segment',
-                            'RxBytes'   : 'Network1: Received Bytes',
-                            'RxPackets' : 'Network1: Received Packets',
-                            'TxBytes'   : 'Network1: Transmitted Bytes',
-                            'TxPackets' : 'Network1: Transmitted Packets',
-                            'NetRX'     : 'Network2: NetRX',
-                            'NetWX'     : 'Network2: NetWX',
+                            'NetRecv'   : 'Network1: Received Bytes',
+                            'NetRecvPkts' : 'Network1: Received Packets',
+                            'NetSent'   : 'Network1: Transmitted Bytes',
+                            'NetSentPkts' : 'Network1: Transmitted Packets',
+                            'NetRX'     : 'Network2: Received Bytes',
+                            'NetWX'     : 'Network2: Transmitted Bytes',
                             'InOctets'  : 'Network3: InOctets',
                             'OutOctets' : 'Network3: OutOctets',
-                            'BLKR'      : 'Block Reads',
-                            'BLKW'      : 'Block Writes'
+                            'BlockR'    : 'Block Reads',
+                            'BlockW'    : 'Block Writes'
                         }
-        self.col2units = {  'CPUPERC'   : '%',
+        self.col2units = {  'CPUPerc'   : '%',
                             'VmPeak'    : 'MiB',
-                            'VmSize'     : 'MiB',
+                            'MemUse'    : 'MiB',
                             'VmRSS'     : 'MiB',
                             'VmData'    : 'MiB',
                             'VmStk'     : 'MiB',
-                            'RxBytes'   : 'MiB',
-                            'RxPackets' : 'Packets',
-                            'TxBytes'   : 'MiB',
-                            'TxPackets' : 'Packets',
-                            'NetRX'     : 'MiB',
-                            'NetWX'     : 'MiB',
+                            'NetRecv'   : 'MiB',
+                            'NetRecvPkts' : 'Packets',
+                            'NetSent'   : 'MiB',
+                            'NetSentPkts' : 'Packets',
+                            'NetRX'   : 'MiB',
+                            'NetWX'   : 'MiB',
                             'InOctets'  : 'MiB',
                             'OutOctets' : 'MiB',
-                            'BLKR'      : 'MiB',
-                            'BLKW'      : 'MiB'
+                            'BlockR'    : 'MiB',
+                            'BlockW'    : 'MiB'
                         }
-        self.cols = ['VmPeak', 'VmSize', 'VmRSS', 'VmData', 'VmStk',
-                            'RxBytes', 'RxPackets', 'TxBytes', 'TxPackets', 'NetRX', 'NetWX',
-                            'InOctets', 'OutOctets', 'BLKR', 'BLKW']
+        self.cols = ['CPUPerc', 'VmPeak', 'MemUse', 'VmRSS', 'VmData', 'VmStk',
+                            'RxBytes', 'RxPackets', 'TxBytes', 'TxPackets', 'NetRecv', 'NetSent',
+                            'InOctets', 'OutOctets', 'BlockR', 'BlockW']
 
     def process_data(self):
         if not path_ok(Path(self.fname)):
@@ -500,14 +503,14 @@ class HostProc(Plots, metaclass=Singleton):
                 skipinitialspace = True, delimiter=r"\s+",
                 usecols= ['EpochId', 'PID', 'TimeStamp',
                     'ContainerName', 'ContainerID', 'NodeName',
-                    'VmPeak', 'VmPeakUnit', 'VmSize', 'VmSizeUnit',
+                    'VmPeak', 'VmPeakUnit', 'MemUse', 'MemUseUnit',
                     'VmRSS', 'VmRSSUnit', 'VmData','VmDataUnit', 'VmStk', 'VmStkUnit',
-                    'HostVIF', 'RxBytes', 'RxPackets', 'TxBytes', 'TxPackets',
-                    'VETH', 'InOctets', 'OutOctets',
-                    'DockerVIF', 'NetRX', 'NetWX',
-                    'VETH',  'InOctets', 'OutOctets',
-                    'BLKR', 'BLKW',
-                    'CPUPERC'])
+                    'HostVIF', 'NetSent', 'NetSentPkts', 'NetRecv', 'NetRecvPkts',
+                    #'VETH', 'InOctets', 'OutOctets',
+                    #'DockerVIF', 'NetRecv', 'NetSent',
+                    #'VETH',  'InOctets', 'OutOctets',
+                    'BlockR', 'BlockW',
+                    'CPUPerc'])
         self.post_process()
         self.remove_incomplete_samples(grp='Key')
         self.df.to_csv(f'{self.oprefix}-cleaned.csv', sep='/')
@@ -515,21 +518,22 @@ class HostProc(Plots, metaclass=Singleton):
     # normalise the units
     def post_process(self):
         #h2b = Human2BytesConverter()
-        for size in ['VmPeak', 'VmSize','VmRSS', 'VmData','VmStk']:
+        for size in ['VmPeak', 'MemUse','VmRSS', 'VmData','VmStk']:
             self.df[size] = self.df[size].map(lambda x: x/1024) # MiBs
-        for size in ['RxBytes', 'TxBytes', 'InOctets','OutOctets', 'NetRX','NetWX']:
+        for size in ['NetRecv','NetSent']:
             self.df[size] = self.df[size].map(lambda x: x/(1024*1024)) # MiBs
-        for size in ['BLKR', 'BLKW']:
+        for size in ['BlockR', 'BlockW']:
             self.df[size] = self.df[size].map(lambda x: x/(1024*1024)) # MiBs
         #self.df['Key'] = self.df['ContainerName'].map(lambda x: x.split("--")[0])
         self.df['Key'] = self.df['NodeName']#.map(lambda x: x.split("--")[0])
+        self.build_key2nodes()
         #self.df.rename(columns={'NodeName': 'Key'}, inplace=True)
         self.set_keys()
         self.df.fillna(0)
 
     # not very helpful plots atm
     def plot_clusters(self, grp, agg, axes):
-        self.cluster_plot_helper(col=['CPUPERC', 'VmPeak', 'VmRSS', 'VmSize', 'VmData'], grp=grp, axes=axes)
+        self.cluster_plot_helper(col=['CPUPerc', 'VmPeak', 'VmRSS', 'MemUse', 'VmData'], grp=grp, axes=axes)
 
 
 # sanity check config file
@@ -547,7 +551,10 @@ def _config_file_callback(ctx: typer.Context, param: typer.CallbackParam, cfile:
                 if ctx.command.name in conf["plotting"]:
                     ctx.default_map.update(conf["plotting"][ctx.command.name])
                 else:
-                    log.info(f"No dstats/host-proc params in config. Sticking to defaults")
+                    if "hproc" in conf["plotting"]:
+                        ctx.default_map.update(conf["plotting"]["hproc"])
+                    else:
+                        log.info(f"No dstats/host-proc params in config. Sticking to defaults")
             #ctx.default_map.update(conf["plotting"])  # Merge config and default_map
         except Exception as ex:
             raise typer.BadParameter(str(ex))
@@ -563,11 +570,12 @@ def cmd_helper(metric_infra, to_plot, agg, to_compare):
     # always plot the compare plots; rest on demand
     metric_infra.set_compare(to_compare)
     metric_infra.plot_compare_panel()
+    log.info(f'to_plot : {to_plot}')
     if "Network" in to_plot and to_plot["Network"]:
         metric_infra.read_network()
         metric_infra.plot_network()
     if "ColPanel" in to_plot and to_plot["ColPanel"]:
-        metric_infra.plot_column_panels(agg)
+        metric_infra.plot_col_panels(agg)
     if "ValueCluster" in to_plot and to_plot["ValueCluster"]:
         # TODO: find interpretable cluster plot
         metric_infra.build_cluster_index('ContainerID')
@@ -591,9 +599,12 @@ def host_proc(ctx: typer.Context, log_dir: Path, # <- mandatory path
 
     to_plot = ctx.default_map["to_plot"] if ctx.default_map and "to_plot" in ctx.default_map else []
     jf = f'{os.path.abspath(log_dir)}/config/topology_generated/network_data.json'
-    host_proc = HostProc(log_dir, f'{out_prefix}-host-proc', jf, to_plot, config_file)
+    if  os.path.exists("plots"):
+        os.system('rm -rf plots')
+    os.makedirs("plots")
+    host_proc = HostProc(log_dir, f'plots/{out_prefix}-host-proc', jf, to_plot, config_file)
     cmd_helper(host_proc, to_plot, agg=aggregate,
-            to_compare=['CPUPERC', 'VmPeak', 'NetRX', 'NetWX', 'BLKR', 'BLKW'])
+            to_compare=["CPUPerc", "MemUse", "NetRecv", "NetSent", "BlockR", "BlockW"])
     log.info(f'Done: {log_dir}')
 
 
@@ -609,7 +620,10 @@ def dstats(ctx: typer.Context, log_dir: Path, # <- mandatory path
 
     to_plot = ctx.default_map["to_plot"] if ctx.default_map and "to_plot" in ctx.default_map else []
     jf = f'{os.path.abspath(log_dir)}/config/topology_generated/network_data.json'
-    dstats = DStats(log_dir, f'{out_prefix}-dstats', jf, to_plot, config_file)
+    if  os.path.exists("plots"):
+        os.system('rm -rf plots')
+    os.makedirs("plots")
+    dstats = DStats(log_dir, f'plots/{out_prefix}-dstats', jf, to_plot, config_file)
     cmd_helper(dstats, to_plot, agg=aggregate,
             to_compare=["CPUPerc", "MemUse", "NetRecv", "NetSent", "BlockR", "BlockW"])
     log.info(f'Done: {log_dir}')
