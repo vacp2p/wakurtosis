@@ -29,14 +29,15 @@ class Parser(metaclass=Singleton):
     # pulls system-wide jiffies
     def system_cpu(self, f):
         f.seek(0)
-        return sum(float(s) for s in f.readline().split()[2:])
+        line = f.readline()
+        return sum(int(s) for s in line.split()[2:])
 
     # pulls per-process user/system jiffies
     def process_cpu(self, f):
         f.seek(0)
         rbuff = f.readline().split()
-        ptot = rbuff[13] + rbuff[14]
-        return float(ptot)
+        ptot = int(rbuff[13]) + int(rbuff[14])
+        return ptot
 
     # pulls VmPeak, VmSize, VmRSS stats per wakunode
     def mem_metrics(self, f):
@@ -178,14 +179,14 @@ class MetricsCollector:
             self.last_sys_ctot[pid], self.last_pid_ctot[pid] = sys_ctot, pid_ctot
             mem = self.parser.mem_metrics(self.pid2procfds[pid]["mem"])
             net1 = self.parser.net1_metrics(self.pid2procfds[pid]["net1"], self.host_if)
-            net2 = self.parser.net2_metrics(self.pid2procfds[pid]["net2"], veth) # SNMP MIB
-            net3 = self.parser.net3_metrics(self.pid2procfds[pid]["net3rx"],
-                    self.pid2procfds[pid]["net3tx"], veth) # sysfs/cgroup stats
+            #net2 = self.parser.net2_metrics(self.pid2procfds[pid]["net2"], veth) # SNMP MIB
+            #net3 = self.parser.net3_metrics(self.pid2procfds[pid]["net3rx"],
+            #        self.pid2procfds[pid]["net3tx"], veth) # sysfs/cgroup stats
             blk = self.parser.blk_metrics(self.pid2procfds[pid]["blk"]) # Read, Write
             out = ( f'SAMPLE_{self.procfs_sample_cnt} '
                     f'{pid} {self.pid2node_name[pid]} {time.time()} '
                     f'{self.pid2did[pid]} {self.pid2kdid[pid]} '
-                    f'MEM {mem} NET {net1} {net2} {net3} '
+                    f'MEM {mem} NET {net1} '
                     f'BLK {blk} CPU {cpu_perc}\n'
                   )
             self.procfs_fd.write(str(out))
@@ -219,17 +220,19 @@ class MetricsCollector:
         self.procfs_fd.write(f'# {", ".join([f"{pid} = {self.pid2node_name[pid]}" for pid in self.pid2did])} : {len(self.pid2node_name.keys())}\n')
         # write the df column names
         self.procfs_fd.write((f'EpochId PID NodeName TimeStamp ContainerID ContainerName '
-                f'MEM VmPeakKey VmPeak VmPeakUnit VmSizeKey VmSize VmSizeUnit '
+                f'MEM VmPeakKey VmPeak VmPeakUnit '
+                f'MemUseKey MemUse MemUseUnit '
                 f'VmRSSKey VmRSS VmRSSUnit '
-                f'VmDataKey VmData VmDataUnit VmStkKey VmStk VmStkUnit '
-                f'NET HostVIF RxBytesKey RxBytes RxPacketsKey RxPackets '
-                f'TxBytesKey TxBytes TxPacketsKey TxPackets '
-                f'VETH InOctetsKey InOctets OutOctetsKey OutOctets '
-                f'DockerVIF NetRXKey NetRX NETWXKey NetWX '
-                f'BLK READKEY BLKR WRITEKEY BLKW '
+                f'VmDataKey VmData VmDataUnit '
+                f'VmStkKey VmStk VmStkUnit '
+                f'NET HostVIF RxBytesKey NetSent RxPacketsKey NetSentPkts '
+                f'TxBytesKey NetRecv TxPacketsKey NetRecvPkts '
+                #f'VETH InOctetsKey InOctets OutOctetsKey OutOctets '
+                #f'DockerVIF NetRXKey NetRX NETWXKey NetWX '
+                f'BLK READKEY BlockR WRITEKEY BlockW '
                 #f'CPU-SYS cpu cpu0 cpu1 cpu2 cpu3 cpu4 cpu5 cpu6 cpu7 cpu8 cpu9 '
                 #f'CPU-Process CPUUTIME CPUSTIME 
-                f'CPU CPUPERC\n'))
+                f'CPU CPUPerc\n'))
         log.info("Metrics: launch_procfs_monitor: signalling WLS")
         signal_wls = f'docker exec {wls_cid} touch /wls/start.signal'
         subprocess.run(signal_wls, shell=True) # revisit after Jordi's pending branch merge
