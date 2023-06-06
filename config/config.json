@@ -9,7 +9,7 @@
     "interconnection_batch": 10
   },
   "gennet": {
-    "num_nodes": 13,
+    "num_nodes": 25,
     "fanout": 13,
     "num_topics": 1,
     "num_partitions": 1,
