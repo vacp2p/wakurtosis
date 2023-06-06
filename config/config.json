@@ -10,7 +10,7 @@
   },
   "gennet": {
     "num_nodes": 10,
-    "fanout": 3,
+    "fanout": 13,
     "num_topics": 1,
     "num_partitions": 1,
     "num_subnets": 1,
@@ -27,8 +27,8 @@
     "debug_level": "DEBUG",
     "simulation_time": 60,
     "message_rate": 10,
-    "min_packet_size": 2,
-    "max_packet_size": 1024,
+    "min_packet_size": 1024,
+    "max_packet_size": 10240,
     "inter_msg_type": "poisson",
     "dist_type": "gaussian",
     "emitters_fraction": 1.0
@@ -42,14 +42,14 @@
     "metrics_filename": "./cproc_metrics.json"
   },
   "plotting": {
-    "dstats": {
+    "hproc": {
       "out_prefix" : "output",
-      "aggregate" : "True",
+      "aggregate" : "False",
       "to_plot" : {
         "Network": "True",
-        "ColPanel" : ["CPUPERC", "NetRX"],
+        "ColPanel" : ["CPUPerc", "MemUse", "NetRecv", "NetSent"],
         "ValueCluster" : [],
-        "DegColPanel" : ["VmPeak"],
+        "DegColPanel" : ["CPUPerc", "MemUse", "NetRecv", "NetSent"],
         "SettlingTime" : "True",
         "Compare" : "True"
       }
