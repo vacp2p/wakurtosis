@@ -36,8 +36,9 @@ cut -f 1 -d '#' $dps > $dids
 dinspect=$odir/docker-inspect.out
 docker inspect --format "{{.State.Pid}}{{.Name}}/{{.Image}}/{{.State}}" $(cat $dids) > $dinspect
 
+#only pick up wakunodes with explicit config
 pidlist=$odir/docker-pids.out
-ps -ef | grep -E "wakunode|waku" |grep -v docker | grep -v grep | awk '{print $2}' > $pidlist
+ps -ef | grep -E "wakunode|waku"  | grep config-file | awk '{print $2}' > $pidlist
 
 cat /proc/cpuinfo > $odir/docker-cpuinfo.out
 cat /proc/meminfo > $odir/docker-meminfo.out
