@@ -21,9 +21,9 @@ echo "- Enclave name: " $enclave_name
 echo "- Configuration file: " $wakurtosis_config_file
 
 # Cleanup previous runs
-echo -e "\Cleaning up previous runs"
+echo "Cleaning up previous runs"
 sh ./cleanup.sh $enclave_name
-echo -e "\Done cleaning up previous runs"
+echo "Done cleaning up previous runs"
 ##################### END
 
 
@@ -43,17 +43,42 @@ then
     echo "cAdvisor IP: $last_ip"
 
     # Set up Cadvisor
-    docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev/disk/:/dev/disk:ro --volume=/sys:/sys:ro --volume=/etc/machine-id:/etc/machine-id:ro --publish=8080:8080 --detach=true --name=cadvisor --privileged --device=/dev/kmsg --network $enclave_prefix --ip=$last_ip gcr.io/cadvisor/cadvisor:v0.47.0
-    # docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev/disk/:/dev/disk:ro --volume=/sys:/sys:ro --volume=/etc/machine-id:/etc/machine-id:ro --publish=8080:8080 --detach=true --name=cadvisor --privileged --device=/dev/kmsg gcr.io/cadvisor/cadvisor
+    docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev/disk/:/dev/disk:ro --volume=/sys:/sys:ro --volume=/etc/machine-id:/etc/machine-id:ro --publish=8080:8080 --detach=true --name=cadvisor --privileged --device=/dev/kmsg --network $enclave_prefix --ip=$last_ip gcr.io/cadvisor/cadvisor:v0.47.0 >/dev/null 2>&1
 fi
 ##################### END
 
+##################### BOOTSTRAP NODE
+echo "Setting up bootstrap node"
+# Get bootstrap IP in enclave
+IFS='.' ip_parts="$last_ip"
 
+part1=$(echo "$ip_parts" | cut -d '.' -f 1)
+part2=$(echo "$ip_parts" | cut -d '.' -f 2)
+part3=$(echo "$ip_parts" | cut -d '.' -f 3)
+part4=$(echo "$ip_parts" | cut -d '.' -f 4)
+
+previous_part=$((part4 - 1))
+
+bootstrap_ip="$part1.$part2.$part3.$previous_part"
+
+echo "Bootstrap node IP: $bootstrap_ip"
+# TODO crear en json apartado donde poner la imagen de nwaku
+docker run --name bootstrap_node -p 127.0.0.1:60000:60000 -p 127.0.0.1:8008:8008 -p 127.0.0.1:9000:9000 -p 127.0.0.1:8545:8545 -v "$(pwd)/run_bootstrap_node.sh:/opt/runnode.sh:Z" --detach=true --ip="$bootstrap_ip" --entrypoint sh statusteam/nim-waku:nwaku-trace3 -c "/opt/runnode.sh" >/dev/null 2>&1
+
+RETRIES_TRAFFIC=${RETRIES_TRAFFIC:=10}
+while [ -z "${NODE_ENR}" ] && [ ${RETRIES_TRAFFIC} -ge 0 ]; do
+  NODE_ENR=$(wget -O - --post-data='{"jsonrpc":"2.0","method":"get_waku_v2_debug_v1_info","params":[],"id":1}' --header='Content-Type:application/json' http://localhost:8545/ 2> /dev/null | sed 's/.*"enrUri":"\([^"]*\)".*/\1/');
+  echo "Trying to get Bootstrap ENR, but node still not ready, retrying (retries left: ${RETRIES_TRAFFIC})"
+  sleep 1
+  RETRIES_TRAFFIC=$(( $RETRIES_TRAFFIC - 1 ))
+done
+echo "Bootstrap ENR: ${NODE_ENR}"
+##################### END
 
 ##################### GENNET
 # Run Gennet docker container
-echo -e "\nRunning network generation"
-docker run --name cgennet -v ${dir}/config/:/config:ro gennet --config-file /config/${wakurtosis_config_file} --traits-dir /config/traits
+echo "Running network generation"
+docker run --name cgennet -v ${dir}/config/:/config:ro gennet --config-file /config/"${wakurtosis_config_file}" --traits-dir /config/traits
 err=$?
 
 if [ $err != 0 ]
