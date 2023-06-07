@@ -436,17 +436,27 @@ def _num_partitions_callback(num_partitions: int):
 
 # sanity check :  num_subnets < num_nodes
 def _num_subnets_callback(ctx: typer, Context, num_subnets: int):
-    num_nodes = ctx.params["num_nodes"]
     if num_subnets == -1:
         num_subnets = num_nodes
-    if num_subnets > num_nodes:
-        raise ValueError(
-            f"num_subnets must be <= num_nodes : num_subnets={num_subnets}, num_nodes={1}")
     return num_subnets
 
+# inter-param sanity check code goes here: all ctx.params[<>] are now fully realised/prioritised.
+def perform_sanity_checks(ctx: typer.Context):
+    num_nodes = ctx.params["num_nodes"]
+    num_subnets = ctx.params["num_subnets"]
+    if num_subnets > num_nodes:
+        raise ValueError(
+            f"num_subnets must be <= num_nodes : num_subnets={num_subnets}, num_nodes={num_nodes}")
+    fanout = ctx.params["fanout"]
+    if fanout >= num_nodes:
+        raise ValueError(
+            f"fanout must be <= num_nodes : fanout={fanout}, num_nodes={num_node}")
+    container_size = ctx.params["container_size"]
+    if container_size > num_nodes:
+        raise ValueError(
+            f"container_size <= num_nodes : container_size={container_size}, num_nodes={num_nodes}")
 
 def main(ctx: typer.Context,
-
         benchmark: bool = typer.Option(False,
             help="Measure CPU/Mem usage of Gennet"),
          draw: bool = typer.Option(False,
@@ -475,6 +485,9 @@ def main(ctx: typer.Context,
              help="Set the input config file (JSON)"),
          traits_dir: Path = typer.Option("./traits", exists=True, file_okay=False,
              dir_okay=True, readable=True, resolve_path=True, help="Set the traits directory")):
+
+    # inter-param sanity checks
+    perform_sanity_checks(ctx)
 
     # Benchmarking: record start time and start tracing mallocs
     if benchmark:
