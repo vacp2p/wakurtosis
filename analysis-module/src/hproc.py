@@ -105,10 +105,10 @@ class Plots(metaclass=Singleton):
             minsize = int(conf["wls"]["min_packet_size"]/1024)
             maxsize = int(conf["wls"]["max_packet_size"]/1024)
             self.run_summary = (f'{conf["gennet"]["num_nodes"]}by'
-                                f'{conf["gennet"]["container_size"]}i'
+                                f'{conf["gennet"]["container_size"]}fo'
                                 f'{conf["gennet"]["fanout"]}-'
                                 f'{conf["wls"]["message_rate"]}mps-'
-                                f'({minsize}-{maxsize})K-'
+                                f'({minsize}-{maxsize})KiB-'
                                 f'{conf["wls"]["simulation_time"]}sec')
         print(f'summary: {self.run_summary} (from {self.cfile})')
 
