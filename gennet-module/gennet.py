@@ -331,7 +331,6 @@ def validate_traits_distribution(traits_dir, traits_distribution):
         raise ValueError(f"{traits_dir} : trait directory does not exist!")
     for s in traits:
         traits_list = [x.strip() for x in s.split(":")]
-        print(traits_list)
         if traits_list[0] not in nodeType:
             raise ValueError(f"{traits_distribution} : unknown node type {traits_list[0]} in {s}")
         for t in traits_list[1:]:
@@ -362,7 +361,7 @@ def validate_inter_subnet_QoS_distribution(QoS_distribution):
     QoS_spec, QoS_distr = dict_to_arrays(QoS_distribution)
     validate_pfd(QoS_distr, "inter_subnet_QoS_distribution")
     for QoS in QoS_spec:
-        QoS_list = QoS.split(":")
+        QoS_list = [x.strip() for x in QoS.split(":")]
         if len(QoS_list) != 3 :
             raise ValueError(f"{QoS_distribution} : invalid spec {QoS}")
         perc = float(QoS_list[0])
@@ -390,7 +389,8 @@ def invert_dict_of_list(d, idx=0):
     return inv
 
 
-# TODO: reduce container packer memory consumption
+# TODO: reduce container packer memory consumption so that it scales to million nodes
+#       currently can only generate half million nodes in a laptop
 # Packs the nodes into container in a subnet aware manner : optimal
 # Number of containers = 
 #   $$ O(\sum_{i=0}^{num_subnets} log_{container_size}(#Nodes_{numsubnets}) + num_subnets)
@@ -412,9 +412,9 @@ def is_nil_QoS(distr):
         return False
     QoS = list(distr.keys())[0]
     validate_pfd(distr.values(), "inter_subnet_QoS_distribution" )
-    QoS_list = QoS.split(":")
-    print(QoS_list)
-    return True
+    QoS_list = [x.strip() for x in QoS.split(":")]
+    if QoS_list == ['-1', 'None', '-1']:
+        return True
 
 
 # Generates network-wide json and per-node toml and writes them
