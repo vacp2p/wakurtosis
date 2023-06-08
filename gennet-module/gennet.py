@@ -339,7 +339,7 @@ def validate_traits_distribution(traits_dir, traits_distribution):
         for t in traits_list[1:]:
             if t not in Trait and not os.path.exists(f"{traits_dir}/{t}.toml"):
                 raise ValueError(f"{traits_distribution} : unknown trait {t} in {s}")
-        if traits_distribution[s] == 0: # omit trivial values
+        if traits_distribution[s] == 0: # omit non-contributing keys
             traits_distribution.pop(s)
         else:
             traits_distribution[":".join(traits_list)] = traits_distribution.pop(s)
@@ -380,7 +380,7 @@ def validate_inter_subnet_QoS_distribution(QoS_distribution):
             raise ValueError(f"{QoS_distribution} : unknown distribution {QoS_list[1]} in {QoS}")
         if not is_int(QoS_list[2]):
             raise ValueError(f"{QoS_distribution} : invalid delay {QoS_list[2]} in {QoS}")
-        if QoS_distribution[QoS] == 0:  # omit trivial values
+        if QoS_distribution[QoS] == 0:  # omit non-contributing keys
             QoS_distribution.pop(QoS)
         else:
             QoS_distribution[":".join(QoS_list)] = QoS_distribution.pop(QoS)
@@ -521,21 +521,29 @@ def _num_subnets_callback(ctx: typer, Context, num_subnets: int):
         num_subnets = num_nodes
     return num_subnets
 
+
 # inter-param sanity check code goes here: all ctx.params[<>] are now fully realised/prioritised.
 def perform_sanity_checks(ctx: typer.Context):
     num_nodes = ctx.params["num_nodes"]
     num_subnets = ctx.params["num_subnets"]
-    if num_subnets > num_nodes:
+    if num_subnets > num_nodes: # can't make more subnets than requested nodes
         raise ValueError(
-            f"num_subnets must be <= num_nodes : num_subnets={num_subnets} > num_nodes={num_nodes}")
+            f"num_subnets must be <= num_nodes : num_subnets={num_subnets}, num_nodes={num_nodes}")
     fanout = ctx.params["fanout"]
-    if fanout >= num_nodes:
+    if fanout >= num_nodes:     # can't connect to more nodes than requested nodes-1
         raise ValueError(
-            f"fanout must be <= num_nodes : fanout={fanout} > num_nodes={num_nodes}")
+            f"fanout must be < num_nodes : fanout={fanout}, num_nodes={num_nodes}")
     container_size = ctx.params["container_size"]
-    if container_size > num_nodes:
+    if container_size > num_nodes:  # can't created a container larger than the requested nodes
         raise ValueError(
-            f"container_size <= num_nodes : container_size={container_size} >num_nodes={num_nodes}")
+            f"container_size <= num_nodes : container_size={container_size}, num_nodes={num_nodes}")
+    # rule out any non-trivial QoS distributions on a trivial subnet
+    inter_subnet_qos_distribution = ctx.params["inter_subnet_qos_distribution"]
+    if num_subnets == 1 and inter_subnet_qos_distribution != {"-1:None:-1": 100}:
+        raise ValueError(
+                f'number of subnets is 1, '
+                f'but a non-trivial QoS distribution ({inter_subnet_qos_distribution}) '
+                f'is requested')
 
 
 def main(ctx: typer.Context,
@@ -570,9 +578,6 @@ def main(ctx: typer.Context,
          traits_dir: Path = typer.Option("./traits", exists=True, file_okay=False,
              dir_okay=True, readable=True, resolve_path=True, help="Set the traits directory")):
 
-    # inter-param sanity checks
-    perform_sanity_checks(ctx)
-
     # Benchmarking: record start time and start tracing mallocs
     if benchmark:
         tracemalloc.start()
@@ -589,12 +594,8 @@ def main(ctx: typer.Context,
     validate_traits_distribution(ctx.params["traits_dir"], node_type_distribution)
     validate_inter_subnet_QoS_distribution(inter_subnet_qos_distribution)
 
-    # rule out any non-trivial QoS distributions on a trivial subnet
-    if num_subnets == 1 and inter_subnet_qos_distribution != {"-1:None:-1": 100}:
-        raise ValueError(
-                f'number of subnets is 1, '
-                f'but a non-trivial QoS distribution ({inter_subnet_qos_distribution}) '
-                f'is requested')
+    # inter-param sanity checks
+    perform_sanity_checks(ctx)
 
     # Generate the network
     # G = generate_network(num_nodes, networkType(network_type), tree_arity)
