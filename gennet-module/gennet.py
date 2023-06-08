@@ -589,6 +589,7 @@ def main(ctx: typer.Context,
     validate_traits_distribution(ctx.params["traits_dir"], node_type_distribution)
     validate_inter_subnet_QoS_distribution(inter_subnet_qos_distribution)
 
+    # rule out any non-trivial QoS distributions on a trivial subnet
     if num_subnets == 1 and inter_subnet_qos_distribution != {"-1:None:-1": 100}:
         raise ValueError(
                 f'number of subnets is 1, '
