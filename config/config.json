@@ -24,8 +24,8 @@
     "benchmark": "False",
     "inter_subnet_qos_distribution": {
       "-1:None:-1": 100,
-      "100.0:Uniform:500": 0,
-      "2.0:Normal:500": 0
+      "80:Uniform:10": 0,
+      "2.0:Normal:5000": 0
     }
   },
   "wls": {
