@@ -349,7 +349,7 @@ def generate_traits_distribution(node_type_distribution, G):
     random.shuffle(traits_distribution)
     return traits_distribution
 
-# Is an Integer
+# check if the given string can be interpreted as an int
 def is_int(s):
     try :
         int(s)
@@ -409,7 +409,6 @@ def pack_nodes(container_size, node2subnet):
 
 # Check if we need to generate the QoS matrix : assume distri != {}
 def is_nil_QoS(distr):
-    print(distr, len(distr))
     if len(distr) > 1:
         return False
     QoS = list(distr.keys())[0]
@@ -476,7 +475,7 @@ def generate_and_write_files(ctx: typer, G):
 # sanity check : valid json with "gennet" config
 def _config_file_callback(ctx: typer.Context, param: typer.CallbackParam, cfile: str):
     if cfile:
-        typer.echo(f"Loading config file: {os.path.basename(cfile)}")
+        typer.echo(f"Gennet: Loading the config file: {os.path.basename(cfile)}")
         ctx.default_map = ctx.default_map or {}  # Init the default map
         try:
             with open(cfile, 'r') as f:  # Load config file
@@ -514,15 +513,15 @@ def perform_sanity_checks(ctx: typer.Context):
     num_subnets = ctx.params["num_subnets"]
     if num_subnets > num_nodes:
         raise ValueError(
-            f"num_subnets must be <= num_nodes : num_subnets={num_subnets}, num_nodes={num_nodes}")
+            f"num_subnets must be <= num_nodes : num_subnets={num_subnets} > num_nodes={num_nodes}")
     fanout = ctx.params["fanout"]
     if fanout >= num_nodes:
         raise ValueError(
-            f"fanout must be <= num_nodes : fanout={fanout}, num_nodes={num_node}")
+            f"fanout must be <= num_nodes : fanout={fanout} > num_nodes={num_nodes}")
     container_size = ctx.params["container_size"]
     if container_size > num_nodes:
         raise ValueError(
-            f"container_size <= num_nodes : container_size={container_size}, num_nodes={num_nodes}")
+            f"container_size <= num_nodes : container_size={container_size} >num_nodes={num_nodes}")
 
 def main(ctx: typer.Context,
         benchmark: bool = typer.Option(False,
@@ -565,37 +564,41 @@ def main(ctx: typer.Context,
     start = time.time()
 
     # set the random seed : networkx uses numpy.random as well
-    print("Setting the random seed to ", prng_seed)
+    print("Gennet: Setting the random seed to ", prng_seed)
     random.seed(prng_seed)
     np.random.seed(prng_seed)
 
+    print("Gennet: Validating the config...")
     # validate and cleanup the node-type/trait-type/inter-subnet distributions
     validate_traits_distribution(ctx.params["traits_dir"], node_type_distribution)
     validate_inter_subnet_QoS_distribution(inter_subnet_qos_distribution)
 
     # Generate the network
     # G = generate_network(num_nodes, networkType(network_type), tree_arity)
+    print("Gennet: Generating the network...")
     G = generate_network(ctx)
 
     # Do not complain if the folder already exists
     make_empty_dir(output_dir)
 
     # Generate file format specific data structs and write the files
+    print("Gennet: Writing the network...")
     generate_and_write_files(ctx, G)
 
     # Draw the graph if need be
     if draw:
         draw_network(output_dir, G)
 
+    print("Gennet: Done...")
     end = time.time()
     time_took = end - start
-    print(f"For {G.number_of_nodes()}/{num_nodes} nodes, network generation took {time_took} secs.\nThe generated network is under .{output_dir}")
+    print(f"Gennet: For {G.number_of_nodes()}/{num_nodes} nodes, network generation took {time_took} secs.\nThe generated network is under .{output_dir}")
 
     # Benchmarking. Record finish time and stop the malloc tracing
     if benchmark:
         mem_curr, mem_max = tracemalloc.get_traced_memory()
         tracemalloc.stop()
-        print(f"STATS: For {num_nodes} nodes, time took is {time_took} secs, peak memory usage is {mem_max/(1024*1024)} MBs\n")
+        print(f"Gennet: STATS: For {num_nodes} nodes, time took is {time_took} secs, peak memory usage is {mem_max/(1024*1024)} MBs\n")
 
 
 if __name__ == "__main__":
