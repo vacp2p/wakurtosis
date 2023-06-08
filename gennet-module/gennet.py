@@ -314,9 +314,9 @@ def sum_fails(lst, sum_expected=100):
 
 def validate_pfd(distribution, name):
     if range_fails(distribution, max=100):
-        raise ValueError(f"{name}= {distribution} : invalid percentage (>{100} or <0)")
+        raise ValueError(f"{name}= {distribution} : invalid percentage (>100 or <0)")
     if sum_fails(distribution, sum_expected=100):
-        raise ValueError(f"{name} = {distribution} : percentages do not sum to {100}")
+        raise ValueError(f"{name} = {distribution} : percentages do not sum to 100")
 
 # Construct the nodeType from the trait
 def traits_to_nodeType(s):
@@ -330,7 +330,8 @@ def validate_traits_distribution(traits_dir, traits_distribution):
     if not os.path.exists(traits_dir):
         raise ValueError(f"{traits_dir} : trait directory does not exist!")
     for s in traits:
-        traits_list = s.split(":")
+        traits_list = [x.strip() for x in s.split(":")]
+        print(traits_list)
         if traits_list[0] not in nodeType:
             raise ValueError(f"{traits_distribution} : unknown node type {traits_list[0]} in {s}")
         for t in traits_list[1:]:
@@ -356,7 +357,7 @@ def is_int(s):
     except ValueError:
         return False
 
-# Validate the QoS distribution: assumes it's != {}
+# Validate the QoS distribution: assumes QoS distribution != {}
 def validate_inter_subnet_QoS_distribution(QoS_distribution):
     QoS_spec, QoS_distr = dict_to_arrays(QoS_distribution)
     validate_pfd(QoS_distr, "inter_subnet_QoS_distribution")
@@ -364,14 +365,13 @@ def validate_inter_subnet_QoS_distribution(QoS_distribution):
         QoS_list = QoS.split(":")
         if len(QoS_list) != 3 :
             raise ValueError(f"{QoS_distribution} : invalid spec {QoS}")
-        p = float(QoS_list[0])
-        if p != -1 and range_fails((p,)):
+        perc = float(QoS_list[0])
+        if perc != -1 and range_fails((perc,)):
             raise ValueError(f"{QoS_distribution} : invalid percentage {QoS_list[0]} in {QoS}")
         if QoS_list[1] not in ["Uniform", "Normal", "None"]:
             raise ValueError(f"{QoS_distribution} : unknown distribution {QoS_list[1]} in {QoS}")
         if not is_int(QoS_list[2]):
             raise ValueError(f"{QoS_distribution} : invalid delay {QoS_list[2]} in {QoS}")
-
 
 # Generate a list of nodeType enums that respects the node type distribution
 def generate_QoS_distribution(QoS_distribution, nedges):
@@ -405,6 +405,17 @@ def pack_nodes(container_size, node2subnet):
             port_shift += 1
     return node2container
 
+# Check if we need to generate the QoS matrix : assume distri != {}
+def is_nil_QoS(distr):
+    print(distr, len(distr))
+    if len(distr) > 1:
+        return False
+    QoS = list(distr.keys())[0]
+    validate_pfd(distr.values(), "inter_subnet_QoS_distribution" )
+    QoS_list = QoS.split(":")
+    print(QoS_list)
+    return True
+
 
 # Generates network-wide json and per-node toml and writes them
 def generate_and_write_files(ctx: typer, G):
@@ -422,7 +433,7 @@ def generate_and_write_files(ctx: typer, G):
     i, traits_dir = 0,  ctx.params["traits_dir"]
     for node in G.nodes:
         # write the per node toml for the i^ith node of appropriate type
-        traits_list, i = traits_distribution[i].split(":"),  i+1
+        traits_list, i = [x.strip() for x in traits_distribution[i].split(":")],  i+1
         node_type = nodeType(traits_list[0])
         write_toml(ctx.params["output_dir"], node, generate_toml(traits_dir, topics, traits_list))
         json_dump[NODES_JSON][node] = {}
@@ -439,22 +450,24 @@ def generate_and_write_files(ctx: typer, G):
         json_dump[NODES_JSON][node]["port_shift"] = port_shift
         json_dump[NODES_JSON][node]["container_id"] = cid
 
-    #subnet_matrix = generate_subnet_matrix(G)
-    subnets = list(set(node2subnet.values()))
-    nsubs = len(subnets)
+    # Generate and dump the inter-subnetwork QoS
+    nsubs = len(set(node2subnet.values()))
+    subnets = [f'subnetwork_{i}' for i in range(0, nsubs)] # O(n): saves on n*log(n) sorting
     nedges, k = nsubs * (nsubs-1), 0  # no QoS on self-loop
-    if ctx.params["inter_subnet_qos_distribution"]: # nothing to add to if it's  == {}
+    if not is_nil_QoS(ctx.params["inter_subnet_qos_distribution"]):
         QoS_distribution = generate_QoS_distribution(
                                         ctx.params["inter_subnet_qos_distribution"], nedges)
-        print(nedges, len(QoS_distribution))
         for i in range(0, nsubs):
-            json_dump[SUBNETS_JSON][subnets[i]] = {}
+            isubnet = subnets[i]
+            json_dump[SUBNETS_JSON][isubnet] = {}
             for j in range(0, nsubs):
                 if i == j :
                     continue
-                json_dump[SUBNETS_JSON][subnets[i]][subnets[j]] = QoS_distribution[k]
-                print(f'{k}: {QoS_distribution[k]}')
+                json_dump[SUBNETS_JSON][isubnet][subnets[j]] = QoS_distribution[k]
                 k = k+1
+        if k  != nedges:
+            print(f"Error: k != nedges:  {k} != {nedges}")
+            sys.exit(1)
     write_json(ctx.params["output_dir"], json_dump)  # network wide json
 
 
@@ -528,7 +541,7 @@ def main(ctx: typer.Context,
              help="Set the arity for trees & newmanwattsstrogatz"),
          node_type_distribution: str = typer.Argument("{\"nwaku\" : 100 }",
              callback=ast.literal_eval, help="Set the node type distribution"),
-         inter_subnet_qos_distribution: str = typer.Argument("{}",
+         inter_subnet_qos_distribution: str = typer.Argument("{\"-1:None:-1\": 100}",
              callback=ast.literal_eval, help="Set the node type distribution"),
          network_type: networkType = typer.Option(networkType.NEWMANWATTSSTROGATZ.value,
              help="Set the node type"),
@@ -556,8 +569,7 @@ def main(ctx: typer.Context,
 
     # validate node type distribution
     validate_traits_distribution(ctx.params["traits_dir"], node_type_distribution)
-    if inter_subnet_qos_distribution:
-        validate_inter_subnet_QoS_distribution(inter_subnet_qos_distribution)
+    validate_inter_subnet_QoS_distribution(inter_subnet_qos_distribution)
     # Generate the network
     # G = generate_network(num_nodes, networkType(network_type), tree_arity)
     G = generate_network(ctx)
