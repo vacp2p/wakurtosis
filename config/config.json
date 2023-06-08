@@ -22,6 +22,10 @@
     "network_type": "newmanwattsstrogatz",
     "output_dir": "network_data",
     "benchmark": "False"
+    "subnet_distribution": {
+      "0.5:Uniform:500": 100,
+      "1.0:Normal:500": 0
+    }
   },
   "wls": {
     "debug_level": "DEBUG",
