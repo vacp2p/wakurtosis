@@ -8,6 +8,7 @@ from src import log_parser
 from src import analysis
 from src import analysis_logger
 from src import cproc
+from src import hproc
 from src import cadvisor
 from src import plotting
 from src import plotting_configurations
@@ -47,7 +48,6 @@ if __name__ == "__main__":
         cadvisor.run(simulation_config, metrics, topology_info, msg_propagation_times, msg_injection_times, min_tss, max_tss, prom_port)
     else:
         analysis_logger.G_LOGGER.error(f'Unknown infrastructure type: {infra_type}')
-    
         analysis.inject_metric_in_dict(plotting_configurations.plotting_config, "propagation",
                                     "Propagation Time (per message)", "Propagation Time (ms)",
                                     "msg_propagation_times", msg_propagation_times)

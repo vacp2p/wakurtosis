@@ -9,8 +9,8 @@
     "interconnection_batch": 10
   },
   "gennet": {
-    "num_nodes": 9,
-    "fanout": 3,
+    "num_nodes": 25,
+    "fanout": 13,
     "num_topics": 1,
     "num_partitions": 1,
     "num_subnets": 1,
@@ -27,8 +27,8 @@
     "debug_level": "DEBUG",
     "simulation_time": 60,
     "message_rate": 10,
-    "min_packet_size": 2,
-    "max_packet_size": 1024,
+    "min_packet_size": 1024,
+    "max_packet_size": 10240,
     "inter_msg_type": "poisson",
     "dist_type": "gaussian",
     "emitters_fraction": 1.0
@@ -42,6 +42,18 @@
     "metrics_filename": "./cproc_metrics.json"
   },
   "plotting": {
+    "hproc": {
+      "out_prefix" : "output",
+      "aggregate" : "False",
+      "to_plot" : {
+        "Network": "True",
+        "ColPanel" : ["CPUPerc", "MemUse", "NetRecv", "NetSent"],
+        "ValueCluster" : [],
+        "DegColPanel" : ["CPUPerc", "MemUse", "NetRecv", "NetSent"],
+        "SettlingTime" : "True",
+        "Compare" : "True"
+      }
+    },
     "by_node": [
       "container_cpu_load_average_10s",
       "container_memory_usage_bytes"
