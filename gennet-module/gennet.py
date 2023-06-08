@@ -244,7 +244,7 @@ def postprocess_network(G):
     mapping = {i : f"{NODE_PREFIX}{ID_STR_SEPARATOR}{i}" for i in range(len(G))}
     return nx.relabel_nodes(G, mapping)  # label the nodes
 
-
+# Generate subnets: randomly splits the nodes into random-sized subnets
 def generate_subnets(G, num_subnets):
     n = len(G.nodes)
     if num_subnets == n:  # if num_subnets == size of the network
@@ -336,8 +336,10 @@ def validate_traits_distribution(traits_dir, traits_distribution):
         for t in traits_list[1:]:
             if t not in Trait and not os.path.exists(f"{traits_dir}/{t}.toml"):
                 raise ValueError(f"{traits_distribution} : unknown trait {t} in {s}")
-        traits_distribution[":".join(traits_list)] = traits_distribution.pop(s)
-
+        if traits_distribution[s] == 0: # omit trivial values
+            traits_distribution.pop(s)
+        else:
+            traits_distribution[":".join(traits_list)] = traits_distribution.pop(s)
 
 # Generate a list of nodeType enums that respects the node type distribution
 def generate_traits_distribution(node_type_distribution, G):
@@ -349,7 +351,7 @@ def generate_traits_distribution(node_type_distribution, G):
     random.shuffle(traits_distribution)
     return traits_distribution
 
-# check if the given string can be interpreted as an int
+# check if the given string can be interpreted as an int, -1 included
 def is_int(s):
     try :
         int(s)
@@ -372,7 +374,10 @@ def validate_inter_subnet_QoS_distribution(QoS_distribution):
             raise ValueError(f"{QoS_distribution} : unknown distribution {QoS_list[1]} in {QoS}")
         if not is_int(QoS_list[2]):
             raise ValueError(f"{QoS_distribution} : invalid delay {QoS_list[2]} in {QoS}")
-        QoS_distribution[":".join(QoS_list)] = QoS_distribution.pop(QoS)
+        if QoS_distribution[QoS] == 0:  # omit trivial values
+            QoS_distribution.pop(QoS)
+        else:
+            QoS_distribution[":".join(QoS_list)] = QoS_distribution.pop(QoS)
 
 # Generate a list of nodeType enums that respects the node type distribution
 def generate_QoS_distribution(QoS_distribution, nedges):
@@ -455,9 +460,9 @@ def generate_and_write_files(ctx: typer, G):
     nsubs = len(set(node2subnet.values()))
     subnets = [f'subnetwork_{i}' for i in range(0, nsubs)] # O(n): saves on n*log(n) sorting
     nedges, k = nsubs * (nsubs-1), 0  # no QoS on self-loop
-    if not is_nil_QoS(ctx.params["inter_subnet_qos_distribution"]):
-        QoS_distribution = generate_QoS_distribution(
-                                        ctx.params["inter_subnet_qos_distribution"], nedges)
+    QoS_dist_spec = ctx.params["inter_subnet_qos_distribution"]
+    if not is_nil_QoS(QoS_dist_spec):
+        QoS_distribution = generate_QoS_distribution(QoS_dist_spec, nedges)
         for i in range(0, nsubs):
             isubnet = subnets[i]
             json_dump[SUBNETS_JSON][isubnet] = {}
@@ -568,8 +573,9 @@ def main(ctx: typer.Context,
     random.seed(prng_seed)
     np.random.seed(prng_seed)
 
+    # validate and prune the node-type/trait-type/inter-subnet distributions
+    # returns a canonical distribution
     print("Gennet: Validating the config...")
-    # validate and cleanup the node-type/trait-type/inter-subnet distributions
     validate_traits_distribution(ctx.params["traits_dir"], node_type_distribution)
     validate_inter_subnet_QoS_distribution(inter_subnet_qos_distribution)
 
