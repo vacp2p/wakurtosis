@@ -589,12 +589,12 @@ def main(ctx: typer.Context,
     np.random.seed(prng_seed)
 
     # validate and prune the node-type/trait-type/inter-subnet distributions
-    # returns a canonical distribution
+    #       returns a canonical distribution
     print("Gennet: Validating the config...")
     validate_traits_distribution(ctx.params["traits_dir"], node_type_distribution)
     validate_inter_subnet_QoS_distribution(inter_subnet_qos_distribution)
 
-    # inter-param sanity checks
+    # inter-parameter consistency sanity checks
     perform_sanity_checks(ctx)
 
     # Generate the network
