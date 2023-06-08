@@ -297,6 +297,8 @@ def generate_toml(traits_dir, topics, traits_list):
     return f"{tomls}#topics\ntopics = {topic_str}\n"
 
 
+
+### percentage frequency distributions related fns ###############################################
 # Convert a dict to pair of arrays
 def dict_to_arrays(dic):
     keys, vals = zip(*dic.items())
@@ -311,6 +313,7 @@ def range_fails(lst, min=0, max=100):
 # Check for sum failures in a list
 def sum_fails(lst, sum_expected=100):
     return not sum(lst) == sum_expected
+
 
 def validate_pfd(distribution, name):
     if range_fails(distribution, max=100):
@@ -341,6 +344,7 @@ def validate_traits_distribution(traits_dir, traits_distribution):
         else:
             traits_distribution[":".join(traits_list)] = traits_distribution.pop(s)
 
+
 # Generate a list of nodeType enums that respects the node type distribution
 def generate_traits_distribution(node_type_distribution, G):
     num_nodes = G.number_of_nodes()
@@ -351,13 +355,15 @@ def generate_traits_distribution(node_type_distribution, G):
     random.shuffle(traits_distribution)
     return traits_distribution
 
-# check if the given string can be interpreted as an int, -1 included
+
+# Check if the given string can be interpreted as an int, -1 included
 def is_int(s):
     try :
         int(s)
         return True
     except ValueError:
         return False
+
 
 # Validate the QoS distribution: assumes QoS distribution != {}
 def validate_inter_subnet_QoS_distribution(QoS_distribution):
@@ -379,7 +385,8 @@ def validate_inter_subnet_QoS_distribution(QoS_distribution):
         else:
             QoS_distribution[":".join(QoS_list)] = QoS_distribution.pop(QoS)
 
-# Generate a list of nodeType enums that respects the node type distribution
+
+# Generate a list of per-edge QoS spec strings that respect the QoS distribution
 def generate_QoS_distribution(QoS_distribution, nedges):
     edge_QoS_spec, edge_QoS_percentage = dict_to_arrays(QoS_distribution)
     edge_QoS_distribution = []
@@ -388,12 +395,24 @@ def generate_QoS_distribution(QoS_distribution, nedges):
     random.shuffle(edge_QoS_distribution)
     return edge_QoS_distribution
 
+
 # Inverts a dictionary of lists (of lists/tuples) 
 def invert_dict_of_list(d, idx=0):
     inv = defaultdict(list)
     for key, val in d.items():
         inv[val[idx]].append(key)
     return inv
+
+
+# Check if we need to generate the QoS matrix : assume distri != {}
+def is_nil_QoS(distr):
+    if len(distr) > 1:
+        return False
+    QoS = list(distr.keys())[0]
+    validate_pfd(distr.values(), "inter_subnet_QoS_distribution" )
+    QoS_list = QoS.split(":")
+    if QoS_list == ['-1', 'None', '-1']:
+        return True
 
 
 # TODO: reduce container packer memory consumption so that it scales to million nodes
@@ -411,16 +430,6 @@ def pack_nodes(container_size, node2subnet):
             node2container[node] = (port_shift, f"{CONTAINER_PREFIX}_{cid}")
             port_shift += 1
     return node2container
-
-# Check if we need to generate the QoS matrix : assume distri != {}
-def is_nil_QoS(distr):
-    if len(distr) > 1:
-        return False
-    QoS = list(distr.keys())[0]
-    validate_pfd(distr.values(), "inter_subnet_QoS_distribution" )
-    QoS_list = QoS.split(":")
-    if QoS_list == ['-1', 'None', '-1']:
-        return True
 
 
 # Generates network-wide json and per-node toml and writes them
@@ -528,6 +537,7 @@ def perform_sanity_checks(ctx: typer.Context):
         raise ValueError(
             f"container_size <= num_nodes : container_size={container_size} >num_nodes={num_nodes}")
 
+
 def main(ctx: typer.Context,
         benchmark: bool = typer.Option(False,
             help="Measure CPU/Mem usage of Gennet"),
@@ -578,6 +588,12 @@ def main(ctx: typer.Context,
     print("Gennet: Validating the config...")
     validate_traits_distribution(ctx.params["traits_dir"], node_type_distribution)
     validate_inter_subnet_QoS_distribution(inter_subnet_qos_distribution)
+
+    if num_subnets == 1 and inter_subnet_qos_distribution != {"-1:None:-1": 100}:
+        raise ValueError(
+                f'number of subnets is 1, '
+                f'but a non-trivial QoS distribution ({inter_subnet_qos_distribution}) '
+                f'is requested')
 
     # Generate the network
     # G = generate_network(num_nodes, networkType(network_type), tree_arity)
