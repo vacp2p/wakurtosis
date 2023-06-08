@@ -73,8 +73,8 @@ class networkType(Enum):
 
 
 NW_DATA_FNAME = "network_data.json"
-NODES_JSON, NODE_PREFIX, SUBNET_PREFIX, CONTAINERS_JSON, CONTAINER_PREFIX = \
-    "nodes", "node", "subnetwork", "containers", "containers"
+NODES_JSON, CONTAINERS_JSON, SUBNETS_JSON = "nodes", "containers", "subnetworks"
+NODE_PREFIX, SUBNET_PREFIX, CONTAINER_PREFIX = "node", "subnetwork", "containers"
 ID_STR_SEPARATOR = "-"
 
 ### I/O related fns ##############################################################
@@ -303,7 +303,7 @@ def dict_to_arrays(dic):
     return keys, vals
 
 
-# Check for range failures in a list
+# Check for open range failures in a list
 def range_fails(lst, min=0, max=100):
     return any(x < min or x > max for x in lst)
 
@@ -379,7 +379,8 @@ def generate_and_write_files(ctx: typer, G):
     node2container = pack_nodes(ctx.params["container_size"], node2subnet)
     container2nodes = invert_dict_of_list(node2container, 1)
 
-    json_dump, json_dump[CONTAINERS_JSON], json_dump[NODES_JSON] = {}, {}, {}
+    json_dump = {}
+    json_dump[CONTAINERS_JSON], json_dump[NODES_JSON], json_dump[SUBNETS_JSON]  = {}, {}, {}
     for container, nodes in container2nodes.items():
         json_dump[CONTAINERS_JSON][container] = nodes
 
@@ -402,6 +403,14 @@ def generate_and_write_files(ctx: typer, G):
         port_shift, cid = node2container[node]
         json_dump[NODES_JSON][node]["port_shift"] = port_shift
         json_dump[NODES_JSON][node]["container_id"] = cid
+
+    #subnet_matrix = generate_subnet_matrix(G)
+    subnets = list(set(node2subnet.values()))
+    nsubs = len(subnets)
+    for i in range(0, nsubs):
+        json_dump[SUBNETS_JSON][subnets[i]] = {}
+        for j in range(0, nsubs):
+            json_dump[SUBNETS_JSON][subnets[i]][subnets[j]] = "ploss, distri, delay"
     write_json(ctx.params["output_dir"], json_dump)  # network wide json
 
 
