@@ -325,7 +325,7 @@ def traits_to_nodeType(s):
 
 # Validate the traits distribution (stick to percentages: num nodes may vary post generation)
 def validate_traits_distribution(traits_dir, traits_distribution):
-    traits, traits_distr = dict_to_arrays(traits_distribution)
+    traits, traits_distr = dict_to_arrays(traits_distribution) #assume: traits_distribution != {}
     validate_pfd(traits_distr, "node_type_distribution")
     if not os.path.exists(traits_dir):
         raise ValueError(f"{traits_dir} : trait directory does not exist!")
@@ -348,6 +348,7 @@ def generate_traits_distribution(node_type_distribution, G):
     random.shuffle(traits_distribution)
     return traits_distribution
 
+# Is an Integer
 def is_int(s):
     try :
         int(s)
@@ -355,6 +356,7 @@ def is_int(s):
     except ValueError:
         return False
 
+# Validate the QoS distribution: assumes it's != {}
 def validate_inter_subnet_QoS_distribution(QoS_distribution):
     QoS_spec, QoS_distr = dict_to_arrays(QoS_distribution)
     validate_pfd(QoS_distr, "inter_subnet_QoS_distribution")
@@ -372,15 +374,11 @@ def validate_inter_subnet_QoS_distribution(QoS_distribution):
 
 
 # Generate a list of nodeType enums that respects the node type distribution
-def generate_QoS_distribution(QoS_distribution, subnets):
-    if not QoS_distribution :
-        return {}
-    num_subnets = len(subnets)
-    num_subnet_edges = num_subnets * (num_subnets-1)
+def generate_QoS_distribution(QoS_distribution, nedges):
     edge_QoS_spec, edge_QoS_percentage = dict_to_arrays(QoS_distribution)
     edge_QoS_distribution = []
     for i, n in enumerate(edge_QoS_spec):
-       edge_QoS_distribution += [edge_QoS_spec[i]] * math.ceil(edge_QoS_percentage[i] * num_subnet_edges/100)
+       edge_QoS_distribution += [edge_QoS_spec[i]] * math.ceil(edge_QoS_percentage[i] * nedges/100)
     random.shuffle(edge_QoS_distribution)
     return edge_QoS_distribution
 
@@ -444,13 +442,19 @@ def generate_and_write_files(ctx: typer, G):
     #subnet_matrix = generate_subnet_matrix(G)
     subnets = list(set(node2subnet.values()))
     nsubs = len(subnets)
-    QoS_distribution = generate_QoS_distribution(
-                                        ctx.params["inter_subnet_qos_distribution"], subnets)
-    if QoS_distribution :
+    nedges, k = nsubs * (nsubs-1), 0  # no QoS on self-loop
+    if ctx.params["inter_subnet_qos_distribution"]: # nothing to add to if it's  == {}
+        QoS_distribution = generate_QoS_distribution(
+                                        ctx.params["inter_subnet_qos_distribution"], nedges)
+        print(nedges, len(QoS_distribution))
         for i in range(0, nsubs):
             json_dump[SUBNETS_JSON][subnets[i]] = {}
             for j in range(0, nsubs):
-                json_dump[SUBNETS_JSON][subnets[i]][subnets[j]] = "ploss, distri, delay"
+                if i == j :
+                    continue
+                json_dump[SUBNETS_JSON][subnets[i]][subnets[j]] = QoS_distribution[k]
+                print(f'{k}: {QoS_distribution[k]}')
+                k = k+1
     write_json(ctx.params["output_dir"], json_dump)  # network wide json
 
 
@@ -552,7 +556,8 @@ def main(ctx: typer.Context,
 
     # validate node type distribution
     validate_traits_distribution(ctx.params["traits_dir"], node_type_distribution)
-    validate_inter_subnet_QoS_distribution(inter_subnet_qos_distribution)
+    if inter_subnet_qos_distribution:
+        validate_inter_subnet_QoS_distribution(inter_subnet_qos_distribution)
     # Generate the network
     # G = generate_network(num_nodes, networkType(network_type), tree_arity)
     G = generate_network(ctx)
