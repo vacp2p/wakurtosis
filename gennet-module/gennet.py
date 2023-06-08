@@ -569,11 +569,10 @@ def main(ctx: typer.Context,
     random.seed(prng_seed)
     np.random.seed(prng_seed)
 
-    # validate node type distribution
-    print("B4",  node_type_distribution)
+    # validate and cleanup the node-type/trait-type/inter-subnet distributions
     validate_traits_distribution(ctx.params["traits_dir"], node_type_distribution)
     validate_inter_subnet_QoS_distribution(inter_subnet_qos_distribution)
-    print("AFTER", node_type_distribution)
+
     # Generate the network
     # G = generate_network(num_nodes, networkType(network_type), tree_arity)
     G = generate_network(ctx)
