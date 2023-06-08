@@ -336,6 +336,7 @@ def validate_traits_distribution(traits_dir, traits_distribution):
         for t in traits_list[1:]:
             if t not in Trait and not os.path.exists(f"{traits_dir}/{t}.toml"):
                 raise ValueError(f"{traits_distribution} : unknown trait {t} in {s}")
+        traits_distribution[":".join(traits_list)] = traits_distribution.pop(s)
 
 
 # Generate a list of nodeType enums that respects the node type distribution
@@ -371,6 +372,7 @@ def validate_inter_subnet_QoS_distribution(QoS_distribution):
             raise ValueError(f"{QoS_distribution} : unknown distribution {QoS_list[1]} in {QoS}")
         if not is_int(QoS_list[2]):
             raise ValueError(f"{QoS_distribution} : invalid delay {QoS_list[2]} in {QoS}")
+        QoS_distribution[":".join(QoS_list)] = QoS_distribution.pop(QoS)
 
 # Generate a list of nodeType enums that respects the node type distribution
 def generate_QoS_distribution(QoS_distribution, nedges):
@@ -412,7 +414,7 @@ def is_nil_QoS(distr):
         return False
     QoS = list(distr.keys())[0]
     validate_pfd(distr.values(), "inter_subnet_QoS_distribution" )
-    QoS_list = [x.strip() for x in QoS.split(":")]
+    QoS_list = QoS.split(":")
     if QoS_list == ['-1', 'None', '-1']:
         return True
 
@@ -433,7 +435,7 @@ def generate_and_write_files(ctx: typer, G):
     i, traits_dir = 0,  ctx.params["traits_dir"]
     for node in G.nodes:
         # write the per node toml for the i^ith node of appropriate type
-        traits_list, i = [x.strip() for x in traits_distribution[i].split(":")],  i+1
+        traits_list, i = traits_distribution[i].split(":"),  i+1
         node_type = nodeType(traits_list[0])
         write_toml(ctx.params["output_dir"], node, generate_toml(traits_dir, topics, traits_list))
         json_dump[NODES_JSON][node] = {}
@@ -568,8 +570,10 @@ def main(ctx: typer.Context,
     np.random.seed(prng_seed)
 
     # validate node type distribution
+    print("B4",  node_type_distribution)
     validate_traits_distribution(ctx.params["traits_dir"], node_type_distribution)
     validate_inter_subnet_QoS_distribution(inter_subnet_qos_distribution)
+    print("AFTER", node_type_distribution)
     # Generate the network
     # G = generate_network(num_nodes, networkType(network_type), tree_arity)
     G = generate_network(ctx)
