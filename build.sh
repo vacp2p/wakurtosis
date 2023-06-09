@@ -28,7 +28,7 @@ cd wls-module
 docker build -t wls:0.0.1 .
 cd ..
 
-cd ./monitoring/container-proc
+cd monitoring/container-proc
 sh ./build.sh
 cd ..
 

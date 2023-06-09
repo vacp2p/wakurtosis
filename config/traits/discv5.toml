@@ -12,5 +12,5 @@
 
 discv5-discovery=true
 #discv5-udp-port=
-discv5-bootstrap-node=""
+discv5-bootstrap-node=["enr:-JK4QO-jsYZRKcLiDoMR6jXDeqfRcw41dEmb7BPRTaSu3YW2MrVFafoAyEfGVlBE9XeWhka7i0dJAdHfnuLFuONcqqQBgmlkgnY0gmlwhKwQAf2Jc2VjcDI1NmsxoQPv2gTF6lS2-tHKIyIkp2UzqWLkjDC3vqoWmPcsLwI3YoN0Y3CC6mCDdWRwgiMohXdha3UyAQ"]
 discv5-enr-auto-update=true
