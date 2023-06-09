@@ -283,8 +283,13 @@ def generate_subnets(G, num_subnets):
 # Generate per node toml configs
 def generate_toml(traits_dir, topics, traits_list):
     topics, node_type, tomls = get_random_sublist(topics), traits_list[0], ""
-    topic_str = ", ".join(f"\"{t}\"" for t in topics)
-    topic_lst = f"[{topic_str}]"        # comma separated list of quoted topics
+    if node_type == nodeType.GOWAKU:    # comma separated list of quoted topics
+        topic_str = ", ".join(f"\"{t}\"" for t in topics)
+        topic_str = f"[{topic_str}]"
+    else:                               # space separated topics
+        topic_str = " ".join(topics)
+        topic_str = f"\"{topic_str}\""
+
     for trait in traits_list[1:]:       # skip the first trait as it is docker/node selector.
         toml = f'#{trait}\n'
         tomlf = f"{traits_dir}/{trait}.toml"
@@ -294,7 +299,7 @@ def generate_toml(traits_dir, topics, traits_list):
             strlines = [l.decode("utf-8").strip() for l in f if not len(l.split()) == 0]
             toml += ''.join([f'{l}\n' for l in strlines if not l.startswith('#')])
         tomls += toml + '\n'
-    return f"{tomls}#topics\ntopic = {topic_lst}\n"
+    return f"{tomls}#topics\ntopics = {topic_str}\n"
 
 
 
