@@ -6,14 +6,17 @@ GOWAKU_IMAGE = "gowaku"
 ID_STR_SEPARATOR = "-"
 
 NODE_CONFIG_FILE_LOCATION = "github.com/logos-co/wakurtosis/config/topology_generated/"
+RUN_SCRIPT_FILE = "github.com/logos-co/wakurtosis/run_waku_node.sh"
 CONFIG_FILE_LOCATION = "github.com/logos-co/wakurtosis/config/"
 CONTAINER_NODE_CONFIG_FILE_LOCATION = "/node/configuration_file/"
+CONTAINER_NODE_SCRIPT_RUN_LOCATION = "/opt/"
 GENERAL_ENTRYPOINT = ["/bin/sh", "-c"]
 CONFIG_FILE_STARLARK_PARAMETER = "config_file"
 
 # Config file keys
 KURTOSIS_KEY = "kurtosis"
 WLS_KEY = "wls"
+INTERCONNECT_NODES = "interconnect_nodes"
 INTERCONNECTION_BATCH_KEY = "interconnection_batch"
 
 # Waku Configuration
@@ -29,7 +32,8 @@ WAKU_DISCV5_PORT_PROTOCOL = "UDP"
 
 WAKUNODE_CONFIGURATION_FILE_FLAG = "--config-file="
 WAKUNODE_PORT_SHIFT_FLAG = "--ports-shift="
-NWAKU_ENTRYPOINT = "/usr/bin/wakunode --rpc-address=0.0.0.0 --metrics-server-address=0.0.0.0 --log-level=TRACE"
+# NWAKU_ENTRYPOINT = "/usr/bin/wakunode --rpc-address=0.0.0.0 --metrics-server-address=0.0.0.0 --log-level=TRACE"
+NWAKU_SCRIPT_ENTRYPOINT = "run_waku_node.sh"
 GOWAKU_ENTRYPOINT = "/usr/bin/waku --rpc-address=0.0.0.0 --metrics-server-address=0.0.0.0"
 NOMOS_ENTRYPOINT = "/usr/bin/nomos-node"
 NOMOS_PORT_SHIFT_FLAG = "--ports-shift="
@@ -135,7 +139,6 @@ ARGUMENT_PARSER_MODULE = "github.com/logos-co/wakurtosis/src/arguments_parser.st
 FILE_HELPERS_MODULE = "github.com/logos-co/wakurtosis/src/file_helpers.star"
 TEMPLATES_MODULE = "github.com/logos-co/wakurtosis/src/templates.star"
 WLS_MODULE = "github.com/logos-co/wakurtosis/src/wls.star"
-GENNET_MODULE = "github.com/logos-co/wakurtosis/src/gennet.star"
 CALL_PROTOCOLS = "github.com/logos-co/wakurtosis/src/call_protocols.star"
 NOMOS_MODULE = "github.com/logos-co/wakurtosis/src/nomos.star"
 
@@ -155,9 +158,3 @@ DEFAULT_TOPOLOGY_FILE = "network_data.json"
 TEST_FILES_LOCATION = "github.com/logos-co/wakurtosis/config/test_files/"
 DEFAULT_TOPOLOGY_FILE_DEFAULT_ARGUMENT_VALUE = "test_network_data.json"
 DEFAULT_CONFIG_FILE = "github.com/logos-co/wakurtosis/config/config.json"
-
-# Default Simulation Parameters
-SIMULATION_TIME = 300
-MESSAGE_RATE = 25
-MIN_PACKET_SIZE = 1
-MAX_PACKET_SIZE = 1024
