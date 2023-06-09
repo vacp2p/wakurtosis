@@ -5,7 +5,6 @@ sudo apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin
 apt-get install -y jq
 
 # Install the suitable kurtosis-cli
-# 0.70.2
 kurtosis_version=0.77.0
 echo "deb [trusted=yes] https://apt.fury.io/kurtosis-tech/ /" | sudo tee /etc/apt/sources.list.d/kurtosis.list
 sudo apt update
@@ -34,8 +33,8 @@ sh ./build.sh
 cd ..
 
 
-git clone git@github.com:waku-org/go-waku.git
-cd go-waku
-docker build -t gowaku .
-cd ..
-rm -rf go-waku
+#git clone git@github.com:waku-org/go-waku.git
+#cd go-waku
+#docker build -t gowaku .
+#cd ..
+#rm -rf go-waku
