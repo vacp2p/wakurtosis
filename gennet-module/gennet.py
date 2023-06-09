@@ -283,9 +283,8 @@ def generate_subnets(G, num_subnets):
 # Generate per node toml configs
 def generate_toml(traits_dir, topics, traits_list):
     topics, node_type, tomls = get_random_sublist(topics), traits_list[0], ""
-    # comma separated list of quoted topics
     topic_str = ", ".join(f"\"{t}\"" for t in topics)
-    topic_lst = f"[{topic_str}]"
+    topic_lst = f"[{topic_str}]"        # comma separated list of quoted topics
     for trait in traits_list[1:]:       # skip the first trait as it is docker/node selector.
         toml = f'#{trait}\n'
         tomlf = f"{traits_dir}/{trait}.toml"
