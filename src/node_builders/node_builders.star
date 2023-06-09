@@ -29,6 +29,8 @@ def instantiate_services(plan, network_topology, discovery, testing):
     """
     all_services_configuration = {}
 
+    run_artifact = plan.upload_files(src=vars.RUN_SCRIPT_FILE)
+
     for service_id, nodes_in_service in network_topology[vars.GENNET_ALL_CONTAINERS_KEY].items():
         image = network_topology[vars.GENNET_NODES_KEY][nodes_in_service[0]][vars.GENNET_IMAGE_KEY]
         service_builder = dispatchers.service_builder_dispatcher[image]
@@ -37,17 +39,14 @@ def instantiate_services(plan, network_topology, discovery, testing):
         config_file_names = [network_topology[vars.GENNET_NODES_KEY][node][vars.GENNET_CONFIG_KEY]
                              for node in nodes_in_service]
 
-        config_files_artifact_ids = [
+        toml_files_artifact_ids = [
             files.get_toml_configuration_artifact(plan, config_file_name, service_name, testing)
             for config_file_name, service_name
             in zip(config_file_names, nodes_in_service)
         ]
 
-        #if discovery:
-            # add bootstrap node to tomls
-
         service_builder(nodes_in_service, all_services_configuration, config_file_names,
-                        config_files_artifact_ids, service_id, network_topology)
+                        toml_files_artifact_ids, run_artifact, service_id, network_topology, discovery)
 
     all_services_information = plan.add_services(
         configs=all_services_configuration
