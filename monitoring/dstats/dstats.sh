@@ -51,7 +51,7 @@ docker exec $wait_cid touch /wls/start.signal
 
 echo "dstats: waiting for WLS to finish : dstats $dstats_pid is running"
 docker container wait $wait_cid
-sleep 10        # make sure you collect the stats until last messages settle down
+sleep 30        # collect as much stats possible as the simulation is winding down
 
 echo "dstats: WLS finished: stopping the docker monitor $dstats_pid"
 kill -15 $dstats_pid

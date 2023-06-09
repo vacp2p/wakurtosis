@@ -35,7 +35,7 @@ procfs_pid=$!
 
 echo "host-proc: waiting for WLS to finish: procfs $procfs_pid running"
 docker container wait $WAIT_CID   # now wait for the wakurtosis to finish
-sleep 60        # make sure you collect the stats until last messages settle down
+sleep 30        # collect as much stats possible as the simulation is winding down
 
 echo "host-proc: stopping the helper $procfs_pid"
 kill -15  $procfs_pid   # procfs-stats is a su process
