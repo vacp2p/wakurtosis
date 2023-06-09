@@ -382,12 +382,11 @@ def generate_and_write_files(ctx: typer, G):
     json_dump, json_dump[CONTAINERS_JSON], json_dump[NODES_JSON] = {}, {}, {}
     for container, nodes in container2nodes.items():
         json_dump[CONTAINERS_JSON][container] = nodes
-    json_dump[CONTAINERS_JSON]["bootstrap"] = ["bootstrap"]
 
-    i, traits_dir = 0,  ctx.params["traits_dir"]
+    i, traits_dir = 0, ctx.params["traits_dir"]
     for node in G.nodes:
         # write the per node toml for the i^ith node of appropriate type
-        traits_list, i = traits_distribution[i].split(":"),  i+1
+        traits_list, i = traits_distribution[i].split(":"), i + 1
         node_type = nodeType(traits_list[0])
         write_toml(ctx.params["output_dir"], node, generate_toml(traits_dir, topics, traits_list))
         json_dump[NODES_JSON][node] = {}
@@ -396,24 +395,13 @@ def generate_and_write_files(ctx: typer, G):
             json_dump[NODES_JSON][node]["static_nodes"].append(edge[1])
         json_dump[NODES_JSON][node][SUBNET_PREFIX] = node2subnet[node]
         json_dump[NODES_JSON][node]["image"] = nodeTypeToDocker.get(node_type)
-            # the per node tomls will continue for now as they include topics
+        # the per node tomls will continue for now as they include topics
         json_dump[NODES_JSON][node]["node_config"] = f"{node}.toml"
-            # logs ought to continue as they need to be unique
+        # logs ought to continue as they need to be unique
         json_dump[NODES_JSON][node]["node_log"] = f"{node}.log"
         port_shift, cid = node2container[node]
         json_dump[NODES_JSON][node]["port_shift"] = port_shift
         json_dump[NODES_JSON][node]["container_id"] = cid
-
-    json_dump[NODES_JSON]["bootstrap"] = {}
-    json_dump[NODES_JSON]["bootstrap"]["static_nodes"] = []
-    json_dump[NODES_JSON]["bootstrap"]["image"] = nodeTypeToDocker[nodeType.NWAKU]
-    json_dump[NODES_JSON]["bootstrap"]["node_config"] = "bootstrap.toml"
-    json_dump[NODES_JSON]["bootstrap"]["node_log"] = "bootstrap.log"
-    json_dump[NODES_JSON]["bootstrap"]["port_shift"] = 0
-    json_dump[NODES_JSON]["bootstrap"]["container_id"] = "bootstrap"
-    write_toml(ctx.params["output_dir"], "bootstrap", generate_toml(traits_dir, ["bootstrap"],
-                                                                    ["nwaku", "discv5", "metrics",
-                                                                     "rpc"]))
 
     write_json(ctx.params["output_dir"], json_dump)  # network wide json
 
