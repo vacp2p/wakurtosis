@@ -17,17 +17,6 @@ def get_wakunode_peer_id(plan, service_name, port_id):
     return response["extract.peer_id"]
 
 
-def get_wakunode_enr(plan, service_name, port_id):
-    extract = {"enr": '.result.enrUri | split(":") | .[-1]'}
-
-    response = call_protocols.send_json_rpc(plan, service_name, port_id,
-                             vars.GET_WAKU_INFO_METHOD, "", extract)
-
-    plan.assert(value=response["code"], assertion="==", target_value = 200)
-
-    return response["extract.enr"]
-
-
 def create_node_multiaddress(node_id, node_information):
     ip = node_information[vars.IP_KEY]
     port = node_information[vars.PORTS_KEY][vars.WAKU_LIBP2P_PORT_ID + vars.ID_STR_SEPARATOR + node_id][0]
