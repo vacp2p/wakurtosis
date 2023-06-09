@@ -20,7 +20,7 @@ echo "- Configuration file: " "$wakurtosis_config_file"
 
 # Cleanup previous runs
 echo "Cleaning up previous runs"
-sh ./cleanup.sh $enclave_name
+sh ./bash-utils/cleanup.sh $enclave_name
 echo "Done cleaning up previous runs"
 
 # make sure the prometheus and grafana configs are readable
@@ -82,7 +82,7 @@ previous_part=$((part4 - 1))
 bootstrap_ip="$part1.$part2.$part3.$previous_part"
 IFS=' '
 echo "Bootstrap node IP: $bootstrap_ip"
-docker run --name bootstrap_node -p 127.0.0.1:60000:60000 -p 127.0.0.1:8008:8008 -p 127.0.0.1:9000:9000 -p 127.0.0.1:8545:8545 -v "$(pwd)/run_bootstrap_node.sh:/opt/runnode.sh:Z" --detach=true --network $enclave_prefix --ip="$bootstrap_ip" --entrypoint sh statusteam/nim-waku:nwaku-trace3 -c "/opt/runnode.sh" >/dev/null 2>&1
+docker run --name bootstrap_node -p 127.0.0.1:60000:60000 -p 127.0.0.1:8008:8008 -p 127.0.0.1:9000:9000 -p 127.0.0.1:8545:8545 -v "$(pwd)/bash-utils/run_bootstrap_node.sh:/opt/runnode.sh:Z" --detach=true --network $enclave_prefix --ip="$bootstrap_ip" --entrypoint sh statusteam/nim-waku:nwaku-trace3 -c "/opt/runnode.sh" >/dev/null 2>&1
 
 RETRIES_TRAFFIC=${RETRIES_TRAFFIC:=10}
 while [ -z "${NODE_ENR}" ] && [ ${RETRIES_TRAFFIC} -ge 0 ]; do

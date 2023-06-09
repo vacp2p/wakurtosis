@@ -6,7 +6,7 @@ GOWAKU_IMAGE = "gowaku"
 ID_STR_SEPARATOR = "-"
 
 NODE_CONFIG_FILE_LOCATION = "github.com/logos-co/wakurtosis/config/topology_generated/"
-RUN_SCRIPT_FILE = "github.com/logos-co/wakurtosis/run_waku_node.sh"
+RUN_SCRIPT_FILE = "github.com/logos-co/wakurtosis/bash-utils/run_waku_node.sh"
 CONFIG_FILE_LOCATION = "github.com/logos-co/wakurtosis/config/"
 CONTAINER_NODE_CONFIG_FILE_LOCATION = "/node/configuration_file/"
 CONTAINER_NODE_SCRIPT_RUN_LOCATION = "/opt/"
