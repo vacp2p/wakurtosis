@@ -11,10 +11,9 @@ def get_toml_configuration_artifact(plan, config_file, name, testing):
             name=name
         )
     else:
-        # No longer getting them from host, but from gennet container
-        artifact_id = plan.store_service_files(
-            service_name = "node-bootstrap",
-            src="/gennet/network_data/" + config_file,
+        artifact_id = plan.upload_files(
+            src=vars.NODE_CONFIG_FILE_LOCATION + config_file,
+            name=name
         )
 
     return artifact_id
