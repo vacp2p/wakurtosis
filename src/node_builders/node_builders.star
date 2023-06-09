@@ -52,7 +52,7 @@ def instantiate_services(plan, network_topology, discovery, testing):
         configs=all_services_configuration
     )
 
-    _add_service_info_to_topology(plan, all_services_information, network_topology)
+    _add_service_info_to_topology(plan, all_services_information, network_topology, discovery)
 
 
 def interconnect_nodes(plan, topology_information, interconnection_batch):
@@ -74,7 +74,7 @@ def interconnect_nodes(plan, topology_information, interconnection_batch):
 
 
 
-def _add_service_info_to_topology(plan, all_services_information, network_topology):
+def _add_service_info_to_topology(plan, all_services_information, network_topology, discovery):
     for node_id, node_info in network_topology[vars.GENNET_NODES_KEY].items():
         node_rpc_port_id = vars.WAKU_RPC_PORT_ID + vars.ID_STR_SEPARATOR + node_id
 
@@ -89,7 +89,7 @@ def _add_service_info_to_topology(plan, all_services_information, network_topolo
             all_services_information[node_info[vars.GENNET_NODE_CONTAINER_KEY]].ip_address
 
         ports_adder = dispatchers.ports_dispatcher[node_info[vars.GENNET_IMAGE_KEY]]
-        ports_adder(network_topology, all_services_information, node_info, node_id)
+        ports_adder(network_topology, all_services_information, node_info, node_id, discovery)
 
     for container_id, container_info in network_topology[vars.GENNET_ALL_CONTAINERS_KEY].items():
         nodes = container_info

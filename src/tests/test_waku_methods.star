@@ -17,7 +17,7 @@ def test_waku_methods(plan):
     topology = read_file(src=topology_for_test_file)
     topology = json.decode(topology)
 
-    node_builders.instantiate_services(plan, topology, True)
+    node_builders.instantiate_services(plan, topology, False, True)
     expected_ids = {
         "nwaku_0_2": "16Uiu2HAm7ZPmRY3ECVz7fAJQdxEDrBw3ToneYgUryKDJPtz25R2n",
         "nwaku_1_2": "16Uiu2HAmV7KPdL24S9Lztu6orfWuHypA9F6NUR4GkBDvWg8U4B5Z"

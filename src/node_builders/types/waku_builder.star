@@ -46,16 +46,22 @@ def prepare_waku_config_files_in_service(node_names, toml_artifact_ids, run_arti
     return prepared_files
 
 
-def add_waku_ports_info_to_topology(network_topology, all_services_information, node_info, node_id):
+def add_waku_ports_info_to_topology(network_topology, all_services_information, node_info, node_id,
+                                    discovery):
     waku_rpc_port_id = vars.WAKU_RPC_PORT_ID + vars.ID_STR_SEPARATOR + node_id
     libp2p_port_id = vars.WAKU_LIBP2P_PORT_ID + vars.ID_STR_SEPARATOR + node_id
     prometheus_port_id = vars.PROMETHEUS_PORT_ID + vars.ID_STR_SEPARATOR + node_id
+
 
     network_topology[vars.GENNET_NODES_KEY][node_id][vars.PORTS_KEY] = {}
     _add_waku_port(network_topology, all_services_information, node_id, node_info, waku_rpc_port_id)
     _add_waku_port(network_topology, all_services_information, node_id, node_info, libp2p_port_id)
     _add_waku_port(network_topology, all_services_information, node_id, node_info,
                    prometheus_port_id)
+    if discovery:
+        discv5_port_id = vars.WAKU_DISCV5_PORT_ID + vars.ID_STR_SEPARATOR + node_id
+        _add_waku_port(network_topology, all_services_information, node_id, node_info,
+                       discv5_port_id)
 
 
 def _add_waku_port(network_topology, all_services_information, node_id, node_info, port_id):

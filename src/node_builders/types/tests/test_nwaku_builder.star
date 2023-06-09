@@ -11,8 +11,8 @@ def test_prepare_nwaku_service(plan):
 
     nwaku_builder.prepare_nwaku_service(["test1", "test2"], test_dict,
                                         ["test1.toml", "test2.toml"],
-                                        ["a1", "a2"],
-                                        "id_1", topology)
+                                        ["a1", "a2"], "run",
+                                        "id_1", topology, False)
 
     # hasattr doesn't work in dicts?
     plan.assert(value=str(test_dict.get("id_1")),
@@ -36,6 +36,10 @@ def test_prepare_nwaku_service(plan):
         plan.assert(value=test_dict["id_1"].files[vars.CONTAINER_NODE_CONFIG_FILE_LOCATION+node],
                 assertion="==", target_value=file)
 
+    for node, file in zip(["test1", "test2"], ["run", "run"]):
+        plan.assert (value=test_dict["id_1"].files[vars.CONTAINER_NODE_SCRIPT_RUN_LOCATION],
+        assertion="==", target_value=file)
+
     for i in range(len(test_dict["id_1"].entrypoint)):
         plan.assert(value=test_dict["id_1"].entrypoint[i], assertion="==",
                 target_value=vars.GENERAL_ENTRYPOINT[i])
@@ -48,10 +52,9 @@ def test__prepare_nwaku_cmd_in_service(plan):
 
     plan.assert(value=result[0],
             assertion="==",
-            target_value=vars.NWAKU_ENTRYPOINT+" "+vars.WAKUNODE_CONFIGURATION_FILE_FLAG+
-                vars.CONTAINER_NODE_CONFIG_FILE_LOCATION+"a"+"/"+"c"+" "+
-                vars.WAKUNODE_PORT_SHIFT_FLAG+"0"+" & "+
-                vars.NWAKU_ENTRYPOINT+" "+vars.WAKUNODE_CONFIGURATION_FILE_FLAG+
-                vars.CONTAINER_NODE_CONFIG_FILE_LOCATION+"b"+"/"+"d"+" "+
-                vars.WAKUNODE_PORT_SHIFT_FLAG+"1"
+            target_value=vars.CONTAINER_NODE_SCRIPT_RUN_LOCATION+
+                vars.NWAKU_SCRIPT_ENTRYPOINT+" "+vars.CONTAINER_NODE_CONFIG_FILE_LOCATION
+                +"a"+"/"+"c"+" "+"0"+" & "+vars.CONTAINER_NODE_SCRIPT_RUN_LOCATION+
+                vars.NWAKU_SCRIPT_ENTRYPOINT+" "+vars.CONTAINER_NODE_CONFIG_FILE_LOCATION+
+                "b"+"/"+"d"+" "+"1"
                 )

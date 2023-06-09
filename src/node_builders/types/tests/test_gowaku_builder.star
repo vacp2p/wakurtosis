@@ -13,7 +13,7 @@ def test_prepare_gowaku_service(plan):
     gowaku_builder.prepare_gowaku_service(["test1", "test2"], test_dict,
                                           ["test1.toml", "test2.toml"],
                                           ["a1", "a2"],
-                                          "id_1", topology)
+                                          "id_1", topology, False)
 
     # hasattr doesn't work in dicts?
     plan.assert(value=str(test_dict.get("id_1")),

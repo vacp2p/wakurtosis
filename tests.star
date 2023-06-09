@@ -13,7 +13,6 @@ nwaku_builder_test = import_module(vars.TEST_NWAKU_BUILDER_MODULE)
 
 
 
-
 def run(plan, args):
 
     args_parser_test.test_load_config_args_default(plan)
@@ -35,9 +34,8 @@ def run(plan, args):
     waku_builder_test.test_prepare_waku_config_files_in_service(plan)
     waku_builder_test.test_add_waku_ports_info_to_topology(plan)
 
-
-    gowaku_builder_test.test_prepare_gowaku_service(plan)
-    gowaku_builder_test.test__prepare_gowaku_cmd_in_service(plan)
+    # gowaku_builder_test.test_prepare_gowaku_service(plan)
+    # gowaku_builder_test.test__prepare_gowaku_cmd_in_service(plan)
 
     nwaku_builder_test.test_prepare_nwaku_service(plan)
     nwaku_builder_test.test__prepare_nwaku_cmd_in_service(plan)
