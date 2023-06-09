@@ -16,9 +16,9 @@ enclave_name=${2:-"wakurtosis"}
 wakurtosis_config_file=${3:-"config.json"}
 
 loglevel="error"
-echo "- Metrics Infra: " $metrics_infra
-echo "- Enclave name: " $enclave_name
-echo "- Configuration file: " $wakurtosis_config_file
+echo "- Metrics Infra: " "$metrics_infra"
+echo "- Enclave name: " "$enclave_name"
+echo "- Configuration file: " "$wakurtosis_config_file"
 
 # Cleanup previous runs
 echo "Cleaning up previous runs"
@@ -60,10 +60,9 @@ part4=$(echo "$ip_parts" | cut -d '.' -f 4)
 previous_part=$((part4 - 1))
 
 bootstrap_ip="$part1.$part2.$part3.$previous_part"
-
+IFS=' '
 echo "Bootstrap node IP: $bootstrap_ip"
-# TODO crear en json apartado donde poner la imagen de nwaku
-docker run --name bootstrap_node -p 127.0.0.1:60000:60000 -p 127.0.0.1:8008:8008 -p 127.0.0.1:9000:9000 -p 127.0.0.1:8545:8545 -v "$(pwd)/run_bootstrap_node.sh:/opt/runnode.sh:Z" --detach=true --ip="$bootstrap_ip" --entrypoint sh statusteam/nim-waku:nwaku-trace3 -c "/opt/runnode.sh" >/dev/null 2>&1
+docker run --name bootstrap_node -p 127.0.0.1:60000:60000 -p 127.0.0.1:8008:8008 -p 127.0.0.1:9000:9000 -p 127.0.0.1:8545:8545 -v "$(pwd)/run_bootstrap_node.sh:/opt/runnode.sh:Z" --detach=true --network $enclave_prefix --ip="$bootstrap_ip" --entrypoint sh statusteam/nim-waku:nwaku-trace3 -c "/opt/runnode.sh" >/dev/null 2>&1
 
 RETRIES_TRAFFIC=${RETRIES_TRAFFIC:=10}
 while [ -z "${NODE_ENR}" ] && [ ${RETRIES_TRAFFIC} -ge 0 ]; do
@@ -73,6 +72,11 @@ while [ -z "${NODE_ENR}" ] && [ ${RETRIES_TRAFFIC} -ge 0 ]; do
   RETRIES_TRAFFIC=$(( $RETRIES_TRAFFIC - 1 ))
 done
 echo "Bootstrap ENR: ${NODE_ENR}"
+
+# Specify the path to your TOML file
+echo "Injecting ENR in Discv5 toml"
+toml_file="config/traits/discv5.toml"
+sed -i "s|discv5-bootstrap-node=\(.*\)|discv5-bootstrap-node=[\"${NODE_ENR}\"]|" $toml_file
 ##################### END
 
 ##################### GENNET
@@ -87,7 +91,7 @@ then
   exit
 fi
 # Copy the network generated TODO: remove this extra copy
-docker cp cgennet:/gennet/network_data ${dir}/config/topology_generated
+docker cp cgennet:/gennet/network_data "${dir}"/config/topology_generated
 docker rm cgennet > /dev/null 2>&1
 ##################### END
 
@@ -114,13 +118,13 @@ fi
 ##################### KURTOSIS RUN
 
 # Create the new enclave and run the simulation
-jobs=$(cat config/${wakurtosis_config_file} | jq -r ".kurtosis.jobs")
-echo -e "\nSetting up the enclave: $enclave_name"
+jobs=$(cat "${dir}"/config/"${wakurtosis_config_file}" | jq -r ".kurtosis.jobs")
+echo "\nSetting up the enclave: $enclave_name"
 
 kurtosis_cmd="kurtosis --cli-log-level \"$loglevel\" run --enclave ${enclave_name} . '{\"wakurtosis_config_file\" : \"config/${wakurtosis_config_file}\"}' --parallelism ${jobs} > kurtosisrun_log.txt 2>&1"
 
 START=$(date +%s)
-  eval $kurtosis_cmd
+  eval "$kurtosis_cmd"
 END1=$(date +%s)
 
 DIFF1=$(( $END1 - $START ))
