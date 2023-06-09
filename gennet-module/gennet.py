@@ -244,21 +244,27 @@ def postprocess_network(G):
     mapping = {i : f"{NODE_PREFIX}{ID_STR_SEPARATOR}{i}" for i in range(len(G))}
     return nx.relabel_nodes(G, mapping)  # label the nodes
 
+
+# Adjust the offsets so that each subnet has at least one node
+def adjust_offsets(offsets):
+    for i in reversed(range(0, num_subnets-1)):
+        if offsets[i] == offsets[i+1]: # in case of a zero-node subset
+            offsets[i] -= 1                 # promote from the next subnet
+
+
 # Generate subnets: randomly splits the nodes into random-sized subnets
 def generate_subnets(G, num_subnets):
     n = len(G.nodes)
-    if num_subnets == n:  # if num_subnets == size of the network
-        return {f"{NODE_PREFIX}{ID_STR_SEPARATOR}{i}" : f"{SUBNET_PREFIX}_{i}" for i in range(n)}
-
+    l, lst = range(n), list(range(n))
     # Permute the node indices; this makes sure that the nodes are assigned randomly to subnets
-    lst = list(range(n))
     random.shuffle(lst)
-
-    # Select (without replacement) a num_subnets - 1 of offsets; make sure final offset is n-1.
-    # Each offset demarcates a subnet boundary
-    offsets = sorted(random.sample(range(0, n), num_subnets - 1))
-    offsets.append(n - 1)   # we have num_subnets offsets
-
+    if num_subnets == n:  # if num_subnets == num_nodes
+        return {f"{NODE_PREFIX}{ID_STR_SEPARATOR}{i}" : f"{SUBNET_PREFIX}_{lst[i]}" for i in l}
+    # Select (without replacement) a num_subnets-1 of offsets; the last offset must be n-1
+    # Each offset demarcates a subnet boundary; make sure you have at least one node per subnet
+    offsets = sorted(random.sample(range(0, n-1), num_subnets-1))
+    offsets.append(n-1)   # now we have num_subnets offsets, with max offset at n-1
+    #adjust_offsets(offsets)
     start, subnet_id, node2subnet = 0, 0, {}
     for end in offsets:
         # Build a node2subnet map as follows
@@ -268,9 +274,8 @@ def generate_subnets(G, num_subnets):
         # Finally, assign all these node to the current subnet.
         for i in range(start, end + 1):
             node2subnet[f"{NODE_PREFIX}{ID_STR_SEPARATOR}{lst[i]}"] = f"{SUBNET_PREFIX}_{subnet_id}"
-            #node2subnet[lst[i]] = subnet_id
-        start = end     # roll over the start to the end of the last offset
-        subnet_id += 1  # increment the subnet_id 
+        start = end + 1     # roll over the start to the last offset + 1
+        subnet_id += 1  # increment the subnet_id
     return node2subnet
 
 
@@ -440,11 +445,13 @@ def generate_and_write_files(ctx: typer, G):
     node2container = pack_nodes(ctx.params["container_size"], node2subnet)
     container2nodes = invert_dict_of_list(node2container, 1)
 
+    # Populate the containers
     json_dump = {}
     json_dump[CONTAINERS_JSON], json_dump[NODES_JSON], json_dump[SUBNETS_JSON]  = {}, {}, {}
     for container, nodes in container2nodes.items():
         json_dump[CONTAINERS_JSON][container] = nodes
 
+    # Populate the nodes
     i, traits_dir = 0,  ctx.params["traits_dir"]
     for node in G.nodes:
         # write the per node toml for the i^ith node of appropriate type
@@ -465,9 +472,12 @@ def generate_and_write_files(ctx: typer, G):
         json_dump[NODES_JSON][node]["port_shift"] = port_shift
         json_dump[NODES_JSON][node]["container_id"] = cid
 
-    # Generate and dump the inter-subnetwork QoS
+    # Populate the inter-subnetwork QoS
+    #subnets = sorted(set(node2subnet.values()), key=lambda item: (int(item.partition(' ')[0])
+    #                           if item[0].isdigit() else float('inf'), item))
     nsubs = len(set(node2subnet.values()))
-    subnets = [f'subnetwork_{i}' for i in range(0, nsubs)] # O(n): saves on n*log(n) sorting
+    # O(n): avoids N*log_N sorting : non-zero nodes in each subnet, so range is fully present
+    subnets = [f'{SUBNET_PREFIX}_{i}' for i in range(0, nsubs)]
     nedges, k = nsubs * (nsubs-1), 0  # no QoS on self-loop
     QoS_dist_spec = ctx.params["inter_subnet_qos_distribution"]
     if not is_nil_QoS(QoS_dist_spec):
@@ -475,15 +485,13 @@ def generate_and_write_files(ctx: typer, G):
         for i in range(0, nsubs):
             isubnet = subnets[i]
             json_dump[SUBNETS_JSON][isubnet] = {}
-            for j in range(0, nsubs):
-                if i == j :
-                    continue
+            for j in [ x for x in range(0, nsubs) if x != i]:  # no QoS for self-loops
                 json_dump[SUBNETS_JSON][isubnet][subnets[j]] = QoS_distribution[k]
                 k = k+1
-        if k  != nedges:
+        if k  != nedges:    # sanity check
             print(f"Error: k != nedges:  {k} != {nedges}")
             sys.exit(1)
-    write_json(ctx.params["output_dir"], json_dump)  # network wide json
+    write_json(ctx.params["output_dir"], json_dump)  # final, network wide json
 
 
 # sanity check : valid json with "gennet" config
@@ -613,16 +621,16 @@ def main(ctx: typer.Context,
     if draw:
         draw_network(output_dir, G)
 
-    print("Gennet: Done...")
     end = time.time()
     time_took = end - start
-    print(f"Gennet: For {G.number_of_nodes()}/{num_nodes} nodes, network generation took {time_took} secs.\nThe generated network is under .{output_dir}")
+    print(f"Gennet: For {G.number_of_nodes()}/{num_nodes} nodes, network generation took {time_took} secs.\nGennet: The generated network is under .{output_dir}")
 
     # Benchmarking. Record finish time and stop the malloc tracing
     if benchmark:
         mem_curr, mem_max = tracemalloc.get_traced_memory()
         tracemalloc.stop()
         print(f"Gennet: STATS: For {num_nodes} nodes, time took is {time_took} secs, peak memory usage is {mem_max/(1024*1024)} MBs\n")
+    print("Gennet: Done.")
 
 
 if __name__ == "__main__":
