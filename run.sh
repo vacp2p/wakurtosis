@@ -50,7 +50,7 @@ kurtosis_inspect="kurtosis_inspect.log"
 usr=`id -u`
 grp=`id -g`
 stats_dir=stats
-signal_fifo=/tmp/hostproc-signal.fifo   # do not create fifo under ./stats, or inside the repo
+signal_fifo=/tmp/host-proc-signal.fifo   # do not create fifo under ./stats, or inside the repo
 ##################### MONITORING MODULE PROLOGUES
 if [ "$metrics_infra" = "cadvisor" ]; then #CADVISOR
     # prepare the enclave
@@ -165,8 +165,8 @@ echo "Simulation took $DIFF1 + $DIFF2 = $(( $END2 - $START)) secs"
 
 
 ##################### GATHER CONFIG, LOGS & METRICS
-# give time for the messages to settle down before we collect the logs
-sleep 60
+# give time for the logs and metrics collection to settle down
+sleep 45 # 30 + 15
 
 # dump logs
 echo "Dumping Kurtosis logs"
@@ -182,6 +182,7 @@ if [ "$metrics_infra" = "dstats" ]; then
     echo "dstats: copying the dstats data"
     cp -r ./monitoring/dstats/stats  ${enclave_name}_logs/dstats-data
 elif [ "$metrics_infra" = "host-proc" ]; then
+    rm -f $signal_fifo
     echo "Copying the host-proc data"
     cp -r ./monitoring/host-proc/stats  ${enclave_name}_logs/host-proc-data
 elif [ "$metrics_infra" = "container-proc" ]; then
