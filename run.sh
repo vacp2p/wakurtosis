@@ -41,16 +41,15 @@ signal_fifo=/tmp/hostproc-signal.fifo   # do not create fifo under ./stats, or i
     kurtosis  --cli-log-level $loglevel  enclave add --name ${enclave_name}
     enclave_prefix=$(kurtosis --cli-log-level $loglevel  enclave inspect --full-uuids $enclave_name | grep UUID: | awk '{print $2}')
     echo "Enclave network: "$enclave_prefix
-#####################
-
-##################### MONITORING MODULE PROLOGUES
-if [ "$metrics_infra" = "cadvisor" ]; then #CADVISOR
     # get the last IP of the enclave
     subnet="$(docker network inspect $enclave_prefix | jq -r '.[].IPAM.Config[0].Subnet')"
     echo "Enclave subnetork: $subnet"
     last_ip="$(ipcalc $subnet | grep HostMax | awk '{print $2}')"
-    echo "cAdvisor IP: $last_ip"
+#####################
 
+##################### MONITORING MODULE PROLOGUES
+if [ "$metrics_infra" = "cadvisor" ]; then #CADVISOR
+    echo "cAdvisor IP: $last_ip"
     # set up the cadvisor
     docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev/disk/:/dev/disk:ro --volume=/sys:/sys:ro --volume=/etc/machine-id:/etc/machine-id:ro --publish=8080:8080 --detach=true --name=cadvisor --privileged --device=/dev/kmsg --network $enclave_prefix --ip=$last_ip gcr.io/cadvisor/cadvisor:v0.47.0
 elif  [ "$metrics_infra" = "dstats" ]; then # HOST-PROC
