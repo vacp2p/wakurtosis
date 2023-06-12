@@ -34,14 +34,17 @@ usr=`id -u`
 grp=`id -g`
 stats_dir=stats
 signal_fifo=/tmp/hostproc-signal.fifo   # do not create fifo under ./stats, or inside the repo
-##################### MONITORING MODULE PROLOGUES
-if [ "$metrics_infra" = "cadvisor" ]; then #CADVISOR
-    # prepare the enclave
+
+##################### PREPARING ENCLAVE
+# prepare the enclave
     echo "Preparing the enclave..."
     kurtosis  --cli-log-level $loglevel  enclave add --name ${enclave_name}
     enclave_prefix=$(kurtosis --cli-log-level $loglevel  enclave inspect --full-uuids $enclave_name | grep UUID: | awk '{print $2}')
     echo "Enclave network: "$enclave_prefix
+#####################
 
+##################### MONITORING MODULE PROLOGUES
+if [ "$metrics_infra" = "cadvisor" ]; then #CADVISOR
     # get the last IP of the enclave
     subnet="$(docker network inspect $enclave_prefix | jq -r '.[].IPAM.Config[0].Subnet')"
     echo "Enclave subnetork: $subnet"
