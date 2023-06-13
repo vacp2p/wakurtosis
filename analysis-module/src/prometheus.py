@@ -35,8 +35,8 @@ def get_hardware_metrics(metrics, topology, min_tss, max_tss, prom_port):
             analysis_logger.G_LOGGER.error('%s: %s' % (e.__doc__, e))
             continue
 
-    fetch_cadvisor_stats_from_prometheus_by_simulation(metrics, prometheus, container_ips, min_tss,
-                                                       max_tss)
+    #fetch_cadvisor_stats_from_prometheus_by_simulation(metrics, prometheus, container_ips, min_tss,
+    #                                                   max_tss)
 
 
 def fetch_cadvisor_stats_from_prometheus_by_simulation(metrics, prom, container_ips, start_ts,
@@ -117,5 +117,5 @@ def fetch_metric_with_timestamp(prom, metric, ip, start_timestamp, end_timestamp
 function_dispatcher = {
     "max": max,
     "min": min,
-    "average": lambda x: sum(x) / len(x),
+    "average": lambda x: sum(x) / len(x)
 }
