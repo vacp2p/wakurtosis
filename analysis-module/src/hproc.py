@@ -396,13 +396,13 @@ class DStats(Plots, metaclass=Singleton):
         self.col2units = {  "ContainerID"   : "ID",
                             "ContainerName" : "Name",
                             "CPUPerc"       : "Percentage (%)",
-                            "MemUse"        : "MiB",
-                            "MemTotal"      : "MiB",
+                            "MemUse"        : "MegaBytes",
+                            "MemTotal"      : "MegaBytes",
                             "MemPerc"       : "Percentage (%)",
-                            "NetRecv"       : "MiB",
-                            "NetSent"       : "MiB",
-                            "BlockR"        : "MiB",
-                            "BlockW"        : "MiB",
+                            "NetRecv"       : "MegaBytes",
+                            "NetSent"       : "MegaBytes",
+                            "BlockR"        : "MegaBytes",
+                            "BlockW"        : "MegaBytes",
                             "CPIDS"          : "PIDS"
                             }
         self.cols = ["CPUPerc", "MemUse","NetRecv", "NetSent", "BlockR", "BlockW"]
@@ -425,12 +425,13 @@ class DStats(Plots, metaclass=Singleton):
         h2b, n = Human2BytesConverter(), len(self.keys)
         for percent in ["CPUPerc", "MemPerc"]:
             self.df[percent] = self.df[percent].str.replace('%','').astype(float)
+        # Normalise to MegaBytes
         for size in ["MemUse", "MemTotal"]:
-            self.df[size] = self.df[size].map(lambda x:h2b.convert(x.strip())/(1024*1024)) # MiB
+            self.df[size] = self.df[size].map(lambda x:h2b.convert(x.strip())/(1024*1024))
         for size in ["NetRecv", "NetSent"]:
-            self.df[size] = self.df[size].map(lambda x:h2b.convert(x.strip())/(1024*1024)) # MiB
+            self.df[size] = self.df[size].map(lambda x:h2b.convert(x.strip())/(1024*1024))
         for size in ["BlockR", "BlockW"]:
-            self.df[size] = self.df[size].map(lambda x:h2b.convert(x.strip())/(1024*1024)) # MiB
+            self.df[size] = self.df[size].map(lambda x:h2b.convert(x.strip())/(1024*1024))
         self.df['Key'] = self.df['ContainerName'].map(lambda x: x.split("--")[0])
         self.build_key2nodes()
         self.df['NodeName'] = self.df['Key'].map(lambda x: self.key2nodes[x][0])
@@ -474,22 +475,22 @@ class HostProc(Plots, metaclass=Singleton):
                             'BlockW'    : 'Block Writes'
                         }
         self.col2units = {  'CPUPerc'   : '%',
-                            'VmPeak'    : 'MiB',
-                            'MemUse'    : 'MiB',
-                            'VmSize'    : 'MiB',
-                            'VmRSS'     : 'MiB',
-                            'VmData'    : 'MiB',
-                            'VmStk'     : 'MiB',
-                            'NetRecv'   : 'MiB',
+                            'VmPeak'    : 'MegaBytes',
+                            'MemUse'    : 'MegaBytes',
+                            'VmSize'    : 'MegaBytes',
+                            'VmRSS'     : 'MegaBytes',
+                            'VmData'    : 'MegaBytes',
+                            'VmStk'     : 'MegaBytes',
+                            'NetRecv'   : 'MegaBytes',
                             'NetRecvPkts' : 'Packets',
-                            'NetSent'   : 'MiB',
+                            'NetSent'   : 'MegaBytes',
                             'NetSentPkts' : 'Packets',
-                            'NetRX'   : 'MiB',
-                            'NetWX'   : 'MiB',
-                            'InOctets'  : 'MiB',
-                            'OutOctets' : 'MiB',
-                            'BlockR'    : 'MiB',
-                            'BlockW'    : 'MiB'
+                            'NetRX'   : 'MegaBytes',
+                            'NetWX'   : 'MegaBytes',
+                            'InOctets'  : 'MegaBytes',
+                            'OutOctets' : 'MegaBytes',
+                            'BlockR'    : 'MegaBytes',
+                            'BlockW'    : 'MegaBytes'
                         }
         self.cols = ['CPUPerc', 'VmPeak', 'MemUse', 'VmSize', 'VmRSS', 'VmData', 'VmStk',
                             'RxBytes', 'RxPackets', 'TxBytes', 'TxPackets', 'NetRecv', 'NetSent',
@@ -519,11 +520,11 @@ class HostProc(Plots, metaclass=Singleton):
     def post_process(self):
         #h2b = Human2BytesConverter()
         for size in ['VmPeak', 'VmSize','VmRSS', 'VmData','VmStk']:
-            self.df[size] = self.df[size].map(lambda x: x/1024) # MiBs
+            self.df[size] = self.df[size].map(lambda x: x/1024) # MegaBytes
         for size in ['NetRecv','NetSent']:
-            self.df[size] = self.df[size].map(lambda x: x/(1024*1024)) # MiBs
+            self.df[size] = self.df[size].map(lambda x: x/(1024*1024)) # MegaBytes
         for size in ['BlockR', 'BlockW']:
-            self.df[size] = self.df[size].map(lambda x: x/(1024*1024)) # MiBs
+            self.df[size] = self.df[size].map(lambda x: x/(1024*1024)) # MegaBytes
         #self.df['Key'] = self.df['ContainerName'].map(lambda x: x.split("--")[0])
         self.df['Key'] = self.df['NodeName']#.map(lambda x: x.split("--")[0])
         self.df['MemUse'] = self.df['VmPeak']
