@@ -14,7 +14,7 @@ else
   echo "deb [trusted=yes] https://apt.fury.io/kurtosis-tech/ /" | sudo tee /etc/apt/sources.list.d/kurtosis.list
   sudo apt update
   sudo apt-mark unhold kurtosis-cli
-  sudo apt install kurtosis-cli=$kurtosis_version
+  sudo apt install kurtosis-cli=$required_version
   sudo apt-mark hold kurtosis-cli
   sudo rm /etc/apt/sources.list.d/kurtosis.list
 fi
