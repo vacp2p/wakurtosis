@@ -231,11 +231,11 @@ def generate_star_graph(ctx):
     n = ctx.params["num_nodes"]
     return nx.star_graph(n-1)
 
-# |G| = n, n*d must be even
+# |G| = n, if n*d is even; n+1 if n*d is odd
 def generate_regular_graph(ctx):
     d = ctx.params["fanout"]
     n = ctx.params["num_nodes"]
-    return nx.random_regular_graph(d, n)
+    return nx.random_regular_graph(d, n+1) if n*d % 2 else nx.random_regular_graph(d, n)
 
 networkTypeSwitch = {
     networkType.CONFIGMODEL: generate_config_model,
