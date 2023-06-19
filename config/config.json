@@ -10,7 +10,7 @@
   },
   "gennet": {
     "num_nodes": 25,
-    "fanout": 13,
+    "fanout": 6,
     "num_topics": 1,
     "num_partitions": 1,
     "num_subnets": 1,
