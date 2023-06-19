@@ -95,9 +95,20 @@ def write_toml(dirname, node_name, toml):
 
 # Draw the network and output the image to a file; does not account for subnets yet
 def draw_network(dirname, H):
-    nx.draw(H, pos=nx.kamada_kawai_layout(H), with_labels=True)
     fname = os.path.join(dirname, NW_DATA_FNAME)
-    plt.savefig(f"{os.path.splitext(fname)[0]}.png", format="png")
+    fig, axes = plt.subplots(1, 2, layout='constrained', sharey=False)
+    fig.set_figwidth(12)
+    fig.set_figheight(10)
+    axes[0].set_title("The Generated Network")
+    nx.draw(H, ax=axes[0], pos=nx.kamada_kawai_layout(H), with_labels=True)
+    degree_sequence = sorted((d for n, d in H.degree()), reverse=True)
+    axes[1].bar(*np.unique(degree_sequence, return_counts=True), align='center',
+            width=0.9975, edgecolor='k', facecolor='green', alpha=0.5)
+    axes[1].set_xticks(range(max(degree_sequence)+1))
+    axes[1].set_title("Normalised Degree Histogram")
+    axes[1].set_xlabel("Degree")
+    axes[1].set_ylabel("% of Nodes")
+    plt.savefig(f'{os.path.splitext(fname)[0]}.pdf', format="pdf", bbox_inches="tight")
     plt.show()
 
 
@@ -469,10 +480,10 @@ def main(ctx: typer.Context,
          num_topics: int = typer.Option(1,
              help="Set the number of topics"),
          fanout: int = typer.Option(3,
-             help="Set the arity for trees & newmanwattsstrogatz"),
+             help="Set the arity for trees, d-regular graphs & newmanwattsstrogatz"),
          node_type_distribution: str = typer.Argument("{\"nwaku\" : 100 }",
              callback=ast.literal_eval, help="Set the node type distribution"),
-         network_type: networkType = typer.Option(networkType.NEWMANWATTSSTROGATZ.value,
+         network_type: networkType = typer.Option(networkType.REGULAR.value,
              help="Set the node type"),
          num_subnets: int = typer.Option(1, callback=_num_subnets_callback,
              help="Set the number of subnets"),
