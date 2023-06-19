@@ -523,7 +523,8 @@ def main(ctx: typer.Context,
 
     end = time.time()
     time_took = end - start
-    print(f"For {G.number_of_nodes()}/{num_nodes} nodes, network generation took {time_took} secs.\nThe generated network is under .{output_dir}")
+    print(f'For {G.number_of_nodes()}/{num_nodes} nodes, network generation took {time_took} secs.')
+    print(f'The generated network ({network_type.value}) is under ./{output_dir}')
 
     # Benchmarking. Record finish time and stop the malloc tracing
     if benchmark:
