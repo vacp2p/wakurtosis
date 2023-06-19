@@ -70,6 +70,7 @@ class networkType(Enum):
     BALANCEDTREE = "balancedtree"  # committees?
     NOMOSTREE = "nomostree"  # balanced binary tree with even # of leaves
     STAR = "star"  # spof
+    REGULAR = "regular"  # gossip-sub / waku
 
 
 NW_DATA_FNAME = "network_data.json"
@@ -219,6 +220,11 @@ def generate_star_graph(ctx):
     n = ctx.params["num_nodes"]
     return nx.star_graph(n-1)
 
+# |G| = n, n*d must be even
+def generate_regular_graph(ctx):
+    d = ctx.params["fanout"]
+    n = ctx.params["num_nodes"]
+    return nx.random_regular_graph(d, n)
 
 networkTypeSwitch = {
     networkType.CONFIGMODEL: generate_config_model,
@@ -227,7 +233,8 @@ networkTypeSwitch = {
     networkType.BARBELL: generate_barbell_graph,
     networkType.BALANCEDTREE: generate_balanced_tree,
     networkType.NOMOSTREE: generate_nomos_tree,
-    networkType.STAR: generate_star_graph
+    networkType.STAR: generate_star_graph,
+    networkType.REGULAR: generate_regular_graph
 }
 
 
