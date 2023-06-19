@@ -102,12 +102,14 @@ def draw_network(dirname, H):
     axes[0].set_title("The Generated Network")
     nx.draw(H, ax=axes[0], pos=nx.kamada_kawai_layout(H), with_labels=True)
     degree_sequence = sorted((d for n, d in H.degree()), reverse=True)
-    axes[1].bar(*np.unique(degree_sequence, return_counts=True), align='center',
+    deg, cnt = *np.unique(degree_sequence, return_counts=True),
+    normalised_cnt =  cnt/np.array(len(H.nodes))
+    axes[1].bar(deg, normalised_cnt, align='center',
             width=0.9975, edgecolor='k', facecolor='green', alpha=0.5)
     axes[1].set_xticks(range(max(degree_sequence)+1))
     axes[1].set_title("Normalised Degree Histogram")
     axes[1].set_xlabel("Degree")
-    axes[1].set_ylabel("% of Nodes")
+    axes[1].set_ylabel("Fraction of Nodes")
     plt.savefig(f'{os.path.splitext(fname)[0]}.pdf', format="pdf", bbox_inches="tight")
     plt.show()
 
