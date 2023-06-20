@@ -49,15 +49,19 @@ class Trait(BaseEnum):
     STORE   =	"store"
     SWAP    =	"swap"
     WEBSOCKET = "websocket"
+    NOMOS = "nomos"
 
 # To add a new node type, add appropriate entries to the nodeType and nodeTypeToDocker
 class nodeType(BaseEnum):
     NWAKU = "nwaku"     # waku desktop config
     GOWAKU = "gowaku"   # waku mobile config
+    NOMOS = "nomos"
 
 nodeTypeToDocker = {
     nodeType.NWAKU: "nim-waku",
-    nodeType.GOWAKU: "go-waku"
+    nodeType.GOWAKU: "go-waku",
+    nodeType.NOMOS: "nomos"
+
 }
 
 # To add a new network type, add appropriate entries to the networkType and networkTypeSwitch
@@ -332,7 +336,7 @@ def validate_traits_distribution(traits_dir, traits_distribution):
         if traits_list[0] not in nodeType:
             raise ValueError(f"{traits_distribution} : unknown node type {traits_list[0]} in {s}")
         for t in traits_list[1:]:
-            if t not in Trait and not os.path.exists(f"{traits_dir}/{t}.toml"):
+            if t not in Trait and not (os.path.exists(f"{traits_dir}/{t}.toml") or os.path.exists(f"{traits_dir}/{t}.yml")):
                 raise ValueError(f"{traits_distribution} : unknown trait {t} in {s}")
 
 
@@ -401,6 +405,32 @@ def generate_and_write_files(ctx: typer, G):
         json_dump[NODES_JSON][node]["node_log"] = f"{node}.log"
         port_shift, cid = node2container[node]
         json_dump[NODES_JSON][node]["port_shift"] = port_shift
+        json_dump[NODES_JSON][node]["container_id"] = cid
+
+    write_json(ctx.params["output_dir"], json_dump)  # network wide json
+
+
+def generate_and_write_files_nomos(ctx: typer, G):
+    node2subnet = generate_subnets(G, ctx.params["num_subnets"])
+    node2container = pack_nodes(ctx.params["container_size"], node2subnet)
+    container2nodes = invert_dict_of_list(node2container, 1)
+
+    json_dump, json_dump[CONTAINERS_JSON], json_dump[NODES_JSON] = {}, {}, {}
+    for container, nodes in container2nodes.items():
+        json_dump[CONTAINERS_JSON][container] = nodes
+
+    for node in G.nodes:
+        json_dump[NODES_JSON][node] = {}
+        json_dump[NODES_JSON][node]["static_nodes"] = []
+        for edge in G.edges(node):
+            json_dump[NODES_JSON][node]["static_nodes"].append(edge[1])
+        json_dump[NODES_JSON][node][SUBNET_PREFIX] = node2subnet[node]
+        json_dump[NODES_JSON][node]["image"] = nodeTypeToDocker.get(nodeType.NOMOS)
+        # the per node tomls will continue for now as they include topics
+        json_dump[NODES_JSON][node]["node_config"] = f"nomos.yml"
+        # logs ought to continue as they need to be unique
+        json_dump[NODES_JSON][node]["node_log"] = f"{node}.log"
+        port_shift, cid = node2container[node]
         json_dump[NODES_JSON][node]["container_id"] = cid
 
     write_json(ctx.params["output_dir"], json_dump)  # network wide json
@@ -498,7 +528,10 @@ def main(ctx: typer.Context,
     make_empty_dir(output_dir)
 
     # Generate file format specific data structs and write the files
-    generate_and_write_files(ctx, G)
+    if "nomos" in node_type_distribution.keys():
+        generate_and_write_files_nomos(ctx, G)
+    else:
+        generate_and_write_files(ctx, G)
 
     # Draw the graph if need be
     if draw:
@@ -517,3 +550,5 @@ def main(ctx: typer.Context,
 
 if __name__ == "__main__":
     typer.run(main)
+
+
