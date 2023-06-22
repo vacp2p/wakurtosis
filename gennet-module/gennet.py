@@ -94,20 +94,21 @@ def write_toml(dirname, node_name, toml):
 
 
 # Draw the network and output the image to a file; does not account for subnets yet
-def draw_network(dirname, H):
+def draw_network(ctx, dirname, H):
     fname = os.path.join(dirname, NW_DATA_FNAME)
     fig, axes = plt.subplots(1, 2, layout='constrained', sharey=False)
     fig.set_figwidth(12)
     fig.set_figheight(10)
-    axes[0].set_title("The Generated Network")
+    n = len(H.nodes)
+    axes[0].set_title(f'The Generated Network: num-nodes = {n}')
     nx.draw(H, ax=axes[0], pos=nx.kamada_kawai_layout(H), with_labels=True)
     degree_sequence = sorted((d for n, d in H.degree()), reverse=True)
     deg, cnt = *np.unique(degree_sequence, return_counts=True),
-    normalised_cnt =  cnt/np.array(len(H.nodes))
+    normalised_cnt =  cnt/np.array(n)
     axes[1].bar(deg, normalised_cnt, align='center',
             width=0.9975, edgecolor='k', facecolor='green', alpha=0.5)
     axes[1].set_xticks(range(max(degree_sequence)+1))
-    axes[1].set_title("Normalised Degree Histogram")
+    axes[1].set_title(f'Normalised Degree Histogram: fanout = {ctx.params["fanout"]}')
     axes[1].set_xlabel("Degree")
     axes[1].set_ylabel("Fraction of Nodes")
     plt.savefig(f'{os.path.splitext(fname)[0]}.pdf', format="pdf", bbox_inches="tight")
@@ -521,7 +522,7 @@ def main(ctx: typer.Context,
 
     # Draw the graph if need be
     if draw:
-        draw_network(output_dir, G)
+        draw_network(ctx, output_dir, G)
 
     end = time.time()
     time_took = end - start
