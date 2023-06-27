@@ -11,6 +11,8 @@ import (
 	  //"encoding/binary"
 	  //"os"
 	 "time"
+   "encoding/json"
+   "io/ioutil"
 
 	logging "github.com/ipfs/go-log/v2"
 	  //"github.com/multiformats/go-multiaddr"
@@ -91,19 +93,29 @@ func main() {
 		panic(err)
 	}
 	logging.SetAllLoggers(lvl)
-/*
-  // Let's first read the `config.json` file
-    content, err := ioutil.ReadFile("./config.json")
-    if err != nil {
-        log.Fatal("Error when opening file: ", err)
-    }
 
-    // Now let's unmarshall the data into `payload`
-    var payload Data
-    err = json.Unmarshal(content, &payload)
-    if err != nil {
+  // Read the `config.json` file
+  json_dump, err := ioutil.ReadFile(conf.config_file)
+  if err != nil {
+       log.Fatal("Error when opening file: ", err)
+   }
+
+   // Unmarshall the data into payload
+   var jsonmap map[string]interface{}
+   err = json.Unmarshal(json_dump, &jsonmap)
+   if err != nil {
         log.Fatal("Error during Unmarshal(): ", err)
-    }
-*/
-  fmt.Println(conf)
+   }
+
+   // TODO: now config.json takes precedence. make cli take precedence
+  var payload map[string]interface{} = jsonmap["genload"].(map[string]interface{})
+  conf.min_msg_size             = int(payload["min_msg_size"].(float64))
+  conf.max_msg_size             = int(payload["max_msg_size"].(float64))
+	conf.msg_size_distribution    = payload["msg_size_distribution"].(string)
+  conf.msg_rate                 = int(payload["msg_rate"].(float64))
+	conf.msg_arrival_distribution = payload["msg_arrival_distribution"].(string)
+	conf.emitters_fraction        = payload["emitters_fraction"].(float64)
+	conf.simulation_time          = time.Duration(payload["simulation_time"].(float64))
+ fmt.Println(conf)
+//  fmt.Println(payload)
 }
