@@ -38,7 +38,7 @@ log-format="TEXT"
 tcp-port=60000
 
 
-keep-alive=false
+keep-alive=true
 max-connections=50
 
 

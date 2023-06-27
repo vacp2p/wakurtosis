@@ -9,14 +9,14 @@
     "interconnection_batch": 10
   },
   "gennet": {
-    "num_nodes": 25,
-    "fanout": 13,
+    "num_nodes": 500,
+    "fanout": 3,
     "num_topics": 1,
     "num_partitions": 1,
     "num_subnets": 1,
     "container_size": "1",
     "node_type_distribution": {
-      "nwaku:relay:rpc:metrics": 100,
+      "nwaku:node:relay:rpc:metrics": 100,
       "gowaku:rln:dnsdisc:dns": 0
     },
     "network_type": "newmanwattsstrogatz",
@@ -25,10 +25,10 @@
   },
   "wls": {
     "debug_level": "DEBUG",
-    "simulation_time": 60,
+    "simulation_time": 180,
     "message_rate": 10,
-    "min_packet_size": 1024,
-    "max_packet_size": 10240,
+    "min_packet_size": 2,
+    "max_packet_size": 1024,
     "inter_msg_type": "poisson",
     "dist_type": "gaussian",
     "emitters_fraction": 1.0
