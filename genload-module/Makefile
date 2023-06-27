@@ -1,5 +1,5 @@
 .PHONY: all build
-FILE=genload.go
+FILE=genload
 
 build:
 	go build -o $(FILE)
