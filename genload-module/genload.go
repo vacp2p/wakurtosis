@@ -1,13 +1,13 @@
 package main
 
 import (
-	  //"context"
+	"context"
 	"flag"
 	"fmt"
-	  //"net"
+	"net"
 	  //"bytes"
-  //"math/rand"
-    //"strconv"
+  "math/rand"
+  "strconv"
 	  //"encoding/binary"
 	  //"os"
 	 "time"
@@ -17,7 +17,7 @@ import (
 	logging "github.com/ipfs/go-log/v2"
 	  //"github.com/multiformats/go-multiaddr"
 	  //"github.com/waku-org/go-waku/waku/v2/dnsdisc"
-	  //"github.com/waku-org/go-waku/waku/v2/node"
+	  "github.com/waku-org/go-waku/waku/v2/node"
 	  //"github.com/waku-org/go-waku/waku/v2/payload"
 	  //"github.com/waku-org/go-waku/waku/v2/protocol/pb"
 	  //"github.com/waku-org/go-waku/waku/v2/utils"
@@ -32,8 +32,9 @@ import (
 )
 
 var log = logging.Logger("GenLoad: ")
-const StartPort = 60000
-const PortRange = 1000
+const localHost =  "0.0.0.0"
+const startPort = 60000
+const portRange = 1000
 
 var nodeType = "lightpush"
 var seqNumber int32 = 0
@@ -82,6 +83,15 @@ func init() {
   ArgInit()
 }
 
+func uniform_distribution(min_size, max_size int) {
+  // generate uniform distri
+}
+
+func rtnormal_distribution(min_size, max_size int) {
+  mean, sd := (max_size - min_size) / 2, (max_size - min_size) / 5
+  fmt.Println(mean, sd)
+  // generate uniform distri
+}
 
 func main() {
 
@@ -94,13 +104,13 @@ func main() {
 	}
 	logging.SetAllLoggers(lvl)
 
-  // Read the `config.json` file
+  // Read the `config.json` as a json_dump
   json_dump, err := ioutil.ReadFile(conf.config_file)
   if err != nil {
        log.Fatal("Error when opening file: ", err)
    }
 
-   // Unmarshall the data into payload
+   // Unmarshall json dump
    var jsonmap map[string]interface{}
    err = json.Unmarshal(json_dump, &jsonmap)
    if err != nil {
@@ -116,6 +126,23 @@ func main() {
 	conf.msg_arrival_distribution = payload["msg_arrival_distribution"].(string)
 	conf.emitters_fraction        = payload["emitters_fraction"].(float64)
 	conf.simulation_time          = time.Duration(payload["simulation_time"].(float64))
- fmt.Println(conf)
-//  fmt.Println(payload)
+
+  tcpEndPoint :=  localHost +
+                      ":" +
+                      strconv.Itoa(startPort +  rand.Intn(portRange))
+	// create the waku node  
+	hostAddr, _ := net.ResolveTCPAddr("tcp", tcpEndPoint)
+	ctx := context.Background()
+  lightpushNode, err := node.New(
+		node.WithHostAddress(hostAddr),
+		//node.WithNTP(),  // don't use NTP, fails at msec granularity
+		//node.WithWakuRelay(),
+		//node.WithLightPush(), // no need to add lightpush to be a lightpush client! 
+	)
+  fmt.Println(ctx, lightpushNode)
+	if err != nil {
+		panic(err)
+	}
+
+  fmt.Println(conf)
 }
