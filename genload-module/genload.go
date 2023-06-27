@@ -40,35 +40,38 @@ var seqNumber int32 = 0
 type config struct {
 	log_level                 string
 	output_fname              string
-  min_msg_size              int            //  min packet size
-  max_msg_size              int            // max packet size
-	msg_size_distribution     string         // Inter-arrival distribution
-  msg_rate                  int            // per-node message rate
+  min_msg_size              int            // Min packet size
+  max_msg_size              int            // Max packet size
+	msg_size_distribution     string         // Message size distribution
+  msg_rate                  int            // Per-node message rate
 	msg_arrival_distribution  string         // Inter-arrival distribution
 	emitters_fraction         float64        // Emitter's fraction
 	simulation_time           time.Duration  // Duration of the simulation
+  config_file               string         // Config file name
 }
 
 var conf = config{}
 func ArgInit(){
-	flag.StringVar(&conf.log_level, "l", "info",
+	flag.StringVar(&conf.log_level, "log-level", "info",
 		"Specify the log level")
-	flag.StringVar(&conf.output_fname, "o", "output.out",
+	flag.StringVar(&conf.output_fname, "output-dir", "output.out",
 		"Specify the output file")
-	flag.IntVar(&conf.min_msg_size, "m", 1024,
+	flag.IntVar(&conf.min_msg_size, "min-msg-size", 1024,
 		"Specify the minimal packet size")
-	flag.IntVar(&conf.max_msg_size, "x", 10240,
+	flag.IntVar(&conf.max_msg_size, "max-msg-size", 10240,
 		"Specify the maximal packet size")
-	flag.StringVar(&conf.msg_size_distribution, "s", "tnormal",
+	flag.StringVar(&conf.msg_size_distribution, "msg-size-distribution", "tnormal",
 		"Specify the message size distribution")
-	flag.IntVar(&conf.msg_rate, "r", 10,
+	flag.IntVar(&conf.msg_rate, "message-rate", 10,
 		"Specify the per-node message rate")
-	flag.StringVar(&conf.msg_arrival_distribution, "a", "poisson",
+	flag.StringVar(&conf.msg_arrival_distribution, "msg-arrival-distribution", "poisson",
 		"Specify the message arrival distribution")
-	flag.Float64Var(&conf.emitters_fraction, "e", 10,
+	flag.Float64Var(&conf.emitters_fraction, "emitters-fraction", 10,
 		"Specify the fraction of nodes to generate the load")
-	flag.DurationVar(&conf.simulation_time, "d", 60*time.Second,
+	flag.DurationVar(&conf.simulation_time, "simulation-time", 60*time.Second,
 		"Specify the duration (1s,2m,4h)")
+	flag.StringVar(&conf.config_file, "config-file", "config.json",
+		"Specify the config.json")
 }
 
 func init() {
@@ -88,5 +91,19 @@ func main() {
 		panic(err)
 	}
 	logging.SetAllLoggers(lvl)
+/*
+  // Let's first read the `config.json` file
+    content, err := ioutil.ReadFile("./config.json")
+    if err != nil {
+        log.Fatal("Error when opening file: ", err)
+    }
+
+    // Now let's unmarshall the data into `payload`
+    var payload Data
+    err = json.Unmarshal(content, &payload)
+    if err != nil {
+        log.Fatal("Error during Unmarshal(): ", err)
+    }
+*/
   fmt.Println(conf)
 }

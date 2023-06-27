@@ -23,6 +23,7 @@ config/config.json
 gennet-module/topology/
 gennet-module/network_data/
 gennet-module/traits
+genload-module/genload
 kurtosis_log.txt
 config/network_topology/
 config/topology_generated/
@@ -31,6 +32,7 @@ kurtosisrun_log.txt
 summary.json
 wakurtosis_logs/
 log_trace_test
+
 
 # monitoring
 docker-ps.out
