@@ -1,5 +1,5 @@
 # Specify the parent go version
-FROM golang:1.18
+FROM golang:1.20
 
 # Copy the binary and the source code
 ADD ./genload /go/bin/genload
