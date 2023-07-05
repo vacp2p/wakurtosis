@@ -50,26 +50,18 @@ def instantiate_services(plan, network_topology, testing):
         configs=all_services_configuration
     )
 
-    plan.print("Subnets: Greetings...")
     subnets = network_topology[vars.GENNET_SUBNETS_KEY].keys()
-    plan.print(subnets)
-
-    i = 0
     for src in subnets:
         src_dict = network_topology[vars.GENNET_SUBNETS_KEY][src]
-        plan.print(src_dict)
         for dst in src_dict.keys():
             skip = False
-            QoS_spec = network_topology[vars.GENNET_SUBNETS_KEY][dst][src]
-            i = i + 1
-            s = src + ":" + dst + "->" + QoS_spec
-            QoS_lst = QoS_spec.split(":")
-            packet_loss_perc, dist, delay = float(QoS_lst[0]), QoS_lst[1], int(QoS_lst[2])
-            plan.print(s + " = " + str(len(QoS_lst)))
+            QoS_spec = network_topology[vars.GENNET_SUBNETS_KEY][dst][src].split(":")
+            packet_loss_perc, dist, delay = float(QoS_spec[0]), QoS_spec[1], int(QoS_spec[2])
+            plan.print(src + ":" + dst + "->" + ":".join(QoS_spec) + " = " + str(len(QoS_spec)))
             if dist == "Uniform":
                 delay_distribution = UniformPacketDelayDistribution(ms=delay)
             elif dist == "Normal":
-                mean, std_dev, corr = delay, int(QoS_lst[3]), float(QoS_lst[4])
+                mean, std_dev, corr = delay, int(QoS_spec[3]), float(QoS_spec[4])
                 delay_distribution = NormalPacketDelayDistribution(
                         mean_ms=delay, std_dev_ms=std_dev, correlation=corr)
             elif dist == "None":
