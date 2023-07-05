@@ -376,15 +376,20 @@ def validate_inter_subnet_QoS_distribution(QoS_distribution):
     validate_pfd(QoS_distr, "inter_subnet_QoS_distribution")
     for QoS in QoS_spec:
         QoS_list = [x.strip() for x in QoS.split(":")]
-        if len(QoS_list) != 3 :
+        if len(QoS_list) != 3 and len(QoS_list) != 5 :
             raise ValueError(f"{QoS_distribution} : invalid spec {QoS}")
         perc = float(QoS_list[0])
         if perc != -1 and range_fails((perc,)):
             raise ValueError(f"{QoS_distribution} : invalid percentage {QoS_list[0]} in {QoS}")
         if QoS_list[1] not in ["Uniform", "Normal", "None"]:
             raise ValueError(f"{QoS_distribution} : unknown distribution {QoS_list[1]} in {QoS}")
-        if not is_int(QoS_list[2]):
-            raise ValueError(f"{QoS_distribution} : invalid delay {QoS_list[2]} in {QoS}")
+        if QoS_list[1]  == "Uniform" and (len(QoS_list) != 3 or  not is_int(QoS_list[2])):
+            raise ValueError(f"Invalid QoS spec for Uniform distribution : {QoS}")
+        if QoS_list[1]  == "Normal":
+            perc = float(QoS_list[4])
+            if len(QoS_list) != 5 or not is_int(QoS_list[2]) or not is_int(QoS_list[3]) or range_fails((perc,)):
+                raise ValueError(f"Invalid QoS spec for Normal distribution : {QoS}")
+
         if QoS_distribution[QoS] == 0:  # omit non-contributing keys
             QoS_distribution.pop(QoS)
         else:
