@@ -50,6 +50,39 @@ def instantiate_services(plan, network_topology, testing):
         configs=all_services_configuration
     )
 
+    plan.print("Subnets: Greetings...")
+    subnets = network_topology[vars.GENNET_SUBNETS_KEY].keys()
+    plan.print(subnets)
+
+    i = 0
+    for src in subnets:
+        src_dict = network_topology[vars.GENNET_SUBNETS_KEY][src]
+        plan.print(src_dict)
+        for dst in src_dict.keys():
+            skip = False
+            QoS_spec = network_topology[vars.GENNET_SUBNETS_KEY][dst][src]
+            i = i + 1
+            s = src + ":" + dst + "->" + QoS_spec
+            QoS_lst = QoS_spec.split(":")
+            packet_loss_perc, dist, delay = float(QoS_lst[0]), QoS_lst[1], int(QoS_lst[2])
+            plan.print(s + " = " + str(len(QoS_lst)))
+            if dist == "Uniform":
+                delay_distribution = UniformPacketDelayDistribution(ms=delay)
+            elif dist == "Normal":
+                mean, std_dev, corr = delay, int(QoS_lst[3]), float(QoS_lst[4])
+                delay_distribution = NormalPacketDelayDistribution(
+                        mean_ms=delay, std_dev_ms=std_dev, correlation=corr)
+            elif dist == "None":
+                skip = True
+            else:
+                plan.print("Subnets: Invalid delay distribution: "+dist)
+                plan.exit()
+            if not skip:
+                connection_config = ConnectionConfig(packet_loss_perc, delay_distribution)
+                plan.set_connection(
+                    subnetworks = (src, dst),
+                    config = connection_config,
+                )
     _add_service_info_to_topology(plan, all_services_information, network_topology)
 
 
