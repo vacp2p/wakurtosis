@@ -14,8 +14,12 @@ from pathlib import Path
 import time, tracemalloc
 import string
 import typer
+import yaml
+import hashlib
 
 from enum import Enum, EnumMeta
+
+from blspy import PrivateKey, Util, BasicSchemeMPL, G2Element, G1Element
 
 # Enums & Consts
 
@@ -419,6 +423,9 @@ def generate_and_write_files_nomos(ctx: typer, G):
     for container, nodes in container2nodes.items():
         json_dump[CONTAINERS_JSON][container] = nodes
 
+    # TODO Put in json_dump[PUBLIC_KEYS] all public keys
+    json_dump["all_public_keys"] = []
+
     for node in G.nodes:
         json_dump[NODES_JSON][node] = {}
         json_dump[NODES_JSON][node]["static_nodes"] = []
@@ -427,13 +434,41 @@ def generate_and_write_files_nomos(ctx: typer, G):
         json_dump[NODES_JSON][node][SUBNET_PREFIX] = node2subnet[node]
         json_dump[NODES_JSON][node]["image"] = nodeTypeToDocker.get(nodeType.NOMOS)
         # the per node tomls will continue for now as they include topics
-        json_dump[NODES_JSON][node]["node_config"] = f"nomos.yml"
+        json_dump[NODES_JSON][node]["node_config"] = f"{node}.yml"
         # logs ought to continue as they need to be unique
         json_dump[NODES_JSON][node]["node_log"] = f"{node}.log"
         port_shift, cid = node2container[node]
         json_dump[NODES_JSON][node]["container_id"] = cid
+        # TODO put in json_dump[NODES_JSON]
+        seed = bytes([random.randint(0, 255) for _ in range(32)])
+        privatekey = BasicSchemeMPL.key_gen(seed)
+        json_dump[NODES_JSON][node]["private_key"] = list(bytes(privatekey))
+        #publickey = privatekey.get_g1()
+        #hashed_publickey = hashlib.blake2b(bytes(publickey), digest_size=32).digest()
+        #json_dump[NODES_JSON][node]["public_key"] = list(hashed_publickey)
+        #json_dump["all_public_keys"].append(list(hashed_publickey))
+        json_dump[NODES_JSON][node]["public_key"] = list(bytes(privatekey))
+        json_dump["all_public_keys"].append(list(bytes(privatekey)))
 
+    write_ymls(json_dump)
+
+    # TODO modificar yml para cada nodo con las claves.
     write_json(ctx.params["output_dir"], json_dump)  # network wide json
+    # shutil.copy2("/config/traits/nomos.yml", "/gennet/network_data/nomos.yml")
+
+
+def write_ymls(json_dump):
+    with open("/config/traits/nomos.yml", "r") as stream:
+        try:
+            nomos_yml_template = yaml.safe_load(stream)
+        except yaml.YAMLError as exc:
+            print(exc)
+
+    for node_name, node_info in json_dump[NODES_JSON].items():
+        nomos_yml_template['consensus']['private_key'] = node_info["private_key"]
+        nomos_yml_template['consensus']['overlay_settings']['nodes'] = json_dump["all_public_keys"]
+        with open(f'/gennet/network_data/{node_name}.yml', 'w') as f:
+            yaml.dump(nomos_yml_template, f)
 
 
 # sanity check : valid json with "gennet" config
