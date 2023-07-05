@@ -50,6 +50,7 @@ def instantiate_services(plan, network_topology, testing):
         configs=all_services_configuration
     )
 
+    # deploy the subnetworks
     for src in network_topology[vars.GENNET_SUBNETS_KEY].keys():
         for dst in network_topology[vars.GENNET_SUBNETS_KEY][src].keys():
             QoS_spec, skip = network_topology[vars.GENNET_SUBNETS_KEY][dst][src].split(":"), False
@@ -63,16 +64,12 @@ def instantiate_services(plan, network_topology, testing):
                 delay_distribution = NormalPacketDelayDistribution(
                         mean_ms=delay, std_dev_ms=std_dev, correlation=corr)
             elif dist == "None":
-                skip = True
+                continue
             else:
-                plan.print("Subnetworks: Unsupported delay distribution: "+dist)
+                plan.print("Subnetworks: Unsupported delay distribution: " + dist)
                 plan.exit()
-            if not skip:
-                connection_config = ConnectionConfig(packet_loss_perc, delay_distribution)
-                plan.set_connection(
-                    subnetworks = (src, dst),
-                    config = connection_config,
-                )
+            connection_config = ConnectionConfig(packet_loss_perc, delay_distribution)
+            plan.set_connection(subnetworks = (src, dst), config = connection_config)
     _add_service_info_to_topology(plan, all_services_information, network_topology)
 
 
