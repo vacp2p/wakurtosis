@@ -50,12 +50,14 @@ def instantiate_services(plan, network_topology, testing):
         configs=all_services_configuration
     )
 
-    # deploy the subnetworks
-    if not network_topology[vars.GENNET_SUBNETS_KEY]:
+    # Deploy the subnetworks
+    if network_topology[vars.GENNET_SUBNETS_KEY]:
+      plan.print("Greetings")
       for src in network_topology[vars.GENNET_SUBNETS_KEY].keys():
           for dst in network_topology[vars.GENNET_SUBNETS_KEY][src].keys():
               QoS = network_topology[vars.GENNET_SUBNETS_KEY][dst][src]
               connection_config = get_connection_config(QoS, plan)
+              plan.print(src + "-" + dst + " = " + str(connection_config))
               plan.set_connection(subnetworks = (src, dst), config = connection_config)
     _add_service_info_to_topology(plan, all_services_information, network_topology)
 
@@ -110,28 +112,28 @@ def get_connection_config(QoS, plan):
     if n == 1:
       if QoS_lst[0] == "None":
          return kurtosis.connection.ALLOWED
-      elif  QoS_lst[0]  == "Block":
+      elif QoS_lst[0]  == "Block":
           return kurtosis.connection.BLOCKED
       else:
-        plan.print("Invalid QoS atom \"" + QoS_lst[0] + "\"")
-        plan.exit()
+          plan.print("Invalid QoS atom \"" + QoS_lst[0] + "\"")
+          plan.exit()
     elif n == 3:
-      packet_loss_perc, dist, delay = float(QoS_lst[0]), QoS_lst[1], int(QoS_lst[2])
-      if dist == "Uniform":
-        distri = UniformPacketDelayDistribution(ms=delay)
-        return ConnectionConfig(packet_loss_perc, distri)
-      else:
-        plan.print("Invalid QoS atom \"" + dist + "\"")
-        plan.exit()
+        packet_loss_perc, dist, delay = float(QoS_lst[0]), QoS_lst[1], int(QoS_lst[2])
+        if dist == "Uniform":
+            return ConnectionConfig(packet_loss_perc, UniformPacketDelayDistribution(ms=delay))
+        else:
+            plan.print("Invalid QoS atom \"" + dist + "\"")
+            plan.exit()
     elif n == 5:
-      packet_loss_perc, dist, mean = float(QoS_lst[0]), QoS_lst[1], int(QoS_lst[2])
-      jitter, corr = int(QoS_lst[3]), float(QoS_lst[4])
-      if dist == "Normal":
-        distri = NormalPacketDelayDistribution(mean_ms=delay, std_dev_ms=jitter, correlation=corr)
-        return ConnectionConfig(packet_loss_perc, distri)
-      else:
-        plan.print("Invalid QoS atom \"" + dist + "\"")
-        plan.exit()
+        packet_loss_perc, dist, mean = float(QoS_lst[0]), QoS_lst[1], int(QoS_lst[2])
+        jitter, corr = int(QoS_lst[3]), float(QoS_lst[4])
+        if dist == "Normal":
+            distri = NormalPacketDelayDistribution(
+                        mean_ms=mean, std_dev_ms=jitter, correlation=corr)
+            return ConnectionConfig(packet_loss_perc, distri)
+        else:
+            plan.print("Invalid QoS atom \"" + dist + "\"")
+            plan.exit()
     else:
         plan.print("Invalid QoS spec \"" + QoS + "\"")
         plan.exit()
