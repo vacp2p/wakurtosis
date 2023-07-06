@@ -199,6 +199,7 @@ echo "- Configuration file:  $wakurtosis_config_file" >> ./${enclave_name}_logs/
 # Copy simulation results
 docker cp "$wls_cid:/wls/network_topology/network_data.json" "./${enclave_name}_logs"
 docker cp "$wls_cid:/wls/messages.json" "./${enclave_name}_logs"
+docker cp "$wls_cid:/wls/prometheus_data.json" "./${enclave_name}_logs"
 
 # Run analysis
 if jq -e ."plotting" >/dev/null 2>&1 "./config/${wakurtosis_config_file}"; then
