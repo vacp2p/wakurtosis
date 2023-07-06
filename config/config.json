@@ -23,8 +23,9 @@
     "output_dir": "network_data",
     "benchmark": "False",
     "inter_subnet_qos_distribution": {
-      "-1:None:-1": 60,
-      "80:Uniform:10": 20,
+      "None": 60,
+      "Block": 10,
+      "80:Uniform:10": 10,
       "2.0:Normal:5000:30:10": 20
     }
   },
