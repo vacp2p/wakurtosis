@@ -376,19 +376,32 @@ def validate_inter_subnet_QoS_distribution(QoS_distribution):
     validate_pfd(QoS_distr, "inter_subnet_QoS_distribution")
     for QoS in QoS_spec:
         QoS_list = [x.strip() for x in QoS.split(":")]
-        if len(QoS_list) != 3 and len(QoS_list) != 5 :
-            raise ValueError(f"{QoS_distribution} : invalid spec {QoS}")
-        perc = float(QoS_list[0])
-        if perc != -1 and range_fails((perc,)):
-            raise ValueError(f"{QoS_distribution} : invalid percentage {QoS_list[0]} in {QoS}")
-        if QoS_list[1] not in ["Uniform", "Normal", "None"]:
-            raise ValueError(f"{QoS_distribution} : unknown distribution {QoS_list[1]} in {QoS}")
-        if QoS_list[1]  == "Uniform" and (len(QoS_list) != 3 or  not is_int(QoS_list[2])):
-            raise ValueError(f"Invalid QoS spec for Uniform distribution : {QoS}")
-        if QoS_list[1]  == "Normal":
-            perc = float(QoS_list[4])
-            if len(QoS_list) != 5 or not is_int(QoS_list[2]) or not is_int(QoS_list[3]) or range_fails((perc,)):
-                raise ValueError(f"Invalid QoS spec for Normal distribution : {QoS}")
+        n = len(QoS_list)
+        if n != 1 and n != 3 and n != 5 :
+            raise ValueError(f"{QoS_distribution}: QoS specs must have 1, 3 or 5 parts: {QoS}={n}")
+        if n == 1 and QoS_list[0] not in ["None", "Block"]:
+            raise ValueError(f"{QoS_distribution}: invalid QoS name \"{QoS_list[0]}\" in {QoS}")
+        elif n == 3 and QoS_list[1] != "Uniform":
+            raise ValueError(f"{QoS_distribution}: invalid 3 parts QoS spec: {QoS}")
+        elif n == 5 and QoS_list[1] != "Normal":
+            raise ValueError(f"{QoS_distribution}: invalid 5 parts QoS spec: {QoS}")
+
+        if n != 1:
+            perc = float(QoS_list[0])
+            if range_fails((perc,)):
+                raise ValueError(
+                        f"{QoS_distribution} : invalid percentage {QoS_list[0]} in {QoS}")
+            if QoS_list[1] not in ["Uniform", "Normal"]:
+                raise ValueError(f"{QoS_distribution}: unknown distribution {QoS_list[1]} in {QoS}")
+            if QoS_list[1]  == "Uniform" and (len(QoS_list) != 3 or not is_int(QoS_list[2])):
+                raise ValueError(f"Invalid QoS spec for Uniform distribution : {QoS}")
+            if QoS_list[1]  == "Normal":
+                perc = float(QoS_list[4])
+                if (
+                    len(QoS_list) != 5 or
+                    not is_int(QoS_list[2]) or not is_int(QoS_list[3]) or range_fails((perc,))
+                   ):
+                    raise ValueError(f"Invalid QoS spec for Normal distribution : {QoS}")
 
         if QoS_distribution[QoS] == 0:  # omit non-contributing keys
             QoS_distribution.pop(QoS)
@@ -420,8 +433,7 @@ def is_nil_QoS(distr):
         return False
     QoS = list(distr.keys())[0]
     validate_pfd(distr.values(), "inter_subnet_QoS_distribution" )
-    QoS_list = QoS.split(":")
-    if QoS_list == ['-1', 'None', '-1']:
+    if QoS == 'None':
         return True
 
 
@@ -552,7 +564,7 @@ def perform_sanity_checks(ctx: typer.Context):
             f"container_size <= num_nodes : container_size={container_size}, num_nodes={num_nodes}")
     # rule out any non-trivial QoS distributions on a trivial subnet
     inter_subnet_qos_distribution = ctx.params["inter_subnet_qos_distribution"]
-    if num_subnets == 1 and inter_subnet_qos_distribution != {"-1:None:-1": 100}:
+    if num_subnets == 1 and inter_subnet_qos_distribution != {"None": 100}:
         raise ValueError(
                 f'number of subnets is 1, '
                 f'but a non-trivial QoS distribution ({inter_subnet_qos_distribution}) '
