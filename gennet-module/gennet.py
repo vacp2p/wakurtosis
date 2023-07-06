@@ -73,8 +73,8 @@ class networkType(Enum):
 
 
 NW_DATA_FNAME = "network_data.json"
-NODES_JSON, NODE_PREFIX, SUBNET_PREFIX, CONTAINERS_JSON, CONTAINER_PREFIX = \
-    "nodes", "node", "subnetwork", "containers", "containers"
+NODES_JSON, CONTAINERS_JSON, SUBNETS_JSON = "nodes", "containers", "subnetworks"
+NODE_PREFIX, SUBNET_PREFIX, CONTAINER_PREFIX = "node", "subnetwork", "containers"
 ID_STR_SEPARATOR = "-"
 
 ### I/O related fns ##############################################################
@@ -245,20 +245,26 @@ def postprocess_network(G):
     return nx.relabel_nodes(G, mapping)  # label the nodes
 
 
+# Adjust the offsets so that each subnet has at least one node
+def adjust_offsets(offsets):
+    for i in reversed(range(0, num_subnets-1)):
+        if offsets[i] == offsets[i+1]: # in case of a zero-node subset
+            offsets[i] -= 1                 # promote from the next subnet
+
+
+# Generate subnets: randomly splits the nodes into random-sized subnets
 def generate_subnets(G, num_subnets):
     n = len(G.nodes)
-    if num_subnets == n:  # if num_subnets == size of the network
-        return {f"{NODE_PREFIX}{ID_STR_SEPARATOR}{i}" : f"{SUBNET_PREFIX}_{i}" for i in range(n)}
-
+    l, lst = range(n), list(range(n))
     # Permute the node indices; this makes sure that the nodes are assigned randomly to subnets
-    lst = list(range(n))
     random.shuffle(lst)
-
-    # Select (without replacement) a num_subnets - 1 of offsets; make sure final offset is n-1.
-    # Each offset demarcates a subnet boundary
-    offsets = sorted(random.sample(range(0, n), num_subnets - 1))
-    offsets.append(n - 1)   # we have num_subnets offsets
-
+    if num_subnets == n:  # if num_subnets == num_nodes
+        return {f"{NODE_PREFIX}{ID_STR_SEPARATOR}{i}" : f"{SUBNET_PREFIX}_{lst[i]}" for i in l}
+    # Select (without replacement) a num_subnets-1 of offsets; the last offset must be n-1
+    # Each offset demarcates a subnet boundary; make sure you have at least one node per subnet
+    offsets = sorted(random.sample(range(0, n-1), num_subnets-1))
+    offsets.append(n-1)   # now we have num_subnets offsets, with max offset at n-1
+    #adjust_offsets(offsets)
     start, subnet_id, node2subnet = 0, 0, {}
     for end in offsets:
         # Build a node2subnet map as follows
@@ -268,9 +274,8 @@ def generate_subnets(G, num_subnets):
         # Finally, assign all these node to the current subnet.
         for i in range(start, end + 1):
             node2subnet[f"{NODE_PREFIX}{ID_STR_SEPARATOR}{lst[i]}"] = f"{SUBNET_PREFIX}_{subnet_id}"
-            #node2subnet[lst[i]] = subnet_id
-        start = end     # roll over the start to the end of the last offset
-        subnet_id += 1  # increment the subnet_id 
+        start = end + 1     # roll over the start to the last offset + 1
+        subnet_id += 1  # increment the subnet_id
     return node2subnet
 
 
@@ -297,13 +302,15 @@ def generate_toml(traits_dir, topics, traits_list):
     return f"{tomls}#topics\ntopics = {topic_str}\n"
 
 
+
+### percentage frequency distributions related fns ###############################################
 # Convert a dict to pair of arrays
 def dict_to_arrays(dic):
     keys, vals = zip(*dic.items())
     return keys, vals
 
 
-# Check for range failures in a list
+# Check for (closed) range failures in a list
 def range_fails(lst, min=0, max=100):
     return any(x < min or x > max for x in lst)
 
@@ -313,6 +320,12 @@ def sum_fails(lst, sum_expected=100):
     return not sum(lst) == sum_expected
 
 
+def validate_pfd(distribution, name):
+    if range_fails(distribution, max=100):
+        raise ValueError(f"{name}= {distribution} : invalid percentage (>100 or <0)")
+    if sum_fails(distribution, sum_expected=100):
+        raise ValueError(f"{name} = {distribution} : percentages do not sum to 100")
+
 # Construct the nodeType from the trait
 def traits_to_nodeType(s):
     return nodeType(s.split(':')[0])
@@ -320,20 +333,21 @@ def traits_to_nodeType(s):
 
 # Validate the traits distribution (stick to percentages: num nodes may vary post generation)
 def validate_traits_distribution(traits_dir, traits_distribution):
-    traits, traits_freq = dict_to_arrays(traits_distribution)
-    if range_fails(traits_freq, max=100):
-        raise ValueError(f"{traits_distribution} : invalid percentage (>{100} or <0)")
-    if sum_fails(traits_freq, sum_expected=100):
-        raise ValueError(f"{traits_distribution} : percentages do not sum to {100}")
+    traits, traits_distr = dict_to_arrays(traits_distribution) #assume: traits_distribution != {}
+    validate_pfd(traits_distr, "node_type_distribution")
     if not os.path.exists(traits_dir):
         raise ValueError(f"{traits_dir} : trait directory does not exist!")
     for s in traits:
-        traits_list = s.split(":")
+        traits_list = [x.strip() for x in s.split(":")]
         if traits_list[0] not in nodeType:
             raise ValueError(f"{traits_distribution} : unknown node type {traits_list[0]} in {s}")
         for t in traits_list[1:]:
             if t not in Trait and not os.path.exists(f"{traits_dir}/{t}.toml"):
                 raise ValueError(f"{traits_distribution} : unknown trait {t} in {s}")
+        if traits_distribution[s] == 0: # omit non-contributing keys
+            traits_distribution.pop(s)
+        else:
+            traits_distribution[":".join(traits_list)] = traits_distribution.pop(s)
 
 
 # Generate a list of nodeType enums that respects the node type distribution
@@ -347,6 +361,64 @@ def generate_traits_distribution(node_type_distribution, G):
     return traits_distribution
 
 
+# Check if the given string can be interpreted as an int, -1 included
+def is_int(s):
+    try :
+        int(s)
+        return True
+    except ValueError:
+        return False
+
+
+# Validate the QoS distribution: assumes QoS distribution != {}
+def validate_inter_subnet_QoS_distribution(QoS_distribution):
+    QoS_spec, QoS_distr = dict_to_arrays(QoS_distribution)
+    validate_pfd(QoS_distr, "inter_subnet_QoS_distribution")
+    for QoS in QoS_spec:
+        QoS_list = [x.strip() for x in QoS.split(":")]
+        n = len(QoS_list)
+        if n != 1 and n != 3 and n != 5 :
+            raise ValueError(f"{QoS_distribution}: QoS specs must have 1, 3 or 5 parts: {QoS}={n}")
+        if n == 1 and QoS_list[0] not in ["None", "Block"]:
+            raise ValueError(f"{QoS_distribution}: invalid QoS name \"{QoS_list[0]}\" in {QoS}")
+        elif n == 3 and QoS_list[1] != "Uniform":
+            raise ValueError(f"{QoS_distribution}: invalid 3 parts QoS spec: {QoS}")
+        elif n == 5 and QoS_list[1] != "Normal":
+            raise ValueError(f"{QoS_distribution}: invalid 5 parts QoS spec: {QoS}")
+
+        if n != 1:
+            perc = float(QoS_list[0])
+            if range_fails((perc,)):
+                raise ValueError(
+                        f"{QoS_distribution} : invalid percentage {QoS_list[0]} in {QoS}")
+            if QoS_list[1] not in ["Uniform", "Normal"]:
+                raise ValueError(f"{QoS_distribution}: unknown distribution {QoS_list[1]} in {QoS}")
+            if QoS_list[1]  == "Uniform" and (len(QoS_list) != 3 or not is_int(QoS_list[2])):
+                raise ValueError(f"Invalid QoS spec for Uniform distribution : {QoS}")
+            if QoS_list[1]  == "Normal":
+                perc = float(QoS_list[4])
+                if (
+                    len(QoS_list) != 5 or
+                    not is_int(QoS_list[2]) or not is_int(QoS_list[3]) or range_fails((perc,))
+                   ):
+                    raise ValueError(f"Invalid QoS spec for Normal distribution : {QoS}")
+
+        if QoS_distribution[QoS] == 0:  # omit non-contributing keys
+            QoS_distribution.pop(QoS)
+        else:
+            QoS_distribution[":".join(QoS_list)] = QoS_distribution.pop(QoS)
+
+
+# Generate a list of per-edge QoS spec strings that respect the QoS distribution
+def generate_QoS_distribution(QoS_distribution, nedges):
+    edge_QoS_spec, edge_QoS_percentage = dict_to_arrays(QoS_distribution)
+    edge_QoS_distribution = []
+    for i, n in enumerate(edge_QoS_spec):
+       edge_QoS_distribution += [edge_QoS_spec[i]] * math.ceil(edge_QoS_percentage[i] * nedges/100)
+    random.shuffle(edge_QoS_distribution)
+    return edge_QoS_distribution
+
+
 # Inverts a dictionary of lists (of lists/tuples) 
 def invert_dict_of_list(d, idx=0):
     inv = defaultdict(list)
@@ -355,7 +427,18 @@ def invert_dict_of_list(d, idx=0):
     return inv
 
 
-# TODO: reduce container packer memory consumption
+# Check if we need to generate the QoS matrix : assume distri != {}
+def is_nil_QoS(distr):
+    if len(distr) > 1:
+        return False
+    QoS = list(distr.keys())[0]
+    validate_pfd(distr.values(), "inter_subnet_QoS_distribution" )
+    if QoS == 'None':
+        return True
+
+
+# TODO: reduce container packer memory consumption so that it scales to million nodes
+#       currently can only generate half million nodes in a laptop
 # Packs the nodes into container in a subnet aware manner : optimal
 # Number of containers = 
 #   $$ O(\sum_{i=0}^{num_subnets} log_{container_size}(#Nodes_{numsubnets}) + num_subnets)
@@ -379,10 +462,13 @@ def generate_and_write_files(ctx: typer, G):
     node2container = pack_nodes(ctx.params["container_size"], node2subnet)
     container2nodes = invert_dict_of_list(node2container, 1)
 
-    json_dump, json_dump[CONTAINERS_JSON], json_dump[NODES_JSON] = {}, {}, {}
+    # Populate the containers
+    json_dump = {}
+    json_dump[CONTAINERS_JSON], json_dump[NODES_JSON], json_dump[SUBNETS_JSON]  = {}, {}, {}
     for container, nodes in container2nodes.items():
         json_dump[CONTAINERS_JSON][container] = nodes
 
+    # Populate the nodes
     i, traits_dir = 0,  ctx.params["traits_dir"]
     for node in G.nodes:
         # write the per node toml for the i^ith node of appropriate type
@@ -402,13 +488,33 @@ def generate_and_write_files(ctx: typer, G):
         port_shift, cid = node2container[node]
         json_dump[NODES_JSON][node]["port_shift"] = port_shift
         json_dump[NODES_JSON][node]["container_id"] = cid
-    write_json(ctx.params["output_dir"], json_dump)  # network wide json
+
+    # Populate the inter-subnetwork QoS
+    #subnets = sorted(set(node2subnet.values()), key=lambda item: (int(item.partition(' ')[0])
+    #                           if item[0].isdigit() else float('inf'), item))
+    nsubs = len(set(node2subnet.values()))
+    # O(n): avoids N*log_N sorting : non-zero nodes in each subnet, so range is fully present
+    subnets = [f'{SUBNET_PREFIX}_{i}' for i in range(0, nsubs)]
+    nedges, k = nsubs * (nsubs-1), 0  # no QoS on self-loop
+    QoS_dist_spec = ctx.params["inter_subnet_qos_distribution"]
+    if not is_nil_QoS(QoS_dist_spec):
+        QoS_distribution = generate_QoS_distribution(QoS_dist_spec, nedges)
+        for i in range(0, nsubs):
+            isubnet = subnets[i]
+            json_dump[SUBNETS_JSON][isubnet] = {}
+            for j in [ x for x in range(0, nsubs) if x != i]:  # no QoS for self-loops
+                json_dump[SUBNETS_JSON][isubnet][subnets[j]] = QoS_distribution[k]
+                k = k+1
+        if k  != nedges:    # sanity check
+            print(f"Error: k != nedges:  {k} != {nedges}")
+            sys.exit(1)
+    write_json(ctx.params["output_dir"], json_dump)  # final, network wide json
 
 
 # sanity check : valid json with "gennet" config
 def _config_file_callback(ctx: typer.Context, param: typer.CallbackParam, cfile: str):
     if cfile:
-        typer.echo(f"Loading config file: {os.path.basename(cfile)}")
+        typer.echo(f"Gennet: Loading the config file: {os.path.basename(cfile)}")
         ctx.default_map = ctx.default_map or {}  # Init the default map
         try:
             with open(cfile, 'r') as f:  # Load config file
@@ -436,17 +542,36 @@ def _num_partitions_callback(num_partitions: int):
 
 # sanity check :  num_subnets < num_nodes
 def _num_subnets_callback(ctx: typer, Context, num_subnets: int):
-    num_nodes = ctx.params["num_nodes"]
     if num_subnets == -1:
         num_subnets = num_nodes
-    if num_subnets > num_nodes:
-        raise ValueError(
-            f"num_subnets must be <= num_nodes : num_subnets={num_subnets}, num_nodes={1}")
     return num_subnets
 
 
-def main(ctx: typer.Context,
+# inter-param sanity check code goes here: all ctx.params[<>] are now fully realised/prioritised.
+def perform_sanity_checks(ctx: typer.Context):
+    num_nodes = ctx.params["num_nodes"]
+    num_subnets = ctx.params["num_subnets"]
+    if num_subnets > num_nodes: # can't make more subnets than requested nodes
+        raise ValueError(
+            f"num_subnets must be <= num_nodes : num_subnets={num_subnets}, num_nodes={num_nodes}")
+    fanout = ctx.params["fanout"]
+    if fanout >= num_nodes:     # can't connect to more nodes than requested nodes-1
+        raise ValueError(
+            f"fanout must be < num_nodes : fanout={fanout}, num_nodes={num_nodes}")
+    container_size = ctx.params["container_size"]
+    if container_size > num_nodes:  # can't created a container larger than the requested nodes
+        raise ValueError(
+            f"container_size <= num_nodes : container_size={container_size}, num_nodes={num_nodes}")
+    # rule out any non-trivial QoS distributions on a trivial subnet
+    inter_subnet_qos_distribution = ctx.params["inter_subnet_qos_distribution"]
+    if num_subnets == 1 and inter_subnet_qos_distribution != {"None": 100}:
+        raise ValueError(
+                f'number of subnets is 1, '
+                f'but a non-trivial QoS distribution ({inter_subnet_qos_distribution}) '
+                f'is requested')
 
+
+def main(ctx: typer.Context,
         benchmark: bool = typer.Option(False,
             help="Measure CPU/Mem usage of Gennet"),
          draw: bool = typer.Option(False,
@@ -465,6 +590,8 @@ def main(ctx: typer.Context,
              help="Set the arity for trees & newmanwattsstrogatz"),
          node_type_distribution: str = typer.Argument("{\"nwaku\" : 100 }",
              callback=ast.literal_eval, help="Set the node type distribution"),
+         inter_subnet_qos_distribution: str = typer.Argument("{\"-1:None:-1\": 100}",
+             callback=ast.literal_eval, help="Set the node type distribution"),
          network_type: networkType = typer.Option(networkType.NEWMANWATTSSTROGATZ.value,
              help="Set the node type"),
          num_subnets: int = typer.Option(1, callback=_num_subnets_callback,
@@ -482,21 +609,29 @@ def main(ctx: typer.Context,
     start = time.time()
 
     # set the random seed : networkx uses numpy.random as well
-    print("Setting the random seed to ", prng_seed)
+    print("Gennet: Setting the random seed to ", prng_seed)
     random.seed(prng_seed)
     np.random.seed(prng_seed)
 
-    # validate node type distribution
+    # validate and prune the node-type/trait-type/inter-subnet distributions
+    #       returns a canonical distribution
+    print("Gennet: Validating the config...")
     validate_traits_distribution(ctx.params["traits_dir"], node_type_distribution)
+    validate_inter_subnet_QoS_distribution(inter_subnet_qos_distribution)
+
+    # inter-parameter consistency sanity checks
+    perform_sanity_checks(ctx)
 
     # Generate the network
     # G = generate_network(num_nodes, networkType(network_type), tree_arity)
+    print("Gennet: Generating the network...")
     G = generate_network(ctx)
 
     # Do not complain if the folder already exists
     make_empty_dir(output_dir)
 
     # Generate file format specific data structs and write the files
+    print("Gennet: Writing the network...")
     generate_and_write_files(ctx, G)
 
     # Draw the graph if need be
@@ -505,13 +640,14 @@ def main(ctx: typer.Context,
 
     end = time.time()
     time_took = end - start
-    print(f"For {G.number_of_nodes()}/{num_nodes} nodes, network generation took {time_took} secs.\nThe generated network is under .{output_dir}")
+    print(f"Gennet: For {G.number_of_nodes()}/{num_nodes} nodes, network generation took {time_took} secs.\nGennet: The generated network is under .{output_dir}")
 
     # Benchmarking. Record finish time and stop the malloc tracing
     if benchmark:
         mem_curr, mem_max = tracemalloc.get_traced_memory()
         tracemalloc.stop()
-        print(f"STATS: For {num_nodes} nodes, time took is {time_took} secs, peak memory usage is {mem_max/(1024*1024)} MBs\n")
+        print(f"Gennet: STATS: For {num_nodes} nodes, time took is {time_took} secs, peak memory usage is {mem_max/(1024*1024)} MBs\n")
+    print("Gennet: Done.")
 
 
 if __name__ == "__main__":

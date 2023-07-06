@@ -39,3 +39,8 @@ ports_dispatcher = {
     vars.GENNET_NWAKU_IMAGE_VALUE: waku_builder.add_waku_ports_info_to_topology,
     vars.GENNET_NOMOS_IMAGE_VALUE: nomos_builder.add_nomos_ports_info_to_topology
 }
+
+#QoS_distribution_dispatcher = {
+#    vars.GENNET_SUBNETS_QOS_UNIFORM: UniformPacketDelayDistribution,
+#    vars.GENNET_SUBNETS_QOS_NORMAL: NormalPacketDelayDistribution
+#}

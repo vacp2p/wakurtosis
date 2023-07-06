@@ -86,6 +86,10 @@ GENNET_STATIC_NODES_KEY = "static_nodes"
 GENNET_GOWAKU_IMAGE_VALUE = "go-waku"
 GENNET_NWAKU_IMAGE_VALUE = "nim-waku"
 GENNET_NOMOS_IMAGE_VALUE = "nomos"
+GENNET_SUBNETS_KEY = "subnetworks"
+
+GENNET_SUBNETS_QOS_UNIFORM = "Uniform"
+GENNET_SUBNETS_QOS_NORMAL = "Normal"
 
 PEER_ID_KEY = "peer_id"
 IP_KEY = "ip_address"

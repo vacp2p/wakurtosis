@@ -13,7 +13,7 @@
     "fanout": 13,
     "num_topics": 1,
     "num_partitions": 1,
-    "num_subnets": 1,
+    "num_subnets": 7,
     "container_size": "1",
     "node_type_distribution": {
       "nwaku:relay:rpc:metrics": 100,
@@ -21,7 +21,13 @@
     },
     "network_type": "newmanwattsstrogatz",
     "output_dir": "network_data",
-    "benchmark": "False"
+    "benchmark": "False",
+    "inter_subnet_qos_distribution": {
+      "None": 60,
+      "Block": 10,
+      "80:Uniform:10": 10,
+      "2.0:Normal:5000:30:10": 20
+    }
   },
   "wls": {
     "debug_level": "DEBUG",

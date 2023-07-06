@@ -50,7 +50,7 @@ kurtosis_inspect="kurtosis_inspect.log"
 usr=`id -u`
 grp=`id -g`
 stats_dir=stats
-signal_fifo=/tmp/hostproc-signal.fifo   # do not create fifo under ./stats, or inside the repo
+signal_fifo=/tmp/host-proc-signal.fifo   # do not create fifo under ./stats, or inside the repo
 ##################### MONITORING MODULE PROLOGUES
 if [ "$metrics_infra" = "cadvisor" ]; then #CADVISOR
     # prepare the enclave
@@ -89,7 +89,8 @@ fi
 jobs=$(cat config/${wakurtosis_config_file} | jq -r ".kurtosis.jobs")
 echo -e "\nSetting up the enclave: $enclave_name"
 
-kurtosis_cmd="kurtosis --cli-log-level \"$loglevel\" run --full-uuids --enclave ${enclave_name} . '{\"wakurtosis_config_file\" : \"config/${wakurtosis_config_file}\"}' --parallelism ${jobs} > $kurtosis_run 2>&1"
+#kurtosis_cmd="kurtosis --cli-log-level \"$loglevel\" run --full-uuids --enclave ${enclave_name} . '{\"wakurtosis_config_file\" : \"config/${wakurtosis_config_file}\"}' --parallelism ${jobs} > $kurtosis_run 2>&1"
+kurtosis_cmd="kurtosis --cli-log-level \"$loglevel\" run --full-uuids --enclave ${enclave_name} . '{\"wakurtosis_config_file\" : \"config/${wakurtosis_config_file}\"}' --with-subnetworks --parallelism ${jobs} > $kurtosis_run 2>&1"
 
 START=$(date +%s)
   eval $kurtosis_cmd
@@ -165,8 +166,8 @@ echo "Simulation took $DIFF1 + $DIFF2 = $(( $END2 - $START)) secs"
 
 
 ##################### GATHER CONFIG, LOGS & METRICS
-# give time for the messages to settle down before we collect the logs
-sleep 60
+# give time for the logs and metrics collection to settle down
+sleep 45 # 30 + 15
 
 # dump logs
 echo "Dumping Kurtosis logs"
@@ -182,6 +183,7 @@ if [ "$metrics_infra" = "dstats" ]; then
     echo "dstats: copying the dstats data"
     cp -r ./monitoring/dstats/stats  ${enclave_name}_logs/dstats-data
 elif [ "$metrics_infra" = "host-proc" ]; then
+    rm -f $signal_fifo
     echo "Copying the host-proc data"
     cp -r ./monitoring/host-proc/stats  ${enclave_name}_logs/host-proc-data
 elif [ "$metrics_infra" = "container-proc" ]; then
@@ -206,13 +208,13 @@ if jq -e ."plotting" >/dev/null 2>&1 "./config/${wakurtosis_config_file}"; then
         docker run --name "dstats" --network "host" -v "$(pwd)/wakurtosis_logs:/simulation_data/" --add-host=host.docker.internal:host-gateway analysis src/hproc.py dstats /simulation_data/ --config-file /simulation_data/config/config.json  >/dev/null 2>&1  
         docker cp dstats:/analysis/plots/ wakurtosis_logs/dstats-plots
         cd wakurtosis_logs
-        ln -s dstats-plots/output-dstats-compare.pdf analysis.pdf
+        cp dstats-plots/output-dstats-compare.pdf analysis.pdf
         cd ..
     elif [ "$metrics_infra" = "host-proc" ]; then
         docker run --name "host-proc" --network "host" -v "$(pwd)/wakurtosis_logs:/simulation_data/" --add-host=host.docker.internal:host-gateway analysis src/hproc.py host-proc /simulation_data/ --config-file /simulation_data/config/config.json  >/dev/null 2>&1
         docker cp host-proc:/analysis/plots/ wakurtosis_logs/host-proc-plots
         cd wakurtosis_logs
-        ln -s host-proc-plots/output-host-proc-compare.pdf analysis.pdf
+        cp host-proc-plots/output-host-proc-compare.pdf analysis.pdf
         cd ..
     elif [ "$metrics_infra" = "container-proc" ]; then
         docker run --network "host" -v "$(pwd)/wakurtosis_logs:/simulation_data/" --add-host=host.docker.internal:host-gateway analysis src/main.py -i container-proc >/dev/null 2>&1
