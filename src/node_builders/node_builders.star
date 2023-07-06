@@ -51,25 +51,12 @@ def instantiate_services(plan, network_topology, testing):
     )
 
     # deploy the subnetworks
-    for src in network_topology[vars.GENNET_SUBNETS_KEY].keys():
-        for dst in network_topology[vars.GENNET_SUBNETS_KEY][src].keys():
-            QoS_spec, skip = network_topology[vars.GENNET_SUBNETS_KEY][dst][src].split(":"), False
-            packet_loss_perc, dist, delay = float(QoS_spec[0]), QoS_spec[1], int(QoS_spec[2])
-            plan.print(src + ":" + dst + "->" + ":".join(QoS_spec) + " = " + str(len(QoS_spec)))
-            # TODO: rewrite with dispatchers
-            if dist == "Uniform":
-                delay_distribution = UniformPacketDelayDistribution(ms=delay)
-            elif dist == "Normal":
-                mean, std_dev, corr = delay, int(QoS_spec[3]), float(QoS_spec[4])
-                delay_distribution = NormalPacketDelayDistribution(
-                        mean_ms=delay, std_dev_ms=std_dev, correlation=corr)
-            elif dist == "None":
-                continue
-            else:
-                plan.print("Subnetworks: Unsupported delay distribution: " + dist)
-                plan.exit()
-            connection_config = ConnectionConfig(packet_loss_perc, delay_distribution)
-            plan.set_connection(subnetworks = (src, dst), config = connection_config)
+    if not network_topology[vars.GENNET_SUBNETS_KEY]:
+      for src in network_topology[vars.GENNET_SUBNETS_KEY].keys():
+          for dst in network_topology[vars.GENNET_SUBNETS_KEY][src].keys():
+              QoS = network_topology[vars.GENNET_SUBNETS_KEY][dst][src]
+              connection_config = get_connection_config(QoS, plan)
+              plan.set_connection(subnetworks = (src, dst), config = connection_config)
     _add_service_info_to_topology(plan, all_services_information, network_topology)
 
 
@@ -115,3 +102,36 @@ def _add_service_info_to_topology(plan, all_services_information, network_topolo
         network_topology[vars.GENNET_ALL_CONTAINERS_KEY][container_id] = {}
         network_topology[vars.GENNET_ALL_CONTAINERS_KEY][container_id][vars.GENNET_NODES_KEY] = nodes
         network_topology[vars.GENNET_ALL_CONTAINERS_KEY][container_id][vars.KURTOSIS_IP_KEY] = ip
+
+
+def get_connection_config(QoS, plan):
+    QoS_lst = QoS.split(":")
+    n = len(QoS_lst)
+    if n == 1:
+      if QoS_lst[0] == "None":
+         return kurtosis.connection.ALLOWED
+      elif  QoS_lst[0]  == "Block":
+          return kurtosis.connection.BLOCKED
+      else:
+        plan.print("Invalid QoS atom \"" + QoS_lst[0] + "\"")
+        plan.exit()
+    elif n == 3:
+      packet_loss_perc, dist, delay = float(QoS_lst[0]), QoS_lst[1], int(QoS_lst[2])
+      if dist == "Uniform":
+        distri = UniformPacketDelayDistribution(ms=delay)
+        return ConnectionConfig(packet_loss_perc, distri)
+      else:
+        plan.print("Invalid QoS atom \"" + dist + "\"")
+        plan.exit()
+    elif n == 5:
+      packet_loss_perc, dist, mean = float(QoS_lst[0]), QoS_lst[1], int(QoS_lst[2])
+      jitter, corr = int(QoS_lst[3]), float(QoS_lst[4])
+      if dist == "Normal":
+        distri = NormalPacketDelayDistribution(mean_ms=delay, std_dev_ms=jitter, correlation=corr)
+        return ConnectionConfig(packet_loss_perc, distri)
+      else:
+        plan.print("Invalid QoS atom \"" + dist + "\"")
+        plan.exit()
+    else:
+        plan.print("Invalid QoS spec \"" + QoS + "\"")
+        plan.exit()
