@@ -7,13 +7,11 @@ grafana = import_module(vars.GRAFANA_MODULE)
 args_parser = import_module(vars.ARGUMENT_PARSER_MODULE)
 wls = import_module(vars.WLS_MODULE)
 nodes = import_module(vars.NODE_BUILDERS_MODULE)
-nwaku_builder = import_module(vars.NWAKU_BUILDER_MODULE)
-waku = import_module(vars.WAKU_MODULE)
 
 
 def run(plan, args):
-    plan.print(args)
-    # Load global config_file_content file
+
+    # Load global config file
     config_file = args_parser.get_configuration_file_name(plan, args)
     config_json = read_file(src=config_file)
     config = json.decode(config_json)
@@ -37,5 +35,5 @@ def run(plan, args):
         nodes.interconnect_nodes(plan, network_topology, interconnection_batch)
 
     # Setup WLS & Start the Simulation
-    wls_service = wls.init(plan, network_topology, config_file)
+    wls_service = wls.init(plan, network_topology, config_file, prometheus_service)
 

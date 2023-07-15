@@ -45,13 +45,11 @@
   "plotting": {
     "by_node": [
       "container_cpu_load_average_10s",
-      "container_memory_usage_bytes"
-    ],
-    "by_simulation": [
-        "container_network_receive_bytes_total",
-        "container_network_transmit_bytes_total",
-        "container_fs_reads_bytes_total",
-        "container_fs_writes_bytes_total"
+      "container_memory_usage_bytes",
+      "container_network_receive_bytes_total",
+      "container_network_transmit_bytes_total",
+      "container_fs_reads_bytes_total",
+      "container_fs_writes_bytes_total"
     ]
   }
 }

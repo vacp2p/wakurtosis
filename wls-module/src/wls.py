@@ -2,7 +2,6 @@
 import argparse
 import hashlib
 import random
-import os
 import sys
 import time
 import tomllib
@@ -14,6 +13,7 @@ from src.utils import wls_logger
 from src.utils import waku_messaging
 from src.utils import payloads
 from src.utils import files
+from src.utils import prometheus
 
 """ Globals """
 G_DEFAULT_CONFIG_FILE = 'config.json'
@@ -27,6 +27,10 @@ def parse_cli(args):
                         default=G_DEFAULT_CONFIG_FILE)
     parser.add_argument("-t", "--topology_file", type=str, help="Topology file",
                         default=G_DEFAULT_TOPOLOGY_FILE)
+    parser.add_argument("-pi", "--prometheus-ip", type=str, help="Prometheus Port",
+                        default=None)
+    parser.add_argument("-pp", "--prometheus-port", type=str, help="Prometheus Port",
+                        default=None)
 
     parsed_args = parser.parse_args(args)
 
@@ -167,9 +171,11 @@ async def main():
 
     config_file = args.config_file
     topology_file = args.topology_file
+    prometheus_ip = args.prometheus_ip
+    prometheus_port = args.prometheus_port
         
     config = files.load_config_file(config_file)
-    
+
     # Set loglevel from config
     wls_config = config['wls']
 
@@ -199,6 +205,10 @@ async def main():
     if os.path.exists('/wls/start.signal'):
         os.remove('/wls/start.signal')
 
+    if prometheus_port is not None:
+        prometheus.dump_prometheus(config, prometheus_ip, prometheus_port)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
+

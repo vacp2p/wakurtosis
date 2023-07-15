@@ -33,7 +33,7 @@ def create_new_topology_information(plan, network_topology, network_artifact_nam
     return artifact_id
 
 
-def create_cmd(config_file):
+def create_cmd(config_file, prometheus_service):
     cmd = []
     config_file_name = config_file.split("/")[-1]
 
@@ -41,10 +41,14 @@ def create_cmd(config_file):
     cmd.append(vars.WLS_CONFIG_PATH + config_file_name)
     cmd.append(vars.WLS_TOPOLOGY_FILE_FLAG)
     cmd.append(vars.WLS_TOPOLOGY_PATH + vars.CONTAINER_TOPOLOGY_FILE_NAME_WLS)
+    cmd.append("--prometheus-ip")
+    cmd.append(prometheus_service.ip_address)
+    cmd.append("--prometheus-port")
+    cmd.append(str(prometheus_service.ports[vars.PROMETHEUS_PORT_ID].number))
 
     return cmd
 
-def init(plan, network_topology, config_file):
+def init(plan, network_topology, config_file, prometheus_service):
     
     # Generate simulation config
     config_artifact = upload_config(plan, config_file, vars.WLS_CONFIG_ARTIFACT_NAME)
@@ -58,7 +62,7 @@ def init(plan, network_topology, config_file):
     wls_topology = create_new_topology_information(plan, network_topology,
                                                    vars.WLS_TOPOLOGY_ARTIFACT_NAME)
 
-    wls_cmd = create_cmd(config_file)
+    wls_cmd = create_cmd(config_file, prometheus_service)
 
     add_service_config = ServiceConfig(
         image=vars.WLS_IMAGE,
