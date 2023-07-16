@@ -133,7 +133,7 @@ def precompute_get_peers_metadata(topology):
 # the event handler for peer collection
 # TODO: add full peers
 async def _collect_peers(wls_config):
-    for name, addr in node2addr.items(): # yield between each invocation
+    for name, addr in node2addr.items(): # yield between each invocations
         response, elapsed = await waku_messaging.send_get_peers_to_node_async(addr)
         wls_logger.G_LOGGER.info(f"get_peers : {name}={addr} -> {response} = {elapsed}")
 
@@ -158,6 +158,7 @@ async def start_traffic_injection_async(wls_config, random_emitters):
         tasks.append(task)
 
         # Collect the peer info at every 50th message
+            # TODO: add a fresh timer and inter-splice it with next_time_to_msg : bit tricky
         if nonce % 50 == 0 :
             print("get_peers: NONCE: " +  str(nonce))
             topo_task = asyncio.create_task(_collect_peers(wls_config))

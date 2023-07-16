@@ -75,7 +75,7 @@ async def _send_waku_rpc_async(data, node_address):
             return response.status, elapsed_ms
 
 
-### get peer
+### functions to get peers
 
 # build a fresh RPC buffer
 def _create_get_peers_rpc(node_address):
@@ -97,7 +97,7 @@ async def _send_get_peers_async(data, node_address):
                 headers={'content-type': 'application/json'}) as res:
             elapsed = time.time() - start
             response = await res.json(content_type='text/html') # yield when parsing
-            #wls_logger.G_LOGGER.debug(f"get_peers : {node_address}: {response} [{elapsed}]")
+            #wls_logger.G_LOGGER.debug(f"get_peers : {node_address}: {response} [{start}:{elapsed}]")
             return response, elapsed
 
 # create the buffer, start the call
