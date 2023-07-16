@@ -22,7 +22,6 @@ G_LOGGER = None
 
 """ Custom logging formatter """
 class CustomFormatter(logging.Formatter):
-    
     # Set different formats for every logging level
     time_name_stamp = "[%(asctime)s.%(msecs)03d] [" + G_APP_NAME + "]"
     FORMATS = {
@@ -40,16 +39,16 @@ class CustomFormatter(logging.Formatter):
         return formatter.format(record)
 
 
-def main(): 
+def main():
 
     global G_LOGGER
-    
+
     """ Init Logging """
     G_LOGGER = logging.getLogger(G_APP_NAME)
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(CustomFormatter())
     G_LOGGER.addHandler(handler)
-    
+
     G_LOGGER.info('Started')
 
     """ Parse command line args. """
@@ -60,7 +59,7 @@ def main():
 
     config_file = args.config_file
     topology_file = args.topology_file
-        
+
     """ Load config file """
     try:
         with open(config_file, 'r') as f:
@@ -68,7 +67,7 @@ def main():
     except Exception as e:
         G_LOGGER.error('%s: %s' % (e.__doc__, e))
         sys.exit()
-    
+
     # Set loglevel from config
     G_LOGGER.setLevel(config['general']['debug_level'])
     handler.setLevel(config['general']['debug_level'])
@@ -78,7 +77,7 @@ def main():
 
     # Set RPNG seed from config
     random.seed(config['general']['prng_seed'])
-    
+
     """ Load targets """
     try:
         with open(config['general']['targets_file'], 'r') as read_file:
@@ -103,7 +102,6 @@ def main():
 
     nomos.run_tests(G_LOGGER, config, targets, topology)
 
-    
+
 if __name__ == "__main__":
-    
     main()
