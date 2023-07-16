@@ -8,6 +8,7 @@ import time
 import tomllib
 import asyncio
 import os
+import json
 
 # Project Imports
 from src.utils import wls_logger
@@ -114,16 +115,25 @@ async def _inject_message_async(emitter_address, emitter_topic, msgs_dict, msgs_
 
     msg_hash = hashlib.sha256(waku_msg.encode('utf-8')).hexdigest()
     async with msgs_dict_lock:
-        
         if msg_hash in msgs_dict:
             wls_logger.G_LOGGER.error(f"Hash collision. {msg_hash} already exists in dictionary")
             return
-        
         # Update the messages dictionary
         msgs_dict[msg_hash] = {'ts': ts, 'injection_point': emitter_address, 'status' : response,
                                'nonce': len(msgs_dict), 'topic': emitter_topic,
                                'payload': payload, 'payload_size': size, 'injection_time': elapsed}
 
+node2addr = {}
+def precompute_get_peers_metadata(topology):
+    #'method': 'get_waku_v2_debug_info',
+    for node, info in topology["nodes"].items():
+        node2addr[node] = f"http://{info['ip_address']}:{info['ports']['rpc-' + node][0]}/"
+    wls_logger.G_LOGGER.debug(f"get_peers: {node2addr}")
+
+async def _collect_topology(wls_config):
+    for name, addr in node2addr.items():
+        response, elapsed = await waku_messaging.send_get_peers_to_node_async(addr)
+        wls_logger.G_LOGGER.info(f"get_peers X : {name}={addr} -> {response} = {elapsed}")
 
 async def start_traffic_injection_async(wls_config, random_emitters):
     """ Start simulation """
@@ -145,6 +155,13 @@ async def start_traffic_injection_async(wls_config, random_emitters):
         task = asyncio.create_task(_inject_message_async(emitter_address, emitter_topic, msgs_dict, msgs_dict_lock, wls_config))
         tasks.append(task)
 
+
+        # Collect the peer info at every 50th message
+        if nonce % 50 == 0 :
+            print("get_peers: NONCE: " +  str(nonce))
+            topo_task = asyncio.create_task(_collect_topology(wls_config))
+            tasks.append(topo_task)
+
         nonce += 1
 
         # Compute the time to next message
@@ -158,7 +175,7 @@ async def start_traffic_injection_async(wls_config, random_emitters):
 
     # Wait for all the tasks to complete
     await asyncio.gather(*tasks)
-    
+
     return msgs_dict
 
 
@@ -167,9 +184,9 @@ async def main():
 
     config_file = args.config_file
     topology_file = args.topology_file
-        
+
     config = files.load_config_file(config_file)
-    
+
     # Set loglevel from config
     wls_config = config['wls']
 
@@ -181,6 +198,7 @@ async def main():
     topology = files.load_topology(topology_file)
 
     load_topics_into_topology(topology)
+    precompute_get_peers_metadata(topology)
 
     random_emitters = get_random_emitters(topology, wls_config)
 

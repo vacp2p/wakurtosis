@@ -46,7 +46,6 @@ def _create_waku_rpc_data(topic, waku_msg, node_address):
 
     return data
 
-
 def _send_waku_rpc(data, node_address):
     s_time = time.time()
 
@@ -69,16 +68,41 @@ async def _send_waku_rpc_async(data, node_address):
     json_data = json.dumps(data)
 
     async with aiohttp.ClientSession() as session:
-        
         async with session.post(node_address, data=json_data, headers={'content-type': 'application/json'}) as response:
-            
             elapsed_ms = (time.time() - s_time) * 1000
-                        
             wls_logger.G_LOGGER.debug(f"Response from {node_address}: {response.status} [{elapsed_ms:.4f} ms.]")
 
             return response.status, elapsed_ms
 
-   
+
+### get peer
+def _create_get_peers_rpc(node_address):
+    data = {
+        'jsonrpc': '2.0',
+        'method': 'get_waku_v2_admin_v1_peers',
+        'id': 1,
+        'params': []
+    }
+    wls_logger.G_LOGGER.debug(f"Waku RPC: {data['method']} from {node_address}")
+    return data
+
+async def _send_get_peers_async(data, node_address):
+    s_time = time.time()
+    json_data = json.dumps(data)
+    async with aiohttp.ClientSession() as session:
+        async with session.post(node_address, data=json_data, headers={'content-type': 'application/json'}) as res:
+            elapsed = time.time() - s_time
+            response = await res.json(content_type='text/html')
+            wls_logger.G_LOGGER.debug(f"get_peers : {node_address}: {response} [{elapsed}]")
+            return response, elapsed
+
+async def send_get_peers_to_node_async(node_address, nonce=1):
+    data = _create_get_peers_rpc(node_address)
+    response_obj, elapsed = await _send_get_peers_async(data, node_address)
+    return response_obj, elapsed
+
+###
+
 def send_msg_to_node(node_address, topic, payload, nonce=1):
     my_payload = _get_waku_payload(nonce, payload)
     waku_msg = _create_waku_msg(my_payload)
