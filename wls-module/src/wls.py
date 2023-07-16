@@ -123,17 +123,19 @@ async def _inject_message_async(emitter_address, emitter_topic, msgs_dict, msgs_
                                'nonce': len(msgs_dict), 'topic': emitter_topic,
                                'payload': payload, 'payload_size': size, 'injection_time': elapsed}
 
+# pre-compute the addresses
 node2addr = {}
 def precompute_get_peers_metadata(topology):
-    #'method': 'get_waku_v2_debug_info',
     for node, info in topology["nodes"].items():
         node2addr[node] = f"http://{info['ip_address']}:{info['ports']['rpc-' + node][0]}/"
     wls_logger.G_LOGGER.debug(f"get_peers: {node2addr}")
 
-async def _collect_topology(wls_config):
-    for name, addr in node2addr.items():
+# the event handler for peer collection
+# TODO: add full peers
+async def _collect_peers(wls_config):
+    for name, addr in node2addr.items(): # yield between each invocation
         response, elapsed = await waku_messaging.send_get_peers_to_node_async(addr)
-        wls_logger.G_LOGGER.info(f"get_peers X : {name}={addr} -> {response} = {elapsed}")
+        wls_logger.G_LOGGER.info(f"get_peers : {name}={addr} -> {response} = {elapsed}")
 
 async def start_traffic_injection_async(wls_config, random_emitters):
     """ Start simulation """
@@ -155,11 +157,10 @@ async def start_traffic_injection_async(wls_config, random_emitters):
         task = asyncio.create_task(_inject_message_async(emitter_address, emitter_topic, msgs_dict, msgs_dict_lock, wls_config))
         tasks.append(task)
 
-
         # Collect the peer info at every 50th message
         if nonce % 50 == 0 :
             print("get_peers: NONCE: " +  str(nonce))
-            topo_task = asyncio.create_task(_collect_topology(wls_config))
+            topo_task = asyncio.create_task(_collect_peers(wls_config))
             tasks.append(topo_task)
 
         nonce += 1

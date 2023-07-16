@@ -76,6 +76,8 @@ async def _send_waku_rpc_async(data, node_address):
 
 
 ### get peer
+
+# build a fresh RPC buffer
 def _create_get_peers_rpc(node_address):
     data = {
         'jsonrpc': '2.0',
@@ -83,22 +85,26 @@ def _create_get_peers_rpc(node_address):
         'id': 1,
         'params': []
     }
-    wls_logger.G_LOGGER.debug(f"Waku RPC: {data['method']} from {node_address}")
+    #wls_logger.G_LOGGER.debug(f"Waku RPC: {data['method']} from {node_address}")
     return data
 
+# post the RPC, collect the result, and parse it to a json
 async def _send_get_peers_async(data, node_address):
-    s_time = time.time()
     json_data = json.dumps(data)
+    start = time.time()
     async with aiohttp.ClientSession() as session:
-        async with session.post(node_address, data=json_data, headers={'content-type': 'application/json'}) as res:
-            elapsed = time.time() - s_time
-            response = await res.json(content_type='text/html')
-            wls_logger.G_LOGGER.debug(f"get_peers : {node_address}: {response} [{elapsed}]")
+        async with session.post(node_address, data=json_data,
+                headers={'content-type': 'application/json'}) as res:
+            elapsed = time.time() - start
+            response = await res.json(content_type='text/html') # yield when parsing
+            #wls_logger.G_LOGGER.debug(f"get_peers : {node_address}: {response} [{elapsed}]")
             return response, elapsed
 
-async def send_get_peers_to_node_async(node_address, nonce=1):
-    data = _create_get_peers_rpc(node_address)
-    response_obj, elapsed = await _send_get_peers_async(data, node_address)
+# create the buffer, start the call
+async def send_get_peers_to_node_async(node_address):
+    # do NOT lift : need fresh rpc buffer for correct operation!
+    data = _create_get_peers_rpc(node_address)  # get a new buffer every time: do NOT reuse!
+    response_obj, elapsed = await _send_get_peers_async(data, node_address) # yield when waiting
     return response_obj, elapsed
 
 ###
