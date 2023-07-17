@@ -15,24 +15,20 @@ def prepare_waku_ports_in_service(node_names, network_topology, discovery):
 def prepare_single_node_waku_ports(prepared_ports, node_name, port_shift, discovery):
     prepared_ports[vars.WAKU_RPC_PORT_ID + vars.ID_STR_SEPARATOR + node_name] = \
         PortSpec(number=vars.WAKU_RPC_PORT_NUMBER + port_shift,
-                 transport_protocol=vars.WAKU_RPC_PORT_PROTOCOL,
-                 wait = None)
+                 transport_protocol=vars.WAKU_RPC_PORT_PROTOCOL)
 
     prepared_ports[vars.PROMETHEUS_PORT_ID + vars.ID_STR_SEPARATOR + node_name] = \
         PortSpec(number=vars.PROMETHEUS_PORT_NUMBER + port_shift,
-                 transport_protocol=vars.PROMETHEUS_PORT_PROTOCOL,
-                 wait = None)
+                 transport_protocol=vars.PROMETHEUS_PORT_PROTOCOL)
 
     prepared_ports[vars.WAKU_LIBP2P_PORT_ID + vars.ID_STR_SEPARATOR + node_name] = \
         PortSpec(number=vars.WAKU_LIBP2P_PORT + port_shift,
-                 transport_protocol=vars.WAKU_LIBP2P_PORT_PROTOCOL,
-                 wait = None)
+                 transport_protocol=vars.WAKU_LIBP2P_PORT_PROTOCOL)
 
     if discovery:
         prepared_ports[vars.WAKU_DISCV5_PORT_ID + vars.ID_STR_SEPARATOR + node_name] = \
             PortSpec(number=vars.WAKU_DISCV5_PORT_NUMBER + port_shift,
-                     transport_protocol=vars.WAKU_DISCV5_PORT_PROTOCOL,
-                 wait = None)
+                     transport_protocol=vars.WAKU_DISCV5_PORT_PROTOCOL)
 
 
 def prepare_waku_config_files_in_service(node_names, toml_artifact_ids, run_artifact_id):

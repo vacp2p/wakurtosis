@@ -1,11 +1,11 @@
-## Install Docker
+# Install Docker
 sudo apt-get update
 sudo apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin python3-venv
 
 apt-get install -y jq
 
 # Install the suitable kurtosis-cli
-required_version=0.77.0
+required_version=0.70.2
 installed_version=`kurtosis version`
 
 if [ "$installed_version" = "$required_version" ]; then
