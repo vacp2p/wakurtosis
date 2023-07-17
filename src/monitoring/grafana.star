@@ -37,7 +37,7 @@ def set_up_grafana(plan, prometheus_service):
     )
 
     grafana_service = plan.add_service(
-        name=vars.GRAFANA_SERVICE_NAME,
+        service_name=vars.GRAFANA_SERVICE_NAME,
         config=add_service_config
     )
 

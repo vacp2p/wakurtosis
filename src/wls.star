@@ -75,7 +75,7 @@ def init(plan, network_topology, config_file, prometheus_service):
         cmd=wls_cmd
     )
     wls_service = plan.add_service(
-        name=vars.WLS_SERVICE_NAME,
+        service_name=vars.WLS_SERVICE_NAME,
         config=add_service_config
     )
 
