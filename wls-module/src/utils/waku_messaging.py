@@ -63,22 +63,24 @@ def _send_waku_rpc(data, node_address):
 
     return response_obj, elapsed_ms
 
-async def _send_waku_rpc_async(data, node_address):
+async def _send_waku_rpc_async(data, node_address, timeout_s=10):
     s_time = time.time()
 
     json_data = json.dumps(data)
+    timeout = aiohttp.ClientTimeout(total=timeout_s)
 
-    async with aiohttp.ClientSession() as session:
-        
-        async with session.post(node_address, data=json_data, headers={'content-type': 'application/json'}) as response:
-            
-            elapsed_ms = (time.time() - s_time) * 1000
-                        
-            wls_logger.G_LOGGER.debug(f"Response from {node_address}: {response.status} [{elapsed_ms:.4f} ms.]")
+    try:
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.post(node_address, data=json_data, headers={'content-type': 'application/json'}) as response:
+                elapsed_ms = (time.time() - s_time) * 1000
+                wls_logger.G_LOGGER.debug(f"Response from {node_address}: {response.status} [{elapsed_ms:.4f} ms.]")
+                return response.status, elapsed_ms
+    
+    except Exception as e:
+        wls_logger.G_LOGGER.error(f"Request to {node_address} failed. Error {e} Type {type(e)}")
+        elapsed_ms = (time.time() - s_time) * 1000
+        return None, elapsed_ms 
 
-            return response.status, elapsed_ms
-
-   
 def send_msg_to_node(node_address, topic, payload, nonce=1):
     my_payload = _get_waku_payload(nonce, payload)
     waku_msg = _create_waku_msg(my_payload)
