@@ -16,7 +16,7 @@ def connect_to_prometheus(ip, port):
     return prometheus
 
 
-def dump_prometheus(config, prometheus_ip, prometheus_port):
+def dump_prometheus(config, prometheus_ip, prometheus_port, start_time, finish_time):
     to_query = config["plotting"]["by_node"]
 
     to_query = "|".join(to_query)
@@ -28,7 +28,8 @@ def dump_prometheus(config, prometheus_ip, prometheus_port):
     query = f"{{__name__=~\"{to_query}\"}}"
     print(query)
 
-    metrics = prometheus_connection.custom_query(query)
+    metrics = prometheus_connection.custom_query_range(query, start_time=start_time,
+                                                       end_time=finish_time, step="1s")
 
     with open("/wls/prometheus_data.json", "w") as out_file:
         json.dump(metrics, out_file)

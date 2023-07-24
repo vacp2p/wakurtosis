@@ -7,6 +7,7 @@ import time
 import tomllib
 import asyncio
 import os
+from datetime import datetime
 
 # Project Imports
 from src.utils import wls_logger
@@ -197,7 +198,11 @@ async def main():
     t1 = time.time()
     wls_logger.G_LOGGER.info(f'Got the signal to start: took {t1-t0} secs')
 
+    injection_start_time = datetime.now()
+
     msgs_dict = await start_traffic_injection_async(wls_config, random_emitters)
+
+    injection_finish_time = datetime.now()
 
     files.save_messages_to_json(msgs_dict)
 
@@ -206,7 +211,8 @@ async def main():
         os.remove('/wls/start.signal')
 
     if prometheus_port is not None:
-        prometheus.dump_prometheus(config, prometheus_ip, prometheus_port)
+        prometheus.dump_prometheus(config, prometheus_ip, prometheus_port, injection_start_time,
+                                   injection_finish_time)
 
 
 if __name__ == "__main__":
