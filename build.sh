@@ -53,3 +53,7 @@ cd ..
 #docker build -t gowaku .
 #cd ..
 #rm -rf go-waku
+
+git clone git@github.com:logos-co/nomos-node.git
+docker build -t nomos-node nomos-node
+rm -rf nomos-node

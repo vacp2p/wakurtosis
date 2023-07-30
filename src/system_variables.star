@@ -1,6 +1,7 @@
-# Waku Configuration
+# IMAGES
 NWAKU_IMAGE = "statusteam/nim-waku:nwaku-trace3"
 GOWAKU_IMAGE = "gowaku"
+NOMOS_IMAGE = "nomos-node"
 
 # If changing this, you'll likely need to change it as well in gennet
 ID_STR_SEPARATOR = "-"
@@ -37,10 +38,9 @@ NWAKU_SCRIPT_ENTRYPOINT = "run_waku_node.sh"
 GOWAKU_ENTRYPOINT = "/usr/bin/waku --rpc-address=0.0.0.0 --metrics-server-address=0.0.0.0"
 NOMOS_ENTRYPOINT = "/usr/bin/nomos-node"
 NOMOS_PORT_SHIFT_FLAG = "--ports-shift="
-NOMOS_CONTAINER_CONFIG_FILE_LOCATION = '/etc/nomos/config.yml'
+NOMOS_CONTAINER_CONFIG_FILE_LOCATION = '/etc/nomos/config.yaml'
 
 # Nomos Configuration
-NOMOS_IMAGE = "nomos"
 NOMOS_RPC_PORT_PROTOCOL = "TCP"
 NOMOS_RPC_PORT_NUMBER = 8080
 NOMOS_LIBP2P_PORT_PROTOCOL = "TCP"
@@ -48,6 +48,8 @@ NOMOS_LIBP2P_PORT_ID = "libp2p"
 NOMOS_LIBP2P_PORT = 3000
 NOMOS_NET_INFO_URL = "/network/info"
 NOMOS_NET_CONN_URL = "/network/conn"
+NOMOS_CARNOT_INFO = "/carnot/info"
+NOMOS_PROMETHEUS_PORT_NUMBER = 8080
 
 # Prometheus Configuration
 PROMETHEUS_IMAGE = "prom/prometheus:latest"
@@ -141,6 +143,7 @@ TEMPLATES_MODULE = "github.com/logos-co/wakurtosis/src/templates.star"
 WLS_MODULE = "github.com/logos-co/wakurtosis/src/wls.star"
 CALL_PROTOCOLS = "github.com/logos-co/wakurtosis/src/call_protocols.star"
 NOMOS_MODULE = "github.com/logos-co/wakurtosis/src/nomos.star"
+ASSERTIONS_MODULE = "github.com/logos-co/wakurtosis/src/assertions.star"
 
 
 TEST_ARGUMENTS_MODULE = "github.com/logos-co/wakurtosis/src/tests/test_arguments_parser.star"
