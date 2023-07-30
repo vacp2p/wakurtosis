@@ -563,7 +563,7 @@ def main(ctx: typer.Context,
     make_empty_dir(output_dir)
 
     # Generate file format specific data structs and write the files
-    if "nomos" in node_type_distribution.keys():
+    if node_type_distribution["nomos"] > 0:
         generate_and_write_files_nomos(ctx, G)
     else:
         generate_and_write_files(ctx, G)
