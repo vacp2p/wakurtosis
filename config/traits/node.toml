@@ -41,7 +41,7 @@ tcp-port=60000
 keep-alive=false
 max-connections=50
 
-
+# NOTE: Port-shift will be handled automatically by Kurtosis if using multinode approach.
 ports-shift=0
 #nat=any
 #ext-multiaddr=

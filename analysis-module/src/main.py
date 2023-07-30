@@ -8,7 +8,6 @@ from src import log_parser
 from src import analysis
 from src import analysis_logger
 from src import cproc
-from src import hproc
 from src import cadvisor
 from src import plotting
 from src import plotting_configurations

@@ -24,14 +24,16 @@ def run(plan, args):
     network_topology = json.decode(network_topology)
 
     # Set up nodes
-    nodes.instantiate_services(plan, network_topology, False)
+    nodes.instantiate_services(plan, network_topology, True, False)
 
     # Set up prometheus + grafana
     prometheus_service = prometheus.set_up_prometheus(plan, network_topology)
 
     grafana_service = grafana.set_up_grafana(plan, prometheus_service)
 
-    nodes.interconnect_nodes(plan, network_topology, interconnection_batch)
+    if kurtosis_config[vars.INTERCONNECT_NODES]:
+        nodes.interconnect_nodes(plan, network_topology, interconnection_batch)
 
     # Setup WLS & Start the Simulation
-    wls_service = wls.init(plan, network_topology, config_file)
+    wls_service = wls.init(plan, network_topology, config_file, prometheus_service)
+

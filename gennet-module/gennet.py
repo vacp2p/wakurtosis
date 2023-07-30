@@ -383,10 +383,10 @@ def generate_and_write_files(ctx: typer, G):
     for container, nodes in container2nodes.items():
         json_dump[CONTAINERS_JSON][container] = nodes
 
-    i, traits_dir = 0,  ctx.params["traits_dir"]
+    i, traits_dir = 0, ctx.params["traits_dir"]
     for node in G.nodes:
         # write the per node toml for the i^ith node of appropriate type
-        traits_list, i = traits_distribution[i].split(":"),  i+1
+        traits_list, i = traits_distribution[i].split(":"), i + 1
         node_type = nodeType(traits_list[0])
         write_toml(ctx.params["output_dir"], node, generate_toml(traits_dir, topics, traits_list))
         json_dump[NODES_JSON][node] = {}
@@ -395,13 +395,14 @@ def generate_and_write_files(ctx: typer, G):
             json_dump[NODES_JSON][node]["static_nodes"].append(edge[1])
         json_dump[NODES_JSON][node][SUBNET_PREFIX] = node2subnet[node]
         json_dump[NODES_JSON][node]["image"] = nodeTypeToDocker.get(node_type)
-            # the per node tomls will continue for now as they include topics
+        # the per node tomls will continue for now as they include topics
         json_dump[NODES_JSON][node]["node_config"] = f"{node}.toml"
-            # logs ought to continue as they need to be unique
+        # logs ought to continue as they need to be unique
         json_dump[NODES_JSON][node]["node_log"] = f"{node}.log"
         port_shift, cid = node2container[node]
         json_dump[NODES_JSON][node]["port_shift"] = port_shift
         json_dump[NODES_JSON][node]["container_id"] = cid
+
     write_json(ctx.params["output_dir"], json_dump)  # network wide json
 
 

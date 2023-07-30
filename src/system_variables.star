@@ -5,29 +5,35 @@ GOWAKU_IMAGE = "gowaku"
 # If changing this, you'll likely need to change it as well in gennet
 ID_STR_SEPARATOR = "-"
 
-RPC_PORT_ID = "rpc"
-
 NODE_CONFIG_FILE_LOCATION = "github.com/logos-co/wakurtosis/config/topology_generated/"
+RUN_SCRIPT_FILE = "github.com/logos-co/wakurtosis/bash-utils/run_waku_node.sh"
 CONFIG_FILE_LOCATION = "github.com/logos-co/wakurtosis/config/"
 CONTAINER_NODE_CONFIG_FILE_LOCATION = "/node/configuration_file/"
+CONTAINER_NODE_SCRIPT_RUN_LOCATION = "/opt/"
 GENERAL_ENTRYPOINT = ["/bin/sh", "-c"]
 CONFIG_FILE_STARLARK_PARAMETER = "config_file"
 
 # Config file keys
 KURTOSIS_KEY = "kurtosis"
 WLS_KEY = "wls"
+INTERCONNECT_NODES = "interconnect_nodes"
 INTERCONNECTION_BATCH_KEY = "interconnection_batch"
 
 # Waku Configuration
+WAKU_RPC_PORT_ID = "rpc"
 WAKU_RPC_PORT_PROTOCOL = "TCP"
 WAKU_RPC_PORT_NUMBER = 8545
 WAKU_LIBP2P_PORT_ID = "libp2p"
 WAKU_LIBP2P_PORT_PROTOCOL = "TCP"
 WAKU_LIBP2P_PORT = 60000
+WAKU_DISCV5_PORT_ID = "discv5"
+WAKU_DISCV5_PORT_NUMBER = 9000
+WAKU_DISCV5_PORT_PROTOCOL = "UDP"
 
 WAKUNODE_CONFIGURATION_FILE_FLAG = "--config-file="
 WAKUNODE_PORT_SHIFT_FLAG = "--ports-shift="
-NWAKU_ENTRYPOINT = "/usr/bin/wakunode --rpc-address=0.0.0.0 --metrics-server-address=0.0.0.0 --log-level=TRACE"
+# NWAKU_ENTRYPOINT = "/usr/bin/wakunode --rpc-address=0.0.0.0 --metrics-server-address=0.0.0.0 --log-level=TRACE"
+NWAKU_SCRIPT_ENTRYPOINT = "run_waku_node.sh"
 GOWAKU_ENTRYPOINT = "/usr/bin/waku --rpc-address=0.0.0.0 --metrics-server-address=0.0.0.0"
 NOMOS_ENTRYPOINT = "/usr/bin/nomos-node"
 NOMOS_PORT_SHIFT_FLAG = "--ports-shift="
@@ -76,6 +82,10 @@ CONTAINER_DATASOURCES_GRAFANA = "/etc/grafana/provisioning/datasources/"
 CONTAINER_DATASOURCES_FILE_NAME_GRAFANA = "datasources.yaml"
 
 # Gennet topology Keys
+GENNET_KEY = "gennet"
+GENNET_IMAGE = "gennet"
+GENNET_SERVICE_NAME = "gennet"
+GENNET_CONFIG_ARTIFACT_NAME = "gennet-config"
 GENNET_NODES_KEY = "nodes"
 GENNET_PORT_SHIFT_KEY = "port_shift"
 GENNET_ALL_CONTAINERS_KEY = "containers"
@@ -148,9 +158,3 @@ DEFAULT_TOPOLOGY_FILE = "network_data.json"
 TEST_FILES_LOCATION = "github.com/logos-co/wakurtosis/config/test_files/"
 DEFAULT_TOPOLOGY_FILE_DEFAULT_ARGUMENT_VALUE = "test_network_data.json"
 DEFAULT_CONFIG_FILE = "github.com/logos-co/wakurtosis/config/config.json"
-
-# Default Simulation Parameters
-SIMULATION_TIME = 300
-MESSAGE_RATE = 25
-MIN_PACKET_SIZE = 1
-MAX_PACKET_SIZE = 1024

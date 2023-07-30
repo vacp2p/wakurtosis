@@ -18,19 +18,16 @@ data/
 enclave.dump/
 wls-module/requirements.txt
 wls-module/__pycache__
-config/network_topology_auto/
-config/config.json
+config/topology_generated/*
 gennet-module/topology/
 gennet-module/network_data/
 gennet-module/traits
 kurtosis_log.txt
-config/network_topology/
-config/topology_generated/
-config/waku_config_files/
 kurtosisrun_log.txt
 summary.json
-wakurtosis_logs/
+wakurtosis_logs/*
 log_trace_test
+*/__pycache__/*
 
 # monitoring
 docker-ps.out

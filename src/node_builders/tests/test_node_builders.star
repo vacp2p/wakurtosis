@@ -11,7 +11,7 @@ def test_instantiate_services(plan):
                              vars.DEFAULT_TOPOLOGY_FILE_DEFAULT_ARGUMENT_VALUE)
     topology = json.decode(topology)
 
-    node_builders.instantiate_services(plan, topology, True)
+    node_builders.instantiate_services(plan, topology, False, True)
 
     for node_info in topology["nodes"].values():
         plan.assert(value="peer_id", assertion="IN", target_value=node_info.keys())
