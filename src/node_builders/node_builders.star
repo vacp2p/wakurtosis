@@ -54,6 +54,8 @@ def instantiate_services(plan, network_topology, discovery, testing):
 
     _add_service_info_to_topology(plan, all_services_information, network_topology, discovery)
 
+    return all_services_information
+
 
 def interconnect_nodes(plan, topology_information, interconnection_batch):
     # Interconnect them

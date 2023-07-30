@@ -143,6 +143,7 @@ TEMPLATES_MODULE = "github.com/logos-co/wakurtosis/src/templates.star"
 WLS_MODULE = "github.com/logos-co/wakurtosis/src/wls.star"
 CALL_PROTOCOLS = "github.com/logos-co/wakurtosis/src/call_protocols.star"
 NOMOS_MODULE = "github.com/logos-co/wakurtosis/src/nomos.star"
+ASSERTIONS_MODULE = "github.com/logos-co/wakurtosis/src/assertions.star"
 
 
 TEST_ARGUMENTS_MODULE = "github.com/logos-co/wakurtosis/src/tests/test_arguments_parser.star"
