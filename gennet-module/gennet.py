@@ -100,7 +100,12 @@ def draw_network(ctx, dirname, H):
     fig.set_figwidth(12)
     fig.set_figheight(10)
     n = len(H.nodes)
-    axes[0].set_title(f'The Generated Network: num-nodes = {n}')
+    e = len(H.edges)
+    s = 0
+    for i in H.nodes:
+        s += H.degree[i]
+    avg = e/n
+    axes[0].set_title(f'The Generated Network: num-nodes = {n}, avg degree= {avg}')
     nx.draw(H, ax=axes[0], pos=nx.kamada_kawai_layout(H), with_labels=True)
     degree_sequence = sorted((d for n, d in H.degree()), reverse=True)
     deg, cnt = *np.unique(degree_sequence, return_counts=True),
