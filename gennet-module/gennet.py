@@ -104,8 +104,8 @@ def draw_network(ctx, dirname, H):
     s = 0
     for i in H.nodes:
         s += H.degree[i]
-    avg = e/n
-    axes[0].set_title(f'The Generated Network: num-nodes = {n}, avg degree= {avg}')
+    avg = 2 * e/n
+    axes[0].set_title(f'The Generated Network: num-nodes = {n}, avg degree= {avg:.2f}')
     nx.draw(H, ax=axes[0], pos=nx.kamada_kawai_layout(H), with_labels=True)
     degree_sequence = sorted((d for n, d in H.degree()), reverse=True)
     deg, cnt = *np.unique(degree_sequence, return_counts=True),
@@ -116,7 +116,7 @@ def draw_network(ctx, dirname, H):
     axes[1].set_title(f'Normalised Degree Histogram: fanout = {ctx.params["fanout"]}')
     axes[1].set_xlabel("Degree")
     axes[1].set_ylabel("Fraction of Nodes")
-    plt.savefig(f'{os.path.splitext(fname)[0]}.pdf', format="pdf", bbox_inches="tight")
+    plt.savefig(f'{os.path.splitext(fname)[0]}.png', format="png", bbox_inches="tight")
     plt.show()
 
 
