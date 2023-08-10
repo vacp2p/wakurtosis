@@ -53,10 +53,13 @@ def plot_network(G, fanout):
 
 
 def main(ctx: typer.Context,
-         network_data_file: Path = typer.Option("a", exists=True, file_okay=True,
-             dir_okay=False, readable=True, resolve_path=True, help="Set network file")):
+         network_data_file: Path = typer.Option("observed_network.json",
+             exists=True, file_okay=True, dir_okay=False, readable=True,
+             help="Set network file"),
+         fanout : int = typer.Option(6,
+             help="Set the network fanout")):
     G = read_network(network_data_file)
-    plot_network(G, -1)
+    plot_network(G, fanout)
 
 
 
