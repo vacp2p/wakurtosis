@@ -69,7 +69,7 @@ def init(plan, netdata, config_file):
         },
         cmd=collectnet_cmd
     )
-    print(add_service_config)
+    plan.print(add_service_config)
     collectnet_service = plan.add_service(
         service_name=vars.COLLECTNET_SERVICE_NAME,
         config=add_service_config
