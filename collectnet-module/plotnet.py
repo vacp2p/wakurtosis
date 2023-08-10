@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sys
 
+
 def read_network(json_fname, ith=0):
     with open(json_fname) as f:
         json_graphs, G = json.load(f), nx.empty_graph()
@@ -18,6 +19,7 @@ def read_network(json_fname, ith=0):
             for dst  in js_graph[src]:
                 G.add_edge(src, dst)
     return G
+
 
 def plot_network(G, fanout):
         fig, axes = plt.subplots(1, 2, layout='constrained')
@@ -51,7 +53,6 @@ def plot_network(G, fanout):
         plt.show()
 
 
-
 def main(ctx: typer.Context,
          network_data_file: Path = typer.Option("observed_network.json",
              exists=True, file_okay=True, dir_okay=False, readable=True,
@@ -60,7 +61,6 @@ def main(ctx: typer.Context,
              help="Set the network fanout")):
     G = read_network(network_data_file)
     plot_network(G, fanout)
-
 
 
 if __name__ == "__main__":
