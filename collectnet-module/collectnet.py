@@ -60,8 +60,11 @@ async def send_get_peers_to_node_async(node_address):
     return response_obj, elapsed
 '''
 
+
+node2addr, peerid2node, collector, count, debugfh = {}, {}, {}, 0, None
 # the event handler for peer collection
-async def collect_peers(node2addr, peerid2node, collect_count):
+async def collect_peers():
+    #global node2addr, peerid2node, collector, count
     ctime = time.time()
     tasks, collector[ctime]  = [], {}
     for name, addr in node2addr.items(): # yield between each iterations
@@ -80,45 +83,56 @@ async def collect_peers(node2addr, peerid2node, collect_count):
                 relay_peers.append(peerid2node[peerid])
         collector[ctime][name] = relay_peers
         i += 1
+    if debugfh != None:
+        debugfh.write(f'\t{ctime} : {{{collected_replies}}},\n')
 
 
 # pre-compute the addresses
 def precompute_node_maps(network_data):
-    node2addr, peerid2node = {}, {}
+    #global  node2addr, peerid2node
     for node, info in network_data["nodes"].items():
         node2addr[node] = f"http://{info['ip_address']}:{info['ports']['rpc-' + node][0]}/"
+       # if network_data["nodes"][node]["peer_id"] in peerid2node:
         peerid2node[network_data["nodes"][node]["peer_id"]] = node
     log.debug(f"get_peers: {node2addr}")
-    print(f"get_peers: {node2addr}, {peerid2node}")
+    #print(f"get_peers: {node2addr}, {peerid2node}")
     return node2addr, peerid2node
 
 
-async def start_topology_collector_async(wls_config, network_data, sampling_interval):
-    """ Start simulation """
+async def start_topology_collector_async(wls_config,
+        network_data, sampling_interval, output_file, debug):
+    #global node2addr, peerid2node, collector, count, debugfh
     start_time = time.time()
     log.info(f"Starting topology collection")
-    node2addr, peerid2node = precompute_node_maps(network_data)
-    collect_count = 0
+    precompute_node_maps(network_data)
+    count, collector = 0, {}
+    if debug:
+        global debugfh
+        debugfh = open(f'debug-{os.path.basename(output_file)}', "w")
+        debugfh.write("{\n")
     while True:
-        await collect_peers(node2addr, peerid2node, collect_count)
-        collect_count +=1
-        print(f'Next topology collection {collect_count} will be done in {sampling_interval * 1000.0} ms')
-        log.info(f'Next topology collection {collect_count} will be done in {sampling_interval * 1000.0} ms')
+        await collect_peers()
+        count +=1
+        print(f'Next topology collection {count} will be done in {sampling_interval} secs')
+        log.debug(f'Next topology collection {count} will be done in {sampling_interval} secs')
+        # Wait for all the tasks to complete
         await asyncio.sleep(sampling_interval)
-    # Wait for all the tasks to complete
-    return collector
+    #return collector
 
 
-def main(config_file: Path = typer.Option("config.json", exists=True, file_okay=True,
-                 readable=True, resolve_path=True,
+def main(ctx: typer.Context,
+        config_file: Path = typer.Option("config.json",
+                exists=True, file_okay=True, readable=True,
                 help="Set the config file"),
         network_data_file: Path = typer.Option("topology_generated/network_data.json",
-                exists=True, file_okay=True, readable=True, resolve_path=True,
+                exists=True, file_okay=True, readable=True,
                 help="Set the network data file"),
         output_file: Path = typer.Option("observed_network.json", exists=False, resolve_path=True,
                 help="Set the output file"),
         sampling_interval: int = typer.Option(1,
-                help="Set the sampling interval")
+                help="Set the sampling interval"),
+        debug: int = typer.Option(True,
+                help="Set debug")
         ):
 
     config = load_json(config_file)
@@ -135,16 +149,18 @@ def main(config_file: Path = typer.Option("config.json", exists=True, file_okay=
 
     loop = asyncio.get_event_loop()
     task = loop.create_task(
-            start_topology_collector_async(wls_config, network_data, sampling_interval))
+            start_topology_collector_async(
+                wls_config, network_data, sampling_interval, output_file, debug))
     loop.call_later(wls_config['simulation_time'], task.cancel)
-
-    #topology = start_topology_collector_async(wls_config, network_data)
 
     try:
         loop.run_until_complete(task)
     except asyncio.CancelledError:
         pass
+
     save_json(output_file, collector)
+    if debugfh != None:
+        debugfh.write("\n}")
 
 if __name__ == "__main__":
     typer.run(main)
