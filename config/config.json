@@ -6,8 +6,9 @@
     "enclave_name": "wakurtosis",
     "topology_path": "./config/topology_generated/",
     "jobs": 4,
-    "interconnect_nodes": true,
+    "interconnect_nodes": false,
     "interconnection_batch": 10,
+    "collectnet": true,
     "monitoring": false,
     "injection": false,
     "testing": true,
@@ -29,9 +30,9 @@
     "num_subnets": 1,
     "container_size": "1",
     "node_type_distribution": {
-      "nwaku:relay:rpc:metrics:discv5": 0,
+      "nwaku:relay:rpc:metrics:discv5": 100,
       "gowaku:rln:dnsdisc:dns": 0,
-      "nomos": 100
+      "nomos": 0
     },
     "network_type": "newmanwattsstrogatz",
     "output_dir": "network_data",
