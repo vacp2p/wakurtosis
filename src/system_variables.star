@@ -117,9 +117,25 @@ WLS_CONFIG_ARTIFACT_NAME = "config_file"
 WLS_TOPOLOGY_ARTIFACT_NAME = "wls_topology"
 WLS_TOMLS_ARTIFACT_NAME = "tomls_artifact"
 
-
 CONTAINER_WLS_CONFIGURATION_FILE_NAME = "config.json"
 CONTAINER_TOPOLOGY_FILE_NAME_WLS = "network_data.json"
+
+#collectnet configuration
+COLLECTNET_IMAGE = "collectnet:latest"
+COLLECTNET_SERVICE_NAME = "CollectNet"
+COLLECTNET_CONFIG_PATH = "/collectnet/config/"
+COLLECTNET_TARGETS_PATH = "/collectnet/targets/"
+COLLECTNET_TOPOLOGY_PATH = "/collectnet/network_topology/"
+COLLECTNET_CONFIG_FILE_FLAG = "--config_file"
+COLLECTNET_NETDATA_FILE_FLAG = "--network-data-file"
+COLLECTNET_SAMPLING_INTERVAL_FLAG = "--sampling-interval"
+COLLECTNET_DEBUG_FLAG = "--no-debug"
+COLLECTNET_CONFIG_ARTIFACT_NAME = "config_file"
+COLLECTNET_NETDATA_ARTIFACT_NAME = "network_data"
+
+
+CONTAINER_COLLECTNET_CONFIG_FILE_NAME = "config.json"
+CONTAINER_COLLECTNET_NETDATA_FILE_NAME = "network_data.json"
 
 # Waku RPC methods
 POST_RELAY_MESSAGE_METHOD = "post_waku_v2_relay_v1_message"
