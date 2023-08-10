@@ -157,6 +157,7 @@ ARGUMENT_PARSER_MODULE = "github.com/logos-co/wakurtosis/src/arguments_parser.st
 FILE_HELPERS_MODULE = "github.com/logos-co/wakurtosis/src/file_helpers.star"
 TEMPLATES_MODULE = "github.com/logos-co/wakurtosis/src/templates.star"
 WLS_MODULE = "github.com/logos-co/wakurtosis/src/wls.star"
+COLLECTNET_MODULE = "github.com/logos-co/wakurtosis/src/collectnet.star"
 CALL_PROTOCOLS = "github.com/logos-co/wakurtosis/src/call_protocols.star"
 NOMOS_MODULE = "github.com/logos-co/wakurtosis/src/nomos.star"
 ASSERTIONS_MODULE = "github.com/logos-co/wakurtosis/src/assertions.star"
