@@ -80,6 +80,10 @@ async def collect_peers():
         for res in results[0]["result"]:
             if res["protocol"] == "/vac/waku/relay/2.0.0" and res["connected"]:
                 peerid = res["multiaddr"].split("/")[6]
+                if peerid not in peerid2node:
+                    print(f'adding discv5 server ({peerid}) as peer')
+                    peerid2node[peerid] = "discv5-server"
+                    continue
                 relay_peers.append(peerid2node[peerid])
         collector[ctime][name] = relay_peers
         i += 1
@@ -95,7 +99,7 @@ def precompute_node_maps(network_data):
        # if network_data["nodes"][node]["peer_id"] in peerid2node:
         peerid2node[network_data["nodes"][node]["peer_id"]] = node
     log.debug(f"get_peers: {node2addr}")
-    #print(f"get_peers: {node2addr}, {peerid2node}")
+    print(f"get_peers: {node2addr}, {peerid2node}")
     return node2addr, peerid2node
 
 
@@ -129,7 +133,7 @@ def main(ctx: typer.Context,
                 help="Set the network data file"),
         output_file: Path = typer.Option("observed_network.json", exists=False, resolve_path=True,
                 help="Set the output file"),
-        sampling_interval: int = typer.Option(1,
+        sampling_interval: int = typer.Option(5,
                 help="Set the sampling interval"),
         debug: int = typer.Option(True,
                 help="Set debug")
