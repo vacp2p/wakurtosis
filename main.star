@@ -32,14 +32,14 @@ def run(plan, args):
     if kurtosis_config["monitoring"]:
         prometheus_service = prometheus.set_up_prometheus(plan, network_topology)
         grafana_service = grafana.set_up_grafana(plan, prometheus_service)
+        if kurtosis_config["collectnet"]:
+          collectnet_service = collectnet.init(plan, network_topology, config_file, prometheus_service)
 
     # Interconnect nodes if needed
     if kurtosis_config[vars.INTERCONNECT_NODES]:
         nodes.interconnect_nodes(plan, network_topology, interconnection_batch)
 
     # Start topology collection if requested
-    if kurtosis_config["collectnet"]:
-        collectnet_service = collectnet.init(plan, network_topology, config_file, prometheus_service)
     # Setup WLS & Start the Simulation
     if kurtosis_config["injection"]:
         wls_service = wls.init(plan, network_topology, config_file, prometheus_service)
