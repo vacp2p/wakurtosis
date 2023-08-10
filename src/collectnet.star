@@ -13,12 +13,12 @@ def upload_config(plan, config_file, artifact_name):
 
     return config_artifact
 
-def create_new_topology_information(plan, network_topology, network_artifact_name):
+def create_new_netdata(plan, netdata, network_artifact_name):
     template = """
         {{.information}}
     """
     info = {}
-    info["information"] = json.encode(network_topology)
+    info["information"] = json.encode(netdata)
 
     artifact_id = plan.render_templates(
         config={
@@ -44,7 +44,7 @@ def create_cmd(config_file):
 
     return cmd
 
-def init(plan, network_topology, config_file):
+def init(plan, netdata, config_file):
     # Generate simulation config
     config_artifact = upload_config(plan, config_file, vars.COLLECTNET_CONFIG_ARTIFACT_NAME)
 
@@ -53,8 +53,8 @@ def init(plan, network_topology, config_file):
         #name = vars.COLLECTNET_TOMLS_ARTIFACT_NAME,
     )
 
-    # Get complete network topology information
-    collectnet_netdata = create_new_topology_information(plan, network_topology,
+    # Get the augmented network data
+    collectnet_netdata = create_new_netdata(plan, netdata,
                                                    vars.COLLECTNET_NETDATA_ARTIFACT_NAME)
 
     collectnet_cmd = create_cmd(config_file)
