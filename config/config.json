@@ -9,9 +9,9 @@
     "interconnect_nodes": false,
     "interconnection_batch": 10,
     "collectnet": true,
-    "monitoring": false,
+    "monitoring": true,
     "injection": false,
-    "testing": true,
+    "testing": false,
     "assertions": {
       "nomos": {
         "waiting": 60,
@@ -31,7 +31,8 @@
     "container_size": "1",
     "node_type_distribution": {
       "nwaku:relay:rpc:metrics:discv5": 100,
-      "gowaku:rln:dnsdisc:dns": 0
+      "gowaku:rln:dnsdisc:dns": 0,
+      "nomos": 0
     },
     "network_type": "newmanwattsstrogatz",
     "output_dir": "network_data",
