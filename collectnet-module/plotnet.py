@@ -58,8 +58,10 @@ def main(ctx: typer.Context,
              exists=True, file_okay=True, dir_okay=False, readable=True,
              help="Set network file"),
          fanout : int = typer.Option(6,
+             help="Set the network fanout"),
+         ith : int = typer.Option(0,
              help="Set the network fanout")):
-    G = read_network(network_data_file)
+    G = read_network(network_data_file, ith)
     plot_network(G, fanout)
 
 
