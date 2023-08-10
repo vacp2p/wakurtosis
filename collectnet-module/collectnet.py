@@ -13,8 +13,6 @@ import logging as log
 from pathlib import Path
 import aiohttp
 
-collector = {}
-
 def load_json(fname):
     with open(fname, 'r') as f:
         dic = json.load(f)
