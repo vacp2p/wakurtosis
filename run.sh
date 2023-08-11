@@ -145,8 +145,9 @@ wls_suuid=$(grep $wls_service_name $kurtosis_inspect | awk '{print $1}')
 wls_cid="$wls_sname--$wls_suuid"
 #echo "The WLS_CID = $wls_cid"
 collnet_sname="CollectNet"
-collnet_suuid==$(grep $collnet_sname $kurtosis_inspect | awk '{print $1}')
+collnet_suuid=$(grep $collnet_sname $kurtosis_inspect | awk '{print $1}')
 collnet_cid="$collnet_sname--$collnet_suuid"
+echo "CollectNet is at $collnet_cid"
 ##################### END
 
 
