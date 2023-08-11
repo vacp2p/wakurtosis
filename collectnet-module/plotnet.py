@@ -11,7 +11,8 @@ def read_network(json_fname, ith=0):
     with open(json_fname) as f:
         json_graphs, G = json.load(f), nx.empty_graph()
         try:
-            js_graph = json_graphs[sorted(list(json_graphs))[ith]]
+            #js_graph = json_graphs[sorted(list(json_graphs))[ith]]
+            js_graph = json_graphs[list(json_graphs)[ith]]
         except IndexError:
             print(f'read_network: not enough keys {ith}')
             sys.exit()
@@ -31,12 +32,13 @@ def plot_network(G, fanout):
             s += G.degree[i]
         avg = 2 * e/n
 
+        format="pdf"
         if fanout == -1:
             tag = 'discv5'
-            ofname = 'observed-network-discv5.png'
+            ofname = f'observed-network-discv5.{format}'
         else:
             tag = f'fanout={fanout}'
-            ofname = f'observed-network-{fanout}fanout.png'
+            ofname = f'observed-network-{fanout}fanout.{format}'
 
         axes[0].set_title(f'The Generated Network: num-nodes = {n}, avg degree = {avg:.2f}')
         nx.draw(G, ax=axes[0], pos=nx.kamada_kawai_layout(G), with_labels=True)
@@ -49,7 +51,7 @@ def plot_network(G, fanout):
         axes[1].set_title(f'Normalised Degree Histogram: {tag}')
         axes[1].set_xlabel("Degree")
         axes[1].set_ylabel("Fraction of Nodes")
-        plt.savefig(f'{ofname}', format="png", bbox_inches="tight")
+        plt.savefig(f'{ofname}', format=format, bbox_inches="tight")
         plt.show()
 
 
