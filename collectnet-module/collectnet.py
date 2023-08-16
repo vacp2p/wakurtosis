@@ -49,8 +49,7 @@ async def send_get_peers_async(rpc_cmd, node_address):
 
 
 #globals, to avoid repeated parameter push/pop in fast path
-node2addr, peerid2node, collector, count, debugfh = {}, {}, {}, 0, None
-
+node2addr, peerid2node, collector, count, debugfh, proto_id = {}, {}, {}, 0, None, ""
 
 # the event handler for peer collection
 async def collect_peers():
@@ -68,9 +67,10 @@ async def collect_peers():
     for name, addr in node2addr.items():
         results, relay_peers = collected_replies[i], []
         for res in results[0]["result"]:
-            if res["protocol"] == "/vac/waku/relay/2.0.0" and res["connected"]:
+            if proto_id == res["protocol"] and res["connected"]: # equality vs in?
                 peerid = res["multiaddr"].split("/")[6]
                 if peerid not in peerid2node:
+                    log.info(f'adding discv5 server ({peerid}) as peer')
                     print(f'adding discv5 server ({peerid}) as peer')
                     peerid2node[peerid] = "discv5-server"
                     continue
@@ -135,7 +135,17 @@ def main(ctx: typer.Context,
     # Set RPNG seed from config
     random.seed(config['general']['prng_seed'])
 
-    log.info("Starting topology generator")
+    if "collectnet" not in config["kurtosis"]:
+        print("collectnet is not requested, baling out")
+        sys.exit()
+
+    collectnet = config["kurtosis"]["collectnet"]
+    proto = collectnet["protocol"] if "protocol" in collectnet else "relay"
+    version = collectnet["version"] if "version" in collectnet else "2.0.0"
+    sampling_interval = collectnet["sampling_interval"] if "sampling_interval" in collectnet else samlping_interval  # config.json has priority
+    proto_id = f'/vac/waku/{proto}/{version}'
+    log.info(f'Starting peer collection for {proto_id}')
+    print(f'Starting peer collection for {proto_id}')
 
 
     # create the event loop
