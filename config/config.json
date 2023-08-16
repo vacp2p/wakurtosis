@@ -6,11 +6,15 @@
     "enclave_name": "wakurtosis",
     "topology_path": "./config/topology_generated/",
     "jobs": 4,
-    "interconnect_nodes": false,
+    "interconnect_nodes": true,
     "interconnection_batch": 10,
-    "collectnet": true,
+    "collectnet": {
+      "protocol" : "relay",
+      "version" : "2.0.0",
+      "sampling_interval" : 1
+    },
     "monitoring": true,
-    "injection": false,
+    "injection": true,
     "testing": false,
     "assertions": {
       "nomos": {
@@ -23,14 +27,14 @@
     }
   },
   "gennet": {
-    "num_nodes": 5,
-    "fanout": 3,
+    "num_nodes": 100,
+    "fanout": 20,
     "num_topics": 1,
     "num_partitions": 1,
     "num_subnets": 1,
     "container_size": "1",
     "node_type_distribution": {
-      "nwaku:relay:rpc:metrics:discv5": 100,
+      "nwaku:relay:rpc:metrics": 100,
       "gowaku:rln:dnsdisc:dns": 0,
       "nomos": 0
     },
@@ -40,7 +44,7 @@
   },
   "wls": {
     "debug_level": "DEBUG",
-    "simulation_time": 20,
+    "simulation_time": 60,
     "message_rate": 10,
     "min_packet_size": 2,
     "max_packet_size": 1024,

@@ -24,6 +24,7 @@ def save_json(fname, dic):
         f.write(json.dumps(dic, indent=4))
 
 
+# create 
 def _create_get_peers_rpc(node_address):
     data = {
         'jsonrpc': '2.0',
@@ -31,7 +32,6 @@ def _create_get_peers_rpc(node_address):
         'id': 1,
         'params': []
     }
-    #wls_logger.G_LOGGER.debug(f"Waku RPC: {data['method']} from {node_address}")
     return data
 
 
@@ -44,22 +44,14 @@ async def send_get_peers_async(rpc_cmd, node_address):
                 headers={'content-type': 'application/json'}) as res:
             elapsed = time.time() - start
             response = await res.json(content_type='text/html') # yield when parsing
-            #wls_logger.G_LOGGER.debug(f"get_peers : {node_address}: {response} [{start}:{elapsed}]")
             #print(response, elapsed)
             return response, elapsed
 
-'''
-# create the buffer, start the call
-async def send_get_peers_to_node_async(node_address):
-    # do NOT lift : need fresh rpc buffer for correct operation!
-    data = _create_get_peers_rpc(node_address)  # get a new buffer every time: do NOT reuse!
-    response_obj, elapsed = await _send_get_peers_async(data, node_address) # yield when waiting
-    #print(response_obj, elapsed)
-    return response_obj, elapsed
-'''
 
-
+#globals, to avoid repeated parameter push/pop in fast path
 node2addr, peerid2node, collector, count, debugfh = {}, {}, {}, 0, None
+
+
 # the event handler for peer collection
 async def collect_peers():
     #global node2addr, peerid2node, collector, count
@@ -101,8 +93,8 @@ def precompute_node_maps(network_data):
     return node2addr, peerid2node
 
 
-async def start_topology_collector_async(wls_config,
-        network_data, sampling_interval, output_file, debug):
+# the actual, fastpath collection callback
+async def start_topology_collector_async(network_data, sampling_interval, output_file, debug):
     #global node2addr, peerid2node, collector, count, debugfh
     start_time = time.time()
     log.info(f"Starting topology collection")
@@ -140,20 +132,21 @@ def main(ctx: typer.Context,
     config = load_json(config_file)
     network_data = load_json(network_data_file)
 
-    # Set loglevel from config
-    wls_config = config['wls']
-
     # Set RPNG seed from config
     random.seed(config['general']['prng_seed'])
 
     log.info("Starting topology generator")
 
 
+    # create the event loop
     loop = asyncio.get_event_loop()
+
+    # register the callback that gets called periodically
     task = loop.create_task(
-            start_topology_collector_async(
-                wls_config, network_data, sampling_interval, output_file, debug))
-    loop.call_later(wls_config['simulation_time'], task.cancel)
+            start_topology_collector_async(network_data, sampling_interval, output_file, debug))
+
+    # the collection callback runs just as long as the simulation
+    loop.call_later(config['wls']['simulation_time'], task.cancel)
 
     try:
         loop.run_until_complete(task)
