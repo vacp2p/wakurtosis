@@ -38,7 +38,7 @@ def run(plan, args):
         nodes.interconnect_nodes(plan, network_topology, interconnection_batch)
 
     # Start topology collection if requested
-    if kurtosis_config["collectnet"]:
+    if "collectnet" in kurtosis_config:
       collectnet_service = collectnet.init(plan, network_topology, config_file)
 
     # Setup WLS & Start the Simulation
