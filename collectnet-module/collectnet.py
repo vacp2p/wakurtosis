@@ -12,6 +12,7 @@ import typer
 import logging as log
 from pathlib import Path
 import aiohttp
+from collections import defaultdict
 
 def load_json(fname):
     with open(fname, 'r') as f:
@@ -44,35 +45,31 @@ async def send_get_peers_async(rpc_cmd, node_address):
                 headers={'content-type': 'application/json'}) as res:
             elapsed = time.time() - start
             response = await res.json(content_type='text/html') # yield when parsing
-            #print(response, elapsed)
             return response, elapsed
 
 
 #globals, to avoid repeated parameter push/pop in fast path
-node2addr, peerid2node, collector, debugfh, proto_id = {}, {}, {}, None, None
+nodeid2addr, peerid2nodeid, collector, protos, debugfh = {}, {}, {}, {}, None
 
 # the event handler for peer collection
 async def collect_peers():
-    #global node2addr, peerid2node, collector, count
     ctime = time.time()
     tasks, collector[ctime]  = [], {}
-    for name, addr in node2addr.items(): # yield between each iterations
+    for node_name, addr in nodeid2addr.items(): # yield between each iterations
         rpc_cmd = _create_get_peers_rpc(addr)  # get a new buffer every time: do NOT reuse!
         task = asyncio.create_task(send_get_peers_async(rpc_cmd, addr))
         tasks.append(task)
     collected_replies, i = await asyncio.gather(*tasks), 0
-    for name, addr in node2addr.items():
-        results, relay_peers = collected_replies[i], []
+    for node_id, addr in nodeid2addr.items():
+        results, relay_peers = collected_replies[i], defaultdict(list)
         for res in results[0]["result"]:
-            if proto_id == res["protocol"] and res["connected"]: # equality vs in?
+            if res["protocol"] in protos and res["connected"]: # equality vs in?
                 peerid = res["multiaddr"].split("/")[6]
-                if peerid not in peerid2node:
-                    log.info(f'adding discv5 server ({peerid}) as peer')
-                    print(f'adding discv5 server ({peerid}) as peer')
-                    peerid2node[peerid] = "discv5-server"
-                    continue
-                relay_peers.append(peerid2node[peerid])
-        collector[ctime][name] = relay_peers
+                if peerid not in peerid2nodeid:
+                    log.info(f'adding discv5 server ({peerid}) as a peer (discv5-server-0)')
+                    peerid2nodeid[peerid] = "discv5-server-0"
+                relay_peers[res["protocol"]].append(peerid2nodeid[peerid])
+        collector[ctime][node_id] = relay_peers
         i += 1
     if debugfh != None:
         debugfh.write(f'\t{ctime} : {{{collected_replies}}},\n')
@@ -80,19 +77,16 @@ async def collect_peers():
 
 # pre-compute the addresses
 def precompute_node_maps(network_data):
-    #global  node2addr, peerid2node
     for node, info in network_data["nodes"].items():
-        node2addr[node] = f"http://{info['ip_address']}:{info['ports']['rpc-' + node][0]}/"
+        nodeid2addr[node] = f"http://{info['ip_address']}:{info['ports']['rpc-' + node][0]}/"
        # if network_data["nodes"][node]["peer_id"] in peerid2node:
-        peerid2node[network_data["nodes"][node]["peer_id"]] = node
-    log.debug(f"get_peers: {node2addr}")
-    print(f"get_peers: {node2addr}, {peerid2node}")
-    return node2addr, peerid2node
+        peerid2nodeid[network_data["nodes"][node]["peer_id"]] = node
+    log.debug(f"get_peers: {nodeid2addr}, {peerid2nodeid}")
+    return nodeid2addr, peerid2nodeid
 
 
 # the actual, fastpath collection callback
 async def start_topology_collector_async(network_data, sampling_interval, output_file, debug):
-    #global node2addr, peerid2node, collector, count, debugfh
     start_time, count = time.time(), 0
     log.info(f"Starting topology collection")
     precompute_node_maps(network_data)
@@ -103,8 +97,7 @@ async def start_topology_collector_async(network_data, sampling_interval, output
     while True:
         await collect_peers()
         count +=1
-        print(f'Next topology collection {count} will be done in {sampling_interval} secs')
-        log.debug(f'Next topology collection {count} will be done in {sampling_interval} secs')
+        log.info(f'Next topology collection {count} will be done in {sampling_interval} secs')
         # Wait for all the tasks to complete
         await asyncio.sleep(sampling_interval)
     #return collector
@@ -128,22 +121,22 @@ def main(ctx: typer.Context,
     config = load_json(config_file)
     network_data = load_json(network_data_file)
 
+    log.basicConfig(level=log.INFO)
+
     # Set RPNG seed from config
     random.seed(config['general']['prng_seed'])
 
     if "collectnet" not in config["kurtosis"]:
-        print("collectnet is not requested, baling out")
+        log.error("collectnet is not requested, yet launched. Bailing out")
         sys.exit()
 
     collectnet = config["kurtosis"]["collectnet"]
-    proto = collectnet["protocol"] if "protocol" in collectnet else "relay"
-    version = collectnet["version"] if "version" in collectnet else "2.0.0"
+    protocols = collectnet["protocols"] if "protocols" in collectnet else {"relay":"2.0.0"}
     sampling_interval = collectnet["sampling_interval"] if "sampling_interval" in collectnet else samlping_interval  # config.json has priority
     debug = collectnet["debug"] if "debug" in collectnet else False  # config.json has priority
-    global proto_id
-    proto_id = f'/vac/waku/{proto}/{version}'
-    log.info(f'Starting peer collection for {proto_id}')
-    print(f'Starting peer collection for {proto_id}, with debug={debug}')
+    for name, version in protocols.items():
+        protos[f'/vac/waku/{name}/{version}'] = True
+    log.info(f'Starting peer collection for {protos}, with debug={debug}')
 
 
     # create the event loop
