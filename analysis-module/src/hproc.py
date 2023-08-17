@@ -3,7 +3,6 @@ import sys
 import os
 import stat
 import math
-from pathlib import Path
 import time
 import json
 import networkx as nx
@@ -12,8 +11,11 @@ import logging as log
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_pdf import PdfPages
+
+from pathlib import Path
 from sklearn.cluster import KMeans
+from collections import defaultdict
+from matplotlib.backends.backend_pdf import PdfPages
 
 from src import vars
 from src import topology
@@ -67,13 +69,20 @@ class Plots(metaclass=Singleton):
     def __init__(self, log_dir, oprefix, jf, to_plot, cfile, divide):
         self.log_dir, self.oprefix = log_dir, oprefix
         self.df, self.n, self.keys, self.cols = pd.DataFrame(), 0, [], []
-        self.col2title, self.col2units, self.key2nodes = {}, {}, {}
+        self.col2title, self.col2units, self.key2nodes = {}, {}, defaultdict(list)
         self.msg_settling_times, self.msg_injection_times = {}, {}
         self.grp2idx, self.idx2grp = {}, {}
         self.fig, self.axes = "", ""
         self.json_fname, self.G = jf, nx.empty_graph()
         self.to_plot, self.to_compare = to_plot, []
         self.run_summary, self.cfile, self.divide, self.container_size = "", cfile, divide, 1.0
+
+        # List here the names of the (non-network) containers we track, but want to 
+        # omit for the stats/plots : e.g., discv5
+        # Workaround as : 0) there is no way to negate a condition via docker --filter;
+        #                 1) all container names are dynamic, thanks to kurtosis &
+        #                 2) they all have the same image as ancestor
+        self.names_to_remove = ["bootstrap_node"]
 
     # waku log processing
     def compute_msg_settling_times(self):
@@ -116,6 +125,13 @@ class Plots(metaclass=Singleton):
     # set the fields that go into the comparison panel
     def set_compare(self, lst):
         self.to_compare = lst
+
+    # remove containers that are not part of the network : discv5/dns nodes etc
+    def remove_extraneous_names(self):
+        for name_to_remove in self.names_to_remove:
+            log.info(f'removing all records for ContainerName has {name_to_remove}')
+            #self.df = self.df[self.df.ContainerName != name_to_remove]
+            self.df = self.df[~self.df.ContainerName.str.contains(name_to_remove)]
 
     # extract the maximal complete sample set
     def remove_incomplete_samples(self, grp, err=''):
@@ -247,7 +263,8 @@ class Plots(metaclass=Singleton):
                 larray = line.split()
                 if "containers_" in larray[1]:
                     key = larray[1]
-                    self.key2nodes[key] = [larray[2].split("libp2p-")[1].replace(':', '')]
+                    if "libp2p-" in  larray[2]:
+                        self.key2nodes[key].append(larray[2].split("libp2p-")[1].replace(':', ''))
                 elif "libp2p-node" in larray[0]:
                     self.key2nodes[key].append(larray[0].split("libp2p-")[1].replace(':', ''))
 
@@ -427,6 +444,7 @@ class DStats(Plots, metaclass=Singleton):
     def post_process(self):
         for name in ["ContainerID", "ContainerName"]:
             self.df[name] = self.df[name].map(lambda x: x.strip())
+        self.remove_extraneous_names()
         h2b, n = Human2BytesConverter(), len(self.keys)
         for percent in ["CPUPerc", "MemPerc"]:
             self.df[percent] = self.df[percent].str.replace('%','').astype(float)
@@ -439,7 +457,7 @@ class DStats(Plots, metaclass=Singleton):
             self.df[size] = self.df[size].map(lambda x:h2b.convert(x.strip())/(1024*1024))
         self.df['Key'] = self.df['ContainerName'].map(lambda x: x.split("--")[0])
         self.build_key2nodes()
-        self.df['NodeName'] = self.df['Key'].map(lambda x: self.key2nodes[x][0])
+        self.df['NodeName'] = self.df['Key'].map(lambda x: ':'.join(self.key2nodes[x]))
         self.set_keys()
 
     # build df from csv
@@ -517,6 +535,7 @@ class HostProc(Plots, metaclass=Singleton):
                     #'VETH',  'InOctets', 'OutOctets',
                     'BlockR', 'BlockW',
                     'CPUPerc'])
+        self.remove_extraneous_names()
         self.post_process()
         self.remove_incomplete_samples(grp='Key')
         self.df.to_csv(f'{self.oprefix}-cleaned.csv', sep='/')
