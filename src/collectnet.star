@@ -41,8 +41,8 @@ def create_cmd(config_file):
     cmd.append(vars.COLLECTNET_CONFIG_PATH + config_file_name)
     cmd.append(vars.COLLECTNET_NETDATA_FILE_FLAG)
     cmd.append(vars.COLLECTNET_NETDATA_PATH + vars.CONTAINER_COLLECTNET_NETDATA_FILE_NAME)
-    cmd.append(vars.COLLECTNET_SAMPLING_INTERVAL_FLAG)
-    cmd.append(" 1 ")
+   # cmd.append(vars.COLLECTNET_SAMPLING_INTERVAL_FLAG)
+   # cmd.append(" 1 ")
 
     return cmd
 
