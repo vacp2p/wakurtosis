@@ -59,6 +59,6 @@ def interconnect_nomos_nodes(plan, topology_information, interconnection_batch):
                         for peer in peers[i:i + interconnection_batch]]
 
             connect_nomos_to_peers(plan, nodes_in_topology[node_id][vars.GENNET_NODE_CONTAINER_KEY],
-                                      node_id, vars.RPC_PORT_ID, peer_ids)
+                                      node_id, vars.WAKU_RPC_PORT_ID, peer_ids)
 
 

@@ -14,8 +14,12 @@ from pathlib import Path
 import time, tracemalloc
 import string
 import typer
+import yaml
+import hashlib
 
 from enum import Enum, EnumMeta
+
+from blspy import PrivateKey, Util, BasicSchemeMPL, G2Element, G1Element
 
 # Enums & Consts
 
@@ -49,15 +53,19 @@ class Trait(BaseEnum):
     STORE   =	"store"
     SWAP    =	"swap"
     WEBSOCKET = "websocket"
+    NOMOS = "nomos"
 
 # To add a new node type, add appropriate entries to the nodeType and nodeTypeToDocker
 class nodeType(BaseEnum):
     NWAKU = "nwaku"     # waku desktop config
     GOWAKU = "gowaku"   # waku mobile config
+    NOMOS = "nomos"
 
 nodeTypeToDocker = {
     nodeType.NWAKU: "nim-waku",
-    nodeType.GOWAKU: "go-waku"
+    nodeType.GOWAKU: "go-waku",
+    nodeType.NOMOS: "nomos"
+
 }
 
 # To add a new network type, add appropriate entries to the networkType and networkTypeSwitch
@@ -70,6 +78,7 @@ class networkType(Enum):
     BALANCEDTREE = "balancedtree"  # committees?
     NOMOSTREE = "nomostree"  # balanced binary tree with even # of leaves
     STAR = "star"  # spof
+    REGULAR = "regular"  # gossip-sub / waku
 
 
 NW_DATA_FNAME = "network_data.json"
@@ -93,10 +102,29 @@ def write_toml(dirname, node_name, toml):
 
 
 # Draw the network and output the image to a file; does not account for subnets yet
-def draw_network(dirname, H):
-    nx.draw(H, pos=nx.kamada_kawai_layout(H), with_labels=True)
+def draw_network(ctx, dirname, H):
     fname = os.path.join(dirname, NW_DATA_FNAME)
-    plt.savefig(f"{os.path.splitext(fname)[0]}.png", format="png")
+    fig, axes = plt.subplots(1, 2, layout='constrained', sharey=False)
+    fig.set_figwidth(12)
+    fig.set_figheight(10)
+    n = len(H.nodes)
+    e = len(H.edges)
+    s = 0
+    for i in H.nodes:
+        s += H.degree[i]
+    avg = 2 * e/n
+    axes[0].set_title(f'The Generated Network: num-nodes = {n}, avg degree= {avg:.2f}')
+    nx.draw(H, ax=axes[0], pos=nx.kamada_kawai_layout(H), with_labels=True)
+    degree_sequence = sorted((d for n, d in H.degree()), reverse=True)
+    deg, cnt = *np.unique(degree_sequence, return_counts=True),
+    normalised_cnt =  cnt/np.array(n)
+    axes[1].bar(deg, normalised_cnt, align='center',
+            width=0.9975, edgecolor='k', facecolor='green', alpha=0.5)
+    axes[1].set_xticks(range(max(degree_sequence)+1))
+    axes[1].set_title(f'Normalised Degree Histogram: fanout = {ctx.params["fanout"]}')
+    axes[1].set_xlabel("Degree")
+    axes[1].set_ylabel("Fraction of Nodes")
+    plt.savefig(f'{os.path.splitext(fname)[0]}.png', format="png", bbox_inches="tight")
     plt.show()
 
 
@@ -219,6 +247,11 @@ def generate_star_graph(ctx):
     n = ctx.params["num_nodes"]
     return nx.star_graph(n-1)
 
+# |G| = n, if n*d is even; n+1 if n*d is odd
+def generate_regular_graph(ctx):
+    d = ctx.params["fanout"]
+    n = ctx.params["num_nodes"]
+    return nx.random_regular_graph(d, n+1) if n*d % 2 else nx.random_regular_graph(d, n)
 
 networkTypeSwitch = {
     networkType.CONFIGMODEL: generate_config_model,
@@ -227,7 +260,8 @@ networkTypeSwitch = {
     networkType.BARBELL: generate_barbell_graph,
     networkType.BALANCEDTREE: generate_balanced_tree,
     networkType.NOMOSTREE: generate_nomos_tree,
-    networkType.STAR: generate_star_graph
+    networkType.STAR: generate_star_graph,
+    networkType.REGULAR: generate_regular_graph
 }
 
 
@@ -332,7 +366,7 @@ def validate_traits_distribution(traits_dir, traits_distribution):
         if traits_list[0] not in nodeType:
             raise ValueError(f"{traits_distribution} : unknown node type {traits_list[0]} in {s}")
         for t in traits_list[1:]:
-            if t not in Trait and not os.path.exists(f"{traits_dir}/{t}.toml"):
+            if t not in Trait and not (os.path.exists(f"{traits_dir}/{t}.toml") or os.path.exists(f"{traits_dir}/{t}.yml")):
                 raise ValueError(f"{traits_distribution} : unknown trait {t} in {s}")
 
 
@@ -383,10 +417,10 @@ def generate_and_write_files(ctx: typer, G):
     for container, nodes in container2nodes.items():
         json_dump[CONTAINERS_JSON][container] = nodes
 
-    i, traits_dir = 0,  ctx.params["traits_dir"]
+    i, traits_dir = 0, ctx.params["traits_dir"]
     for node in G.nodes:
         # write the per node toml for the i^ith node of appropriate type
-        traits_list, i = traits_distribution[i].split(":"),  i+1
+        traits_list, i = traits_distribution[i].split(":"), i + 1
         node_type = nodeType(traits_list[0])
         write_toml(ctx.params["output_dir"], node, generate_toml(traits_dir, topics, traits_list))
         json_dump[NODES_JSON][node] = {}
@@ -395,14 +429,72 @@ def generate_and_write_files(ctx: typer, G):
             json_dump[NODES_JSON][node]["static_nodes"].append(edge[1])
         json_dump[NODES_JSON][node][SUBNET_PREFIX] = node2subnet[node]
         json_dump[NODES_JSON][node]["image"] = nodeTypeToDocker.get(node_type)
-            # the per node tomls will continue for now as they include topics
+        # the per node tomls will continue for now as they include topics
         json_dump[NODES_JSON][node]["node_config"] = f"{node}.toml"
-            # logs ought to continue as they need to be unique
+        # logs ought to continue as they need to be unique
         json_dump[NODES_JSON][node]["node_log"] = f"{node}.log"
         port_shift, cid = node2container[node]
         json_dump[NODES_JSON][node]["port_shift"] = port_shift
         json_dump[NODES_JSON][node]["container_id"] = cid
+
     write_json(ctx.params["output_dir"], json_dump)  # network wide json
+
+
+def generate_and_write_files_nomos(ctx: typer, G):
+    node2subnet = generate_subnets(G, ctx.params["num_subnets"])
+    node2container = pack_nodes(ctx.params["container_size"], node2subnet)
+    container2nodes = invert_dict_of_list(node2container, 1)
+
+    json_dump, json_dump[CONTAINERS_JSON], json_dump[NODES_JSON] = {}, {}, {}
+    for container, nodes in container2nodes.items():
+        json_dump[CONTAINERS_JSON][container] = nodes
+
+    # TODO Put in json_dump[PUBLIC_KEYS] all public keys
+    json_dump["all_public_keys"] = []
+
+    for node in G.nodes:
+        json_dump[NODES_JSON][node] = {}
+        json_dump[NODES_JSON][node]["static_nodes"] = []
+        for edge in G.edges(node):
+            json_dump[NODES_JSON][node]["static_nodes"].append(edge[1])
+        json_dump[NODES_JSON][node][SUBNET_PREFIX] = node2subnet[node]
+        json_dump[NODES_JSON][node]["image"] = nodeTypeToDocker.get(nodeType.NOMOS)
+        # the per node tomls will continue for now as they include topics
+        json_dump[NODES_JSON][node]["node_config"] = f"{node}.yml"
+        # logs ought to continue as they need to be unique
+        json_dump[NODES_JSON][node]["node_log"] = f"{node}.log"
+        port_shift, cid = node2container[node]
+        json_dump[NODES_JSON][node]["container_id"] = cid
+        # TODO put in json_dump[NODES_JSON]
+        seed = bytes([random.randint(0, 255) for _ in range(32)])
+        privatekey = BasicSchemeMPL.key_gen(seed)
+        json_dump[NODES_JSON][node]["private_key"] = list(bytes(privatekey))
+        #publickey = privatekey.get_g1()
+        #hashed_publickey = hashlib.blake2b(bytes(publickey), digest_size=32).digest()
+        #json_dump[NODES_JSON][node]["public_key"] = list(hashed_publickey)
+        #json_dump["all_public_keys"].append(list(hashed_publickey))
+        json_dump[NODES_JSON][node]["public_key"] = list(bytes(privatekey))
+        json_dump["all_public_keys"].append(list(bytes(privatekey)))
+
+    write_ymls(json_dump)
+
+    # TODO modificar yml para cada nodo con las claves.
+    write_json(ctx.params["output_dir"], json_dump)  # network wide json
+    # shutil.copy2("/config/traits/nomos.yml", "/gennet/network_data/nomos.yml")
+
+
+def write_ymls(json_dump):
+    with open("/config/traits/nomos.yml", "r") as stream:
+        try:
+            nomos_yml_template = yaml.safe_load(stream)
+        except yaml.YAMLError as exc:
+            print(exc)
+
+    for node_name, node_info in json_dump[NODES_JSON].items():
+        nomos_yml_template['consensus']['private_key'] = node_info["private_key"]
+        nomos_yml_template['consensus']['overlay_settings']['nodes'] = json_dump["all_public_keys"]
+        with open(f'/gennet/network_data/{node_name}.yml', 'w') as f:
+            yaml.dump(nomos_yml_template, f)
 
 
 # sanity check : valid json with "gennet" config
@@ -462,10 +554,10 @@ def main(ctx: typer.Context,
          num_topics: int = typer.Option(1,
              help="Set the number of topics"),
          fanout: int = typer.Option(3,
-             help="Set the arity for trees & newmanwattsstrogatz"),
+             help="Set the arity for trees, d-regular graphs & newmanwattsstrogatz"),
          node_type_distribution: str = typer.Argument("{\"nwaku\" : 100 }",
              callback=ast.literal_eval, help="Set the node type distribution"),
-         network_type: networkType = typer.Option(networkType.NEWMANWATTSSTROGATZ.value,
+         network_type: networkType = typer.Option(networkType.REGULAR.value,
              help="Set the node type"),
          num_subnets: int = typer.Option(1, callback=_num_subnets_callback,
              help="Set the number of subnets"),
@@ -497,15 +589,19 @@ def main(ctx: typer.Context,
     make_empty_dir(output_dir)
 
     # Generate file format specific data structs and write the files
-    generate_and_write_files(ctx, G)
+    if node_type_distribution["nomos"] > 0:
+        generate_and_write_files_nomos(ctx, G)
+    else:
+        generate_and_write_files(ctx, G)
 
     # Draw the graph if need be
     if draw:
-        draw_network(output_dir, G)
+        draw_network(ctx, output_dir, G)
 
     end = time.time()
     time_took = end - start
-    print(f"For {G.number_of_nodes()}/{num_nodes} nodes, network generation took {time_took} secs.\nThe generated network is under .{output_dir}")
+    print(f'For {G.number_of_nodes()}/{num_nodes} nodes, network generation took {time_took} secs.')
+    print(f'The generated network ({network_type.value}) is under ./{output_dir}')
 
     # Benchmarking. Record finish time and stop the malloc tracing
     if benchmark:
@@ -516,3 +612,5 @@ def main(ctx: typer.Context,
 
 if __name__ == "__main__":
     typer.run(main)
+
+

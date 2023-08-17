@@ -13,7 +13,7 @@ def test_prepare_gowaku_service(plan):
     gowaku_builder.prepare_gowaku_service(["test1", "test2"], test_dict,
                                           ["test1.toml", "test2.toml"],
                                           ["a1", "a2"],
-                                          "id_1", topology)
+                                          "id_1", topology, False)
 
     # hasattr doesn't work in dicts?
     plan.assert(value=str(test_dict.get("id_1")),
@@ -23,7 +23,7 @@ def test_prepare_gowaku_service(plan):
         assertion="==", target_value=vars.GOWAKU_IMAGE)
 
     for node in ["test1", "test2"]:
-        plan.assert(value=str(test_dict["id_1"].ports[vars.RPC_PORT_ID+vars.ID_STR_SEPARATOR+node].number),
+        plan.assert(value=str(test_dict["id_1"].ports[vars.WAKU_RPC_PORT_ID+vars.ID_STR_SEPARATOR+node].number),
             assertion="==", target_value = str(vars.WAKU_RPC_PORT_NUMBER +
                                                topology["nodes"][node][vars.GENNET_PORT_SHIFT_KEY]))
         plan.assert(value=str(test_dict["id_1"].ports[vars.PROMETHEUS_PORT_ID+vars.ID_STR_SEPARATOR+node].number),
