@@ -7,7 +7,7 @@ import numpy as np
 import sys
 
 
-def read_network(json_fname, ith=0):
+def read_network(json_fname, proto, ith=0):
     with open(json_fname) as f:
         json_graphs, G = json.load(f), nx.empty_graph()
         try:
@@ -17,12 +17,12 @@ def read_network(json_fname, ith=0):
             print(f'read_network: not enough keys {ith}')
             sys.exit()
         for src in js_graph.keys():
-            for dst  in js_graph[src]:
+            for dst  in js_graph[src][proto]:
                 G.add_edge(src, dst)
     return G
 
 
-def plot_network(G, fanout):
+def plot_network(G, pname, fanout):
         fig, axes = plt.subplots(1, 2, layout='constrained')
         fig.set_figwidth(12)
         fig.set_figheight(10)
@@ -35,12 +35,12 @@ def plot_network(G, fanout):
         format="pdf"
         if fanout == -1:
             tag = 'discv5'
-            ofname = f'observed-network-discv5.{format}'
+            ofname = f'observed-network-{pname}-discv5.{format}'
         else:
             tag = f'fanout={fanout}'
-            ofname = f'observed-network-{fanout}fanout.{format}'
+            ofname = f'observed-network-{pname}-{fanout}fanout.{format}'
 
-        axes[0].set_title(f'The Generated Network: num-nodes = {n}, avg degree = {avg:.2f}')
+        axes[0].set_title(f'Observed Network ({pname}): num-nodes = {n}, avg degree = {avg:.2f}')
         nx.draw(G, ax=axes[0], pos=nx.kamada_kawai_layout(G), with_labels=True)
         degree_sequence = sorted((d for n, d in G.degree()), reverse=True)
         deg, cnt = *np.unique(degree_sequence, return_counts=True),
@@ -59,12 +59,17 @@ def main(ctx: typer.Context,
          network_data_file: Path = typer.Option("observed_network.json",
              exists=True, file_okay=True, dir_okay=False, readable=True,
              help="Set network file"),
+         proto_name : str = typer.Option("relay",
+             help="Set the network fanout"),
+         proto_version : str = typer.Option("2.0.0",
+             help="Set the network fanout"),
          fanout : int = typer.Option(6,
              help="Set the network fanout"),
          ith : int = typer.Option(0,
              help="Set the network fanout")):
-    G = read_network(network_data_file, ith)
-    plot_network(G, fanout)
+    proto = f'/vac/waku/{proto_name}/{proto_version}'
+    G = read_network(network_data_file, proto, ith)
+    plot_network(G, proto_name, fanout)
 
 
 if __name__ == "__main__":
