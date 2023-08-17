@@ -64,7 +64,7 @@ class Human2BytesConverter(metaclass=Singleton):
 
 # Base class for plots and common helpers
 class Plots(metaclass=Singleton):
-    def __init__(self, log_dir, oprefix, jf, to_plot, cfile):
+    def __init__(self, log_dir, oprefix, jf, to_plot, cfile, divide):
         self.log_dir, self.oprefix = log_dir, oprefix
         self.df, self.n, self.keys, self.cols = pd.DataFrame(), 0, [], []
         self.col2title, self.col2units, self.key2nodes = {}, {}, {}
@@ -73,7 +73,7 @@ class Plots(metaclass=Singleton):
         self.fig, self.axes = "", ""
         self.json_fname, self.G = jf, nx.empty_graph()
         self.to_plot, self.to_compare = to_plot, []
-        self.run_summary, self.cfile = "", cfile
+        self.run_summary, self.cfile, self.divide, self.container_size = "", cfile, divide, 1.0
 
     # waku log processing
     def compute_msg_settling_times(self):
@@ -102,6 +102,7 @@ class Plots(metaclass=Singleton):
     def set_summary(self):
         with open(self.cfile, 'r') as f:  # Load config file
             conf = json.load(f)
+            self.container_size = float(conf["gennet"]["container_size"])
             minsize = int(conf["wls"]["min_packet_size"]/1024)
             maxsize = int(conf["wls"]["max_packet_size"]/1024)
             self.run_summary = (f'{conf["gennet"]["num_nodes"]}by'
@@ -296,7 +297,11 @@ class Plots(metaclass=Singleton):
                 col = self.to_compare[k]
                 #self.axes[i,j].ticklabel_format(style='plain')
                 self.axes[i,j].yaxis.grid(True)
-                pc = self.axes[i,j].violinplot(self.df[col], showmedians=True)
+                if self.divide and col != "CPUPerc": # Jordi's compare plots do not divide CPU
+                    ddf = self.df[col]/self.container_size
+                    pc = self.axes[i,j].violinplot(ddf, showmedians=True)
+                else:
+                    pc = self.axes[i,j].violinplot(self.df[col], showmedians=True)
                 self.axes[i,j].set_ylabel(self.col2units[col])
                 self.axes[i,j].set_title(self.col2title[col])
                 #for p in pc['bodies']:
@@ -377,8 +382,8 @@ class Plots(metaclass=Singleton):
 
 # handle docker stats
 class DStats(Plots, metaclass=Singleton):
-    def __init__(self, log_dir, oprefix, jf, to_plot, cfile):
-        Plots.__init__(self, log_dir, oprefix, jf, to_plot, cfile)
+    def __init__(self, log_dir, oprefix, jf, to_plot, cfile, divide):
+        Plots.__init__(self, log_dir, oprefix, jf, to_plot, cfile, divide)
         self.dstats_fname = f'{log_dir}/dstats-data/docker-stats.out'
         self.kinspect_fname = f'{log_dir}/dstats-data/docker-kinspect.out'
         self.col2title = {  "ContainerID"   : "Docker ID",
@@ -396,13 +401,13 @@ class DStats(Plots, metaclass=Singleton):
         self.col2units = {  "ContainerID"   : "ID",
                             "ContainerName" : "Name",
                             "CPUPerc"       : "Percentage (%)",
-                            "MemUse"        : "MiB",
-                            "MemTotal"      : "MiB",
+                            "MemUse"        : "MegaBytes",
+                            "MemTotal"      : "MegaBytes",
                             "MemPerc"       : "Percentage (%)",
-                            "NetRecv"       : "MiB",
-                            "NetSent"       : "MiB",
-                            "BlockR"        : "MiB",
-                            "BlockW"        : "MiB",
+                            "NetRecv"       : "MegaBytes",
+                            "NetSent"       : "MegaBytes",
+                            "BlockR"        : "MegaBytes",
+                            "BlockW"        : "MegaBytes",
                             "CPIDS"          : "PIDS"
                             }
         self.cols = ["CPUPerc", "MemUse","NetRecv", "NetSent", "BlockR", "BlockW"]
@@ -425,12 +430,13 @@ class DStats(Plots, metaclass=Singleton):
         h2b, n = Human2BytesConverter(), len(self.keys)
         for percent in ["CPUPerc", "MemPerc"]:
             self.df[percent] = self.df[percent].str.replace('%','').astype(float)
+        # Normalise to MegaBytes
         for size in ["MemUse", "MemTotal"]:
-            self.df[size] = self.df[size].map(lambda x:h2b.convert(x.strip())/(1024*1024)) # MiB
+            self.df[size] = self.df[size].map(lambda x:h2b.convert(x.strip())/(1024*1024))
         for size in ["NetRecv", "NetSent"]:
-            self.df[size] = self.df[size].map(lambda x:h2b.convert(x.strip())/(1024*1024)) # MiB
+            self.df[size] = self.df[size].map(lambda x:h2b.convert(x.strip())/(1024*1024))
         for size in ["BlockR", "BlockW"]:
-            self.df[size] = self.df[size].map(lambda x:h2b.convert(x.strip())/(1024*1024)) # MiB
+            self.df[size] = self.df[size].map(lambda x:h2b.convert(x.strip())/(1024*1024))
         self.df['Key'] = self.df['ContainerName'].map(lambda x: x.split("--")[0])
         self.build_key2nodes()
         self.df['NodeName'] = self.df['Key'].map(lambda x: self.key2nodes[x][0])
@@ -451,8 +457,8 @@ class DStats(Plots, metaclass=Singleton):
 
 
 class HostProc(Plots, metaclass=Singleton):
-    def __init__(self, log_dir, oprefix, jf, to_plot, cfile):
-        Plots.__init__(self, log_dir, oprefix, jf, to_plot, cfile)
+    def __init__(self, log_dir, oprefix, jf, to_plot, cfile, divide):
+        Plots.__init__(self, log_dir, oprefix, jf, to_plot, cfile, divide)
         self.fname = f'{log_dir}/host-proc-data/docker-proc.out'
         self.kinspect_fname = f'{log_dir}/host-proc-data/docker-kinspect.out'
         self.col2title = {  'CPUPerc'   : 'CPU Utilisation',
@@ -474,22 +480,22 @@ class HostProc(Plots, metaclass=Singleton):
                             'BlockW'    : 'Block Writes'
                         }
         self.col2units = {  'CPUPerc'   : '%',
-                            'VmPeak'    : 'MiB',
-                            'MemUse'    : 'MiB',
-                            'VmSize'    : 'MiB',
-                            'VmRSS'     : 'MiB',
-                            'VmData'    : 'MiB',
-                            'VmStk'     : 'MiB',
-                            'NetRecv'   : 'MiB',
+                            'VmPeak'    : 'MegaBytes',
+                            'MemUse'    : 'MegaBytes',
+                            'VmSize'    : 'MegaBytes',
+                            'VmRSS'     : 'MegaBytes',
+                            'VmData'    : 'MegaBytes',
+                            'VmStk'     : 'MegaBytes',
+                            'NetRecv'   : 'MegaBytes',
                             'NetRecvPkts' : 'Packets',
-                            'NetSent'   : 'MiB',
+                            'NetSent'   : 'MegaBytes',
                             'NetSentPkts' : 'Packets',
-                            'NetRX'   : 'MiB',
-                            'NetWX'   : 'MiB',
-                            'InOctets'  : 'MiB',
-                            'OutOctets' : 'MiB',
-                            'BlockR'    : 'MiB',
-                            'BlockW'    : 'MiB'
+                            'NetRX'   : 'MegaBytes',
+                            'NetWX'   : 'MegaBytes',
+                            'InOctets'  : 'MegaBytes',
+                            'OutOctets' : 'MegaBytes',
+                            'BlockR'    : 'MegaBytes',
+                            'BlockW'    : 'MegaBytes'
                         }
         self.cols = ['CPUPerc', 'VmPeak', 'MemUse', 'VmSize', 'VmRSS', 'VmData', 'VmStk',
                             'RxBytes', 'RxPackets', 'TxBytes', 'TxPackets', 'NetRecv', 'NetSent',
@@ -519,11 +525,11 @@ class HostProc(Plots, metaclass=Singleton):
     def post_process(self):
         #h2b = Human2BytesConverter()
         for size in ['VmPeak', 'VmSize','VmRSS', 'VmData','VmStk']:
-            self.df[size] = self.df[size].map(lambda x: x/1024) # MiBs
+            self.df[size] = self.df[size].map(lambda x: x/1024) # MegaBytes
         for size in ['NetRecv','NetSent']:
-            self.df[size] = self.df[size].map(lambda x: x/(1024*1024)) # MiBs
+            self.df[size] = self.df[size].map(lambda x: x/(1024*1024)) # MegaBytes
         for size in ['BlockR', 'BlockW']:
-            self.df[size] = self.df[size].map(lambda x: x/(1024*1024)) # MiBs
+            self.df[size] = self.df[size].map(lambda x: x/(1024*1024)) # MegaBytes
         #self.df['Key'] = self.df['ContainerName'].map(lambda x: x.split("--")[0])
         self.df['Key'] = self.df['NodeName']#.map(lambda x: x.split("--")[0])
         self.df['MemUse'] = self.df['VmPeak']
@@ -593,17 +599,21 @@ def cmd_helper(metric_infra, to_plot, agg, to_compare):
 def host_proc(ctx: typer.Context, log_dir: Path, # <- mandatory path
             out_prefix: str = typer.Option("output", help="Specify the prefix for the plot pdfs"),
             aggregate: bool = typer.Option(True, help="Specify whether to aggregate"),
+            divide : bool = typer.Option(False,
+                help="Specify if you want to divide by container size for compare plots"),
             config_file: str = typer.Option("", callback=_config_file_callback, is_eager=True,
                 help="Set the input config file (JSON)")):
     if not path_ok(log_dir, True):
         sys.exit(0)
+    if not config_file :
+        config_file=f'{os.path.abspath(log_dir)}/config/config.json' # set the default config
 
     to_plot = ctx.default_map["to_plot"] if ctx.default_map and "to_plot" in ctx.default_map else []
     jf = f'{os.path.abspath(log_dir)}/config/topology_generated/network_data.json'
     if  os.path.exists("plots"):
         os.system('rm -rf plots')
     os.makedirs("plots")
-    host_proc = HostProc(log_dir, f'plots/{out_prefix}-host-proc', jf, to_plot, config_file)
+    host_proc = HostProc(log_dir, f'plots/{out_prefix}-host-proc', jf, to_plot, config_file, divide)
     cmd_helper(host_proc, to_plot, agg=aggregate,
             to_compare=["CPUPerc", "MemUse", "NetRecv", "NetSent", "BlockR", "BlockW"])
     log.info(f'Done: {log_dir}')
@@ -614,17 +624,21 @@ def host_proc(ctx: typer.Context, log_dir: Path, # <- mandatory path
 def dstats(ctx: typer.Context, log_dir: Path, # <- mandatory path
             out_prefix: str = typer.Option("output", help="Specify the prefix for the plot pdfs"),
             aggregate: bool = typer.Option(True, help="Specify whether to aggregate"),
+            divide : bool = typer.Option(False,
+                help="Specify if you want to divide by container size for compare plots"),
             config_file: str = typer.Option("", callback=_config_file_callback, is_eager=True,
              help="Set the input config file (JSON)")):
     if not path_ok(log_dir, True):
         sys.exit(0)
+    if not config_file :
+        config_file=f'{os.path.abspath(log_dir)}/config/config.json' # set the default config
 
     to_plot = ctx.default_map["to_plot"] if ctx.default_map and "to_plot" in ctx.default_map else []
     jf = f'{os.path.abspath(log_dir)}/config/topology_generated/network_data.json'
     if  os.path.exists("plots"):
         os.system('rm -rf plots')
     os.makedirs("plots")
-    dstats = DStats(log_dir, f'plots/{out_prefix}-dstats', jf, to_plot, config_file)
+    dstats = DStats(log_dir, f'plots/{out_prefix}-dstats', jf, to_plot, config_file, divide)
     cmd_helper(dstats, to_plot, agg=aggregate,
             to_compare=["CPUPerc", "MemUse", "NetRecv", "NetSent", "BlockR", "BlockW"])
     log.info(f'Done: {log_dir}')

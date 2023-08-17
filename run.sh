@@ -59,7 +59,7 @@ elif  [ "$metrics_infra" = "host-proc" ]; then # HOST-PROC
     odir=./monitoring/host-proc/$stats_dir
     rclist=$odir/docker-rc-list.out
     mkdir $odir
-    mkfifo $signal_fifo
+    mkfifo $signal_fifo   # get a fresh fifo for each run.
     chmod 0777 $signal_fifo
     # get the sudo sorted out in the main thread itself
     echo "host-proc: need sudo rights, please enter suitable credentials at the prompt"
@@ -216,6 +216,8 @@ if [ "$metrics_infra" = "dstats" ]; then
     echo "dstats: copying the dstats data"
     cp -r ./monitoring/dstats/stats  ${enclave_name}_logs/dstats-data
 elif [ "$metrics_infra" = "host-proc" ]; then
+    # do not reuse the fifo across runs
+    rm -f $signal_fifo
     echo "Copying the host-proc data"
     cp -r ./monitoring/host-proc/stats  ${enclave_name}_logs/host-proc-data
 elif [ "$metrics_infra" = "container-proc" ]; then
