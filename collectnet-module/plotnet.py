@@ -17,6 +17,8 @@ def read_network(json_fname, proto, ith=0):
             print(f'read_network: not enough keys {ith}')
             sys.exit()
         for src in js_graph.keys():
+            if not js_graph[src] or not js_graph[src][proto]:
+                    continue
             for dst  in js_graph[src][proto]:
                 G.add_edge(src, dst)
     return G
