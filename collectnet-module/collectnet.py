@@ -49,7 +49,7 @@ async def send_get_peers_async(rpc_cmd, node_address):
 
 
 #globals, to avoid repeated parameter push/pop in fast path
-node2addr, peerid2node, collector, count, debugfh, proto_id = {}, {}, {}, 0, None, ""
+node2addr, peerid2node, collector, debugfh, proto_id = {}, {}, {}, None, None
 
 # the event handler for peer collection
 async def collect_peers():
@@ -60,9 +60,6 @@ async def collect_peers():
         rpc_cmd = _create_get_peers_rpc(addr)  # get a new buffer every time: do NOT reuse!
         task = asyncio.create_task(send_get_peers_async(rpc_cmd, addr))
         tasks.append(task)
-        #response, elapsed = await send_get_peers_to_node_async(addr)
-        #log.info(f"get_peers : {name}={addr} -> {response} = {elapsed}")
-        #collector[name] = (response, elapsed)
     collected_replies, i = await asyncio.gather(*tasks), 0
     for name, addr in node2addr.items():
         results, relay_peers = collected_replies[i], []
@@ -96,10 +93,9 @@ def precompute_node_maps(network_data):
 # the actual, fastpath collection callback
 async def start_topology_collector_async(network_data, sampling_interval, output_file, debug):
     #global node2addr, peerid2node, collector, count, debugfh
-    start_time = time.time()
+    start_time, count = time.time(), 0
     log.info(f"Starting topology collection")
     precompute_node_maps(network_data)
-    count, collector = 0, {}
     if debug:
         global debugfh
         debugfh = open(f'debug-{os.path.basename(output_file)}', "w")
@@ -143,9 +139,11 @@ def main(ctx: typer.Context,
     proto = collectnet["protocol"] if "protocol" in collectnet else "relay"
     version = collectnet["version"] if "version" in collectnet else "2.0.0"
     sampling_interval = collectnet["sampling_interval"] if "sampling_interval" in collectnet else samlping_interval  # config.json has priority
+    debug = collectnet["debug"] if "debug" in collectnet else False  # config.json has priority
+    global proto_id
     proto_id = f'/vac/waku/{proto}/{version}'
     log.info(f'Starting peer collection for {proto_id}')
-    print(f'Starting peer collection for {proto_id}')
+    print(f'Starting peer collection for {proto_id}, with debug={debug}')
 
 
     # create the event loop
