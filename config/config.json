@@ -11,7 +11,8 @@
     "collectnet": {
       "protocol" : "relay",
       "version" : "2.0.0",
-      "sampling_interval" : 1
+      "sampling_interval" : 2,
+      "debug" : true
     },
     "monitoring": true,
     "injection": true,
