@@ -10,7 +10,7 @@
     "interconnection_batch": 10,
     "collectnet": {
       "protocols" : {"relay":"2.0.0"},
-      "sampling_interval" : 1,
+      "sampling_interval" : 5,
       "debug" : false
     },
     "monitoring": true,
