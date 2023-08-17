@@ -49,24 +49,24 @@ async def send_get_peers_async(rpc_cmd, node_address):
 
 
 #globals, to avoid repeated parameter push/pop in fast path
-nodeid2addr, peerid2nodeid, collector, protos, debugfh = {}, {}, {}, {}, None
+nodeid2rpcurl, peerid2nodeid, collector, protos, debugfh = {}, {}, {}, {}, None
 
 # the event handler for peer collection
 async def collect_peers():
     ctime = time.time()
     tasks, collector[ctime]  = [], {}
-    for node_name, addr in nodeid2addr.items(): # yield between each iterations
-        rpc_cmd = _create_get_peers_rpc(addr)  # get a new buffer every time: do NOT reuse!
-        task = asyncio.create_task(send_get_peers_async(rpc_cmd, addr))
+    for _, rpc_url in nodeid2rpcurl.items(): # yield between each iterations
+        rpc_cmd = _create_get_peers_rpc(rpc_url)  # get a fresh buffer every time: do NOT reuse!
+        task = asyncio.create_task(send_get_peers_async(rpc_cmd, rpc_url))
         tasks.append(task)
     collected_replies, i = await asyncio.gather(*tasks), 0
-    for node_id, addr in nodeid2addr.items():
+    for node_id, _ in nodeid2rpcurl.items():
         results, relay_peers = collected_replies[i], defaultdict(list)
         for res in results[0]["result"]:
-            if res["protocol"] in protos and res["connected"]: # equality vs in?
+            if res["protocol"] in protos and res["connected"]:
                 peerid = res["multiaddr"].split("/")[6]
                 if peerid not in peerid2nodeid:
-                    log.info(f'adding discv5 server ({peerid}) as a peer (discv5-server-0)')
+                    log.info(f'adding discv5 server ({peerid}) as peer \"discv5-server-0\"')
                     peerid2nodeid[peerid] = "discv5-server-0"
                 relay_peers[res["protocol"]].append(peerid2nodeid[peerid])
         collector[ctime][node_id] = relay_peers
@@ -78,13 +78,15 @@ async def collect_peers():
 # pre-compute the addresses
 def precompute_node_maps(network_data):
     for node, info in network_data["nodes"].items():
-        nodeid2addr[node] = f"http://{info['ip_address']}:{info['ports']['rpc-' + node][0]}/"
+        nodeid2rpcurl[node] = f"http://{info['ip_address']}:{info['ports']['rpc-' + node][0]}/"
        # if network_data["nodes"][node]["peer_id"] in peerid2node:
         peerid2nodeid[network_data["nodes"][node]["peer_id"]] = node
-    log.debug(f"get_peers: {nodeid2addr}, {peerid2nodeid}")
-    return nodeid2addr, peerid2nodeid
+    log.debug(f"get_peers: {nodeid2rpcurl}, {peerid2nodeid}")
+    return nodeid2rpcurl, peerid2nodeid
 
 
+
+finished = False
 # the actual, fastpath collection callback
 async def start_topology_collector_async(network_data, sampling_interval, output_file, debug):
     start_time, count = time.time(), 0
@@ -94,13 +96,19 @@ async def start_topology_collector_async(network_data, sampling_interval, output
         global debugfh
         debugfh = open(f'debug-{os.path.basename(output_file)}', "w")
         debugfh.write("{\n")
-    while True:
+    while not finished:
+        # do NOT await individual samples: they might take > sampling_interval for large networks.
         await collect_peers()
         count +=1
         log.info(f'Next topology collection {count} will be done in {sampling_interval} secs')
         # Wait for all the tasks to complete
         await asyncio.sleep(sampling_interval)
     #return collector
+
+def done():
+    log.info("Collection done. Exiting...")
+    global finished
+    finished = True
 
 
 def main(ctx: typer.Context,
@@ -147,7 +155,7 @@ def main(ctx: typer.Context,
             start_topology_collector_async(network_data, sampling_interval, output_file, debug))
 
     # the collection callback runs just as long as the simulation
-    loop.call_later(config['wls']['simulation_time'], task.cancel)
+    loop.call_later(config['wls']['simulation_time'], done)
 
     try:
         loop.run_until_complete(task)
