@@ -7,6 +7,6 @@
 #                               ValidIpAddress.init("1.0.0.1")]].
 
 metrics-server=true
-#metrics-server-address=
+metrics-server-address="0.0.0.0"
 metrics-server-port=8008
 #metrics-logging=

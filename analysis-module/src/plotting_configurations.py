@@ -17,6 +17,7 @@ plotting_config = {
         "xtic_labels": [
             "Received (Rx)"
         ],
+        "statistic": "max",
         "toMB": True
     },
     "container_network_transmit_bytes_total": {
@@ -28,6 +29,7 @@ plotting_config = {
         "xtic_labels": [
             "Sent (Tx)"
         ],
+        "statistic": "max",
         "toMB": True
     },
     "container_fs_reads_bytes_total": {
@@ -39,6 +41,7 @@ plotting_config = {
         "xtic_labels": [
             "Read"
         ],
+        "statistic": "max",
         "toMB": True
     },
     "container_fs_writes_bytes_total": {
@@ -50,6 +53,7 @@ plotting_config = {
         "xtic_labels": [
             "Write"
         ],
+        "statistic": "max",
         "toMB": True
     }
 }

@@ -6,8 +6,9 @@ waku_builder = import_module(vars.WAKU_BUILDER_MODULE)
 
 
 def prepare_gowaku_service(gowakunode_names, all_services, config_files, artifact_ids, service_id,
-                           network_topology):
-    prepared_ports = waku_builder.prepare_waku_ports_in_service(gowakunode_names, network_topology)
+                           network_topology, discovery):
+    prepared_ports = waku_builder.prepare_waku_ports_in_service(gowakunode_names, network_topology,
+                                                                discovery)
     prepared_files = waku_builder.prepare_waku_config_files_in_service(gowakunode_names, artifact_ids)
     prepared_cmd = _prepare_gowaku_cmd_in_service(gowakunode_names, config_files, network_topology)
 

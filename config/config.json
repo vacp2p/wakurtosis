@@ -6,29 +6,43 @@
     "enclave_name": "wakurtosis",
     "topology_path": "./config/topology_generated/",
     "jobs": 4,
-    "interconnection_batch": 10
+    "interconnect_nodes": true,
+    "interconnection_batch": 10,
+    "monitoring": false,
+    "injection": false,
+    "testing": true,
+    "assertions": {
+      "nomos": {
+        "waiting": 60,
+        "nodes_to_check": 1,
+        "endpoint": "/carnot/info",
+        "jq_extract": ".current_view",
+        "expected_value": 10.0
+      }
+    }
   },
   "gennet": {
-    "num_nodes": 25,
-    "fanout": 13,
+    "num_nodes": 5,
+    "fanout": 3,
     "num_topics": 1,
     "num_partitions": 1,
     "num_subnets": 1,
     "container_size": "1",
     "node_type_distribution": {
-      "nwaku:relay:rpc:metrics": 100,
-      "gowaku:rln:dnsdisc:dns": 0
+      "nwaku:relay:rpc:metrics:discv5": 0,
+      "gowaku:rln:dnsdisc:dns": 0,
+      "nomos": 100
     },
-    "network_type": "newmanwattsstrogatz",
+    "network_type": "regular",
     "output_dir": "network_data",
     "benchmark": "False"
   },
   "wls": {
     "debug_level": "DEBUG",
-    "simulation_time": 60,
+    "simulation_time": 20,
     "message_rate": 10,
-    "min_packet_size": 1024,
-    "max_packet_size": 10240,
+    "min_packet_size": 2,
+    "max_packet_size": 1024,
     "inter_msg_type": "poisson",
     "dist_type": "gaussian",
     "emitters_fraction": 1.0
@@ -42,27 +56,13 @@
     "metrics_filename": "./cproc_metrics.json"
   },
   "plotting": {
-    "hproc": {
-      "out_prefix" : "output",
-      "aggregate" : "False",
-      "to_plot" : {
-        "Network": "True",
-        "ColPanel" : ["CPUPerc", "MemUse", "NetRecv", "NetSent"],
-        "ValueCluster" : [],
-        "DegColPanel" : ["CPUPerc", "MemUse", "NetRecv", "NetSent"],
-        "SettlingTime" : "True",
-        "Compare" : "True"
-      }
-    },
     "by_node": [
       "container_cpu_load_average_10s",
-      "container_memory_usage_bytes"
-    ],
-    "by_simulation": [
-        "container_network_receive_bytes_total",
-        "container_network_transmit_bytes_total",
-        "container_fs_reads_bytes_total",
-        "container_fs_writes_bytes_total"
+      "container_memory_usage_bytes",
+      "container_network_receive_bytes_total",
+      "container_network_transmit_bytes_total",
+      "container_fs_reads_bytes_total",
+      "container_fs_writes_bytes_total"
     ]
   }
 }
