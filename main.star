@@ -7,6 +7,7 @@ grafana = import_module(vars.GRAFANA_MODULE)
 args_parser = import_module(vars.ARGUMENT_PARSER_MODULE)
 wls = import_module(vars.WLS_MODULE)
 nodes = import_module(vars.NODE_BUILDERS_MODULE)
+assertions = import_module(vars.ASSERTIONS_MODULE)
 
 
 def run(plan, args):
@@ -24,14 +25,21 @@ def run(plan, args):
     network_topology = json.decode(network_topology)
 
     # Set up nodes
-    nodes.instantiate_services(plan, network_topology, False)
+    nodes.instantiate_services(plan, network_topology, not kurtosis_config["interconnect_nodes"], False)
 
     # Set up prometheus + grafana
-    prometheus_service = prometheus.set_up_prometheus(plan, network_topology)
+    if kurtosis_config["monitoring"]:
+        prometheus_service = prometheus.set_up_prometheus(plan, network_topology)
+        grafana_service = grafana.set_up_grafana(plan, prometheus_service)
 
-    grafana_service = grafana.set_up_grafana(plan, prometheus_service)
-
-    nodes.interconnect_nodes(plan, network_topology, interconnection_batch)
+    # Interconnect nodes if needed
+    if kurtosis_config[vars.INTERCONNECT_NODES]:
+        nodes.interconnect_nodes(plan, network_topology, interconnection_batch)
 
     # Setup WLS & Start the Simulation
-    wls_service = wls.init(plan, network_topology, config_file)
+    if kurtosis_config["injection"]:
+        wls_service = wls.init(plan, network_topology, config_file, prometheus_service)
+
+    # Tests
+    if kurtosis_config["testing"]:
+        assertions.start_test(plan, kurtosis_config, network_topology)

@@ -51,7 +51,7 @@ def make_service_wait(plan, service_name, time):
 
 def get_waku_peers(plan, waku_service_container, node_name):
     extract = {"peers": '.result | length'}
-    port_name = vars.RPC_PORT_ID + vars.ID_STR_SEPARATOR + node_name
+    port_name = vars.WAKU_RPC_PORT_ID + vars.ID_STR_SEPARATOR + node_name
 
     response = call_protocols.send_json_rpc(plan, waku_service_container, port_name,
                                             vars.GET_PEERS_METHOD, "", extract)
@@ -73,6 +73,6 @@ def interconnect_waku_nodes(plan, topology_information, interconnection_batch):
                         for peer in peers[i:i + interconnection_batch]]
 
             connect_wakunode_to_peers(plan, nodes_in_topology[node_id][vars.GENNET_NODE_CONTAINER_KEY],
-                                      node_id, vars.RPC_PORT_ID, peer_ids)
+                                      node_id, vars.WAKU_RPC_PORT_ID, peer_ids)
 
 

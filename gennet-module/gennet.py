@@ -14,8 +14,12 @@ from pathlib import Path
 import time, tracemalloc
 import string
 import typer
+import yaml
+import hashlib
 
 from enum import Enum, EnumMeta
+
+from blspy import PrivateKey, Util, BasicSchemeMPL, G2Element, G1Element
 
 # Enums & Consts
 
@@ -49,15 +53,19 @@ class Trait(BaseEnum):
     STORE   =	"store"
     SWAP    =	"swap"
     WEBSOCKET = "websocket"
+    NOMOS = "nomos"
 
 # To add a new node type, add appropriate entries to the nodeType and nodeTypeToDocker
 class nodeType(BaseEnum):
     NWAKU = "nwaku"     # waku desktop config
     GOWAKU = "gowaku"   # waku mobile config
+    NOMOS = "nomos"
 
 nodeTypeToDocker = {
     nodeType.NWAKU: "nim-waku",
-    nodeType.GOWAKU: "go-waku"
+    nodeType.GOWAKU: "go-waku",
+    nodeType.NOMOS: "nomos"
+
 }
 
 # To add a new network type, add appropriate entries to the networkType and networkTypeSwitch
@@ -358,7 +366,7 @@ def validate_traits_distribution(traits_dir, traits_distribution):
         if traits_list[0] not in nodeType:
             raise ValueError(f"{traits_distribution} : unknown node type {traits_list[0]} in {s}")
         for t in traits_list[1:]:
-            if t not in Trait and not os.path.exists(f"{traits_dir}/{t}.toml"):
+            if t not in Trait and not (os.path.exists(f"{traits_dir}/{t}.toml") or os.path.exists(f"{traits_dir}/{t}.yml")):
                 raise ValueError(f"{traits_distribution} : unknown trait {t} in {s}")
 
 
@@ -409,10 +417,10 @@ def generate_and_write_files(ctx: typer, G):
     for container, nodes in container2nodes.items():
         json_dump[CONTAINERS_JSON][container] = nodes
 
-    i, traits_dir = 0,  ctx.params["traits_dir"]
+    i, traits_dir = 0, ctx.params["traits_dir"]
     for node in G.nodes:
         # write the per node toml for the i^ith node of appropriate type
-        traits_list, i = traits_distribution[i].split(":"),  i+1
+        traits_list, i = traits_distribution[i].split(":"), i + 1
         node_type = nodeType(traits_list[0])
         write_toml(ctx.params["output_dir"], node, generate_toml(traits_dir, topics, traits_list))
         json_dump[NODES_JSON][node] = {}
@@ -421,14 +429,72 @@ def generate_and_write_files(ctx: typer, G):
             json_dump[NODES_JSON][node]["static_nodes"].append(edge[1])
         json_dump[NODES_JSON][node][SUBNET_PREFIX] = node2subnet[node]
         json_dump[NODES_JSON][node]["image"] = nodeTypeToDocker.get(node_type)
-            # the per node tomls will continue for now as they include topics
+        # the per node tomls will continue for now as they include topics
         json_dump[NODES_JSON][node]["node_config"] = f"{node}.toml"
-            # logs ought to continue as they need to be unique
+        # logs ought to continue as they need to be unique
         json_dump[NODES_JSON][node]["node_log"] = f"{node}.log"
         port_shift, cid = node2container[node]
         json_dump[NODES_JSON][node]["port_shift"] = port_shift
         json_dump[NODES_JSON][node]["container_id"] = cid
+
     write_json(ctx.params["output_dir"], json_dump)  # network wide json
+
+
+def generate_and_write_files_nomos(ctx: typer, G):
+    node2subnet = generate_subnets(G, ctx.params["num_subnets"])
+    node2container = pack_nodes(ctx.params["container_size"], node2subnet)
+    container2nodes = invert_dict_of_list(node2container, 1)
+
+    json_dump, json_dump[CONTAINERS_JSON], json_dump[NODES_JSON] = {}, {}, {}
+    for container, nodes in container2nodes.items():
+        json_dump[CONTAINERS_JSON][container] = nodes
+
+    # TODO Put in json_dump[PUBLIC_KEYS] all public keys
+    json_dump["all_public_keys"] = []
+
+    for node in G.nodes:
+        json_dump[NODES_JSON][node] = {}
+        json_dump[NODES_JSON][node]["static_nodes"] = []
+        for edge in G.edges(node):
+            json_dump[NODES_JSON][node]["static_nodes"].append(edge[1])
+        json_dump[NODES_JSON][node][SUBNET_PREFIX] = node2subnet[node]
+        json_dump[NODES_JSON][node]["image"] = nodeTypeToDocker.get(nodeType.NOMOS)
+        # the per node tomls will continue for now as they include topics
+        json_dump[NODES_JSON][node]["node_config"] = f"{node}.yml"
+        # logs ought to continue as they need to be unique
+        json_dump[NODES_JSON][node]["node_log"] = f"{node}.log"
+        port_shift, cid = node2container[node]
+        json_dump[NODES_JSON][node]["container_id"] = cid
+        # TODO put in json_dump[NODES_JSON]
+        seed = bytes([random.randint(0, 255) for _ in range(32)])
+        privatekey = BasicSchemeMPL.key_gen(seed)
+        json_dump[NODES_JSON][node]["private_key"] = list(bytes(privatekey))
+        #publickey = privatekey.get_g1()
+        #hashed_publickey = hashlib.blake2b(bytes(publickey), digest_size=32).digest()
+        #json_dump[NODES_JSON][node]["public_key"] = list(hashed_publickey)
+        #json_dump["all_public_keys"].append(list(hashed_publickey))
+        json_dump[NODES_JSON][node]["public_key"] = list(bytes(privatekey))
+        json_dump["all_public_keys"].append(list(bytes(privatekey)))
+
+    write_ymls(json_dump)
+
+    # TODO modificar yml para cada nodo con las claves.
+    write_json(ctx.params["output_dir"], json_dump)  # network wide json
+    # shutil.copy2("/config/traits/nomos.yml", "/gennet/network_data/nomos.yml")
+
+
+def write_ymls(json_dump):
+    with open("/config/traits/nomos.yml", "r") as stream:
+        try:
+            nomos_yml_template = yaml.safe_load(stream)
+        except yaml.YAMLError as exc:
+            print(exc)
+
+    for node_name, node_info in json_dump[NODES_JSON].items():
+        nomos_yml_template['consensus']['private_key'] = node_info["private_key"]
+        nomos_yml_template['consensus']['overlay_settings']['nodes'] = json_dump["all_public_keys"]
+        with open(f'/gennet/network_data/{node_name}.yml', 'w') as f:
+            yaml.dump(nomos_yml_template, f)
 
 
 # sanity check : valid json with "gennet" config
@@ -523,7 +589,10 @@ def main(ctx: typer.Context,
     make_empty_dir(output_dir)
 
     # Generate file format specific data structs and write the files
-    generate_and_write_files(ctx, G)
+    if node_type_distribution["nomos"] > 0:
+        generate_and_write_files_nomos(ctx, G)
+    else:
+        generate_and_write_files(ctx, G)
 
     # Draw the graph if need be
     if draw:
@@ -543,3 +612,5 @@ def main(ctx: typer.Context,
 
 if __name__ == "__main__":
     typer.run(main)
+
+

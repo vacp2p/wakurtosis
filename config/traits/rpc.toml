@@ -8,7 +8,7 @@
 #                               [=false].
 
 rpc=true
-rpc-address="127.0.0.1"
+rpc-address="0.0.0.0"
 rpc-port=8545
 rpc-admin=true
 rpc-private=false
