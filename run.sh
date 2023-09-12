@@ -144,6 +144,10 @@ wls_suuid=$(grep $wls_service_name $kurtosis_inspect | awk '{print $1}')
 # Construct the fully qualified container name that kurtosis has created
 wls_cid="$wls_sname--$wls_suuid"
 #echo "The WLS_CID = $wls_cid"
+collnet_sname="CollectNet"
+collnet_suuid=$(grep $collnet_sname $kurtosis_inspect | awk '{print $1}')
+collnet_cid="$collnet_sname--$collnet_suuid"
+echo "CollectNet is at $collnet_cid"
 ##################### END
 
 
@@ -236,6 +240,13 @@ echo "- Configuration file:  $wakurtosis_config_file" >> ./${enclave_name}_logs/
 docker cp "$wls_cid:/wls/network_topology/network_data.json" "./${enclave_name}_logs"
 docker cp "$wls_cid:/wls/messages.json" "./${enclave_name}_logs"
 docker cp "$wls_cid:/wls/prometheus_data.json" "./${enclave_name}_logs"
+
+# Copy collectnet files. as required
+docker cp "$collnet_cid:/collectnet/observed_network.json" "./${enclave_name}_logs"
+collectnet_debug=`jq '.kurtosis.collectnet.debug'  config/config.json`
+if [ "$collectnet_debug" = "true" ]; then
+  docker cp "$collnet_cid:/collectnet/debug-observed_network.json" "./${enclave_name}_logs"
+fi
 
 # Run analysis
 if jq -e ."plotting" >/dev/null 2>&1 "./config/${wakurtosis_config_file}"; then

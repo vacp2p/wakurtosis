@@ -6,6 +6,7 @@ prometheus = import_module(vars.PROMETHEUS_MODULE)
 grafana = import_module(vars.GRAFANA_MODULE)
 args_parser = import_module(vars.ARGUMENT_PARSER_MODULE)
 wls = import_module(vars.WLS_MODULE)
+collectnet = import_module(vars.COLLECTNET_MODULE)
 nodes = import_module(vars.NODE_BUILDERS_MODULE)
 assertions = import_module(vars.ASSERTIONS_MODULE)
 
@@ -36,6 +37,10 @@ def run(plan, args):
     if kurtosis_config[vars.INTERCONNECT_NODES]:
         nodes.interconnect_nodes(plan, network_topology, interconnection_batch)
 
+    # Start topology collection if requested
+    if "collectnet" in kurtosis_config:
+      collectnet_service = collectnet.init(plan, network_topology, config_file)
+
     # Setup WLS & Start the Simulation
     if kurtosis_config["injection"]:
         wls_service = wls.init(plan, network_topology, config_file, prometheus_service)
@@ -43,3 +48,4 @@ def run(plan, args):
     # Tests
     if kurtosis_config["testing"]:
         assertions.start_test(plan, kurtosis_config, network_topology)
+
