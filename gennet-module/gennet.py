@@ -78,6 +78,7 @@ class networkType(Enum):
     BALANCEDTREE = "balancedtree"  # committees?
     NOMOSTREE = "nomostree"  # balanced binary tree with even # of leaves
     STAR = "star"  # spof
+    REGULAR = "regular"  # gossip-sub / waku
 
 
 NW_DATA_FNAME = "network_data.json"
@@ -101,10 +102,29 @@ def write_toml(dirname, node_name, toml):
 
 
 # Draw the network and output the image to a file; does not account for subnets yet
-def draw_network(dirname, H):
-    nx.draw(H, pos=nx.kamada_kawai_layout(H), with_labels=True)
+def draw_network(ctx, dirname, H):
     fname = os.path.join(dirname, NW_DATA_FNAME)
-    plt.savefig(f"{os.path.splitext(fname)[0]}.png", format="png")
+    fig, axes = plt.subplots(1, 2, layout='constrained', sharey=False)
+    fig.set_figwidth(12)
+    fig.set_figheight(10)
+    n = len(H.nodes)
+    e = len(H.edges)
+    s = 0
+    for i in H.nodes:
+        s += H.degree[i]
+    avg = 2 * e/n
+    axes[0].set_title(f'The Generated Network: num-nodes = {n}, avg degree= {avg:.2f}')
+    nx.draw(H, ax=axes[0], pos=nx.kamada_kawai_layout(H), with_labels=True)
+    degree_sequence = sorted((d for n, d in H.degree()), reverse=True)
+    deg, cnt = *np.unique(degree_sequence, return_counts=True),
+    normalised_cnt =  cnt/np.array(n)
+    axes[1].bar(deg, normalised_cnt, align='center',
+            width=0.9975, edgecolor='k', facecolor='green', alpha=0.5)
+    axes[1].set_xticks(range(max(degree_sequence)+1))
+    axes[1].set_title(f'Normalised Degree Histogram: fanout = {ctx.params["fanout"]}')
+    axes[1].set_xlabel("Degree")
+    axes[1].set_ylabel("Fraction of Nodes")
+    plt.savefig(f'{os.path.splitext(fname)[0]}.png', format="png", bbox_inches="tight")
     plt.show()
 
 
@@ -227,6 +247,11 @@ def generate_star_graph(ctx):
     n = ctx.params["num_nodes"]
     return nx.star_graph(n-1)
 
+# |G| = n, if n*d is even; n+1 if n*d is odd
+def generate_regular_graph(ctx):
+    d = ctx.params["fanout"]
+    n = ctx.params["num_nodes"]
+    return nx.random_regular_graph(d, n+1) if n*d % 2 else nx.random_regular_graph(d, n)
 
 networkTypeSwitch = {
     networkType.CONFIGMODEL: generate_config_model,
@@ -235,7 +260,8 @@ networkTypeSwitch = {
     networkType.BARBELL: generate_barbell_graph,
     networkType.BALANCEDTREE: generate_balanced_tree,
     networkType.NOMOSTREE: generate_nomos_tree,
-    networkType.STAR: generate_star_graph
+    networkType.STAR: generate_star_graph,
+    networkType.REGULAR: generate_regular_graph
 }
 
 
@@ -528,10 +554,10 @@ def main(ctx: typer.Context,
          num_topics: int = typer.Option(1,
              help="Set the number of topics"),
          fanout: int = typer.Option(3,
-             help="Set the arity for trees & newmanwattsstrogatz"),
+             help="Set the arity for trees, d-regular graphs & newmanwattsstrogatz"),
          node_type_distribution: str = typer.Argument("{\"nwaku\" : 100 }",
              callback=ast.literal_eval, help="Set the node type distribution"),
-         network_type: networkType = typer.Option(networkType.NEWMANWATTSSTROGATZ.value,
+         network_type: networkType = typer.Option(networkType.REGULAR.value,
              help="Set the node type"),
          num_subnets: int = typer.Option(1, callback=_num_subnets_callback,
              help="Set the number of subnets"),
@@ -570,11 +596,12 @@ def main(ctx: typer.Context,
 
     # Draw the graph if need be
     if draw:
-        draw_network(output_dir, G)
+        draw_network(ctx, output_dir, G)
 
     end = time.time()
     time_took = end - start
-    print(f"For {G.number_of_nodes()}/{num_nodes} nodes, network generation took {time_took} secs.\nThe generated network is under .{output_dir}")
+    print(f'For {G.number_of_nodes()}/{num_nodes} nodes, network generation took {time_took} secs.')
+    print(f'The generated network ({network_type.value}) is under ./{output_dir}')
 
     # Benchmarking. Record finish time and stop the malloc tracing
     if benchmark:

@@ -200,11 +200,13 @@ async def main():
 
     injection_start_time = datetime.now()
 
-    msgs_dict = await start_traffic_injection_async(wls_config, random_emitters)
-
-    injection_finish_time = datetime.now()
-
-    files.save_messages_to_json(msgs_dict)
+    if wls_config["message_rate"] == 0:
+        time.sleep(wls_config["simulation_time"])
+        injection_finish_time = datetime.now()
+    else:
+        msgs_dict = await start_traffic_injection_async(wls_config, random_emitters)
+        injection_finish_time = datetime.now()
+        files.save_messages_to_json(msgs_dict)
 
     # Delete de signal file just in case
     if os.path.exists('/wls/start.signal'):

@@ -38,7 +38,7 @@
       "gowaku:rln:dnsdisc:dns": 0,
       "nomos": 0
     },
-    "network_type": "newmanwattsstrogatz",
+    "network_type": "regular",
     "output_dir": "network_data",
     "benchmark": "False"
   },
