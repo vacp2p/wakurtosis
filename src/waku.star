@@ -12,7 +12,7 @@ def get_wakunode_peer_id(plan, service_name, port_id):
     response = call_protocols.send_json_rpc(plan, service_name, port_id,
                              vars.GET_WAKU_INFO_METHOD, "", extract)
 
-    plan.assert(value=response["code"], assertion="==", target_value = 200)
+    plan.verify(value=response["code"], assertion="==", target_value = 200)
 
     return response["extract.peer_id"]
 
@@ -36,7 +36,7 @@ def connect_wakunode_to_peers(plan, service_name, node_id, port_id, peer_ids):
 
     response = call_protocols.send_json_rpc(plan, service_name, port_id, method, params)
 
-    plan.assert(value=response["code"], assertion="==", target_value = 200)
+    plan.verify(value=response["code"], assertion="==", target_value = 200)
 
     plan.print(response)
 
@@ -56,7 +56,7 @@ def get_waku_peers(plan, waku_service_container, node_name):
     response = call_protocols.send_json_rpc(plan, waku_service_container, port_name,
                                             vars.GET_PEERS_METHOD, "", extract)
 
-    plan.assert(value=response["code"], assertion="==", target_value=200)
+    plan.verify(value=response["code"], assertion="==", target_value=200)
 
     return response["extract.peers"]
 
