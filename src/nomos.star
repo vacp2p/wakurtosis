@@ -11,7 +11,7 @@ def get_nomos_peer_id(plan, service_name, port_id):
 
     response = call_protocols.send_http_get_req(plan, service_name, port_id, vars.NOMOS_NET_INFO_URL, extract)
 
-    plan.assert(value=response["code"], assertion="==", target_value = 200)
+    plan.verify(value=response["code"], assertion="==", target_value = 200)
 
     return response["extract.peer_id"]
 
@@ -34,7 +34,7 @@ def connect_nomos_to_peers(plan, service_name, node_id, port_id, peer_ids):
 
     response = call_protocols.send_http_post_req(plan, service_name, port_id, vars.NOMOS_NET_CONN_URL, body) 
 
-    plan.assert(value=response["code"], assertion="==", target_value = 200)
+    plan.verify(value=response["code"], assertion="==", target_value = 200)
 
     plan.print(response)
 

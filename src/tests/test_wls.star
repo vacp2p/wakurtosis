@@ -9,14 +9,14 @@ def test_upload_config(plan):
     test_config = vars.TEST_FILES_LOCATION + "test_config_file.json"
     test = wls.upload_config(plan, test_config, "test_config")
 
-    plan.assert(value=test, assertion="==", target_value="test_config")
+    plan.verify(value=test, assertion="==", target_value="test_config")
 
 
 def test_create_new_topology_information(plan):
     test_topology = {}
     test = wls.create_new_topology_information(plan, test_topology, "test_topology")
 
-    plan.assert(value=test, assertion="==", target_value="test_topology")
+    plan.verify(value=test, assertion="==", target_value="test_topology")
 
 def test_create_cmd(plan):
     config_file = "test.json"
@@ -25,7 +25,7 @@ def test_create_cmd(plan):
               vars.WLS_TOPOLOGY_FILE_FLAG, vars.WLS_TOPOLOGY_PATH + vars.CONTAINER_TOPOLOGY_FILE_NAME_WLS]
 
     for i in range(len(result)):
-        plan.assert(value=test[i], assertion="==", target_value=result[i])
+        plan.verify(value=test[i], assertion="==", target_value=result[i])
 
 def test_init(plan):
     test_config = vars.TEST_FILES_LOCATION + "test_config_file.json"

@@ -51,7 +51,7 @@ def test_get_wakunode_peer_id(plan, test_node, test_node_info, expected_ids):
     service_id = test_node_info[vars.GENNET_NODE_CONTAINER_KEY]
     peer_id = waku.get_wakunode_peer_id(plan, service_id, vars.WAKU_RPC_PORT_ID+vars.ID_STR_SEPARATOR+test_node)
     plan.print("Peer ID for " + test_node + ": " + peer_id)
-    plan.assert(value=peer_id, assertion="==", target_value=expected_ids[test_node])
+    plan.verify(value=peer_id, assertion="==", target_value=expected_ids[test_node])
 
 
 def test_create_node_multiaddress(plan):
@@ -61,7 +61,7 @@ def test_create_node_multiaddress(plan):
 
     waku_id = waku.create_node_multiaddress(node_id, node_information)
 
-    plan.assert(value=waku_id, assertion="==", target_value='"/ip4/1.1.1.1/tcp/1234/p2p/ASDFGHJKL"')
+    plan.verify(value=waku_id, assertion="==", target_value='"/ip4/1.1.1.1/tcp/1234/p2p/ASDFGHJKL"')
 
 
 def test__merge_peer_ids(plan):
@@ -69,7 +69,7 @@ def test__merge_peer_ids(plan):
 
     ids = waku._merge_peer_ids(waku_ids)
 
-    plan.assert(value=ids,
+    plan.verify(value=ids,
             assertion="==",
             target_value="[/ip4/1.1.1.1/tcp/1234/p2p/ASDFGHJKL,/ip4/2.2.2.2/tcp/1234/p2p/QWERTYUIOP]")
 
@@ -78,4 +78,4 @@ def test_get_waku_peers(plan, test_topology, expected):
     for test_node, test_node_info in test_topology["nodes"].items():
         num_peers = waku.get_waku_peers(plan, test_node_info["container_id"], test_node)
 
-        plan.assert(value=num_peers, assertion="==", target_value=expected)
+        plan.verify(value=num_peers, assertion="==", target_value=expected)

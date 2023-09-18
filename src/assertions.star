@@ -22,7 +22,7 @@ def start_test(plan, kurtosis_config, network_topology):
                                                         vars.WAKU_RPC_PORT_ID + vars.ID_STR_SEPARATOR + service_name,
                                                         values["endpoint"], extract)
 
-            plan.assert(value=response["code"], assertion="==", target_value = 200)
-            plan.assert(value=response["extract.jq_extract"], assertion=">",
+            plan.verify(value=response["code"], assertion="==", target_value = 200)
+            plan.verify(value=response["extract.jq_extract"], assertion=">",
                 target_value=values["expected_value"])
             plan.remove_service(service_info["container_id"])

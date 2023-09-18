@@ -10,7 +10,7 @@ def test_load_config_args_default(plan):
 
     parsed = arg_parser.get_configuration_file_name(plan, input_args)
 
-    plan.assert(value=parsed, assertion="==", target_value = vars.DEFAULT_CONFIG_FILE)
+    plan.verify(value=parsed, assertion="==", target_value = vars.DEFAULT_CONFIG_FILE)
 
 
 def test_load_config_args_given(plan):
@@ -18,4 +18,4 @@ def test_load_config_args_given(plan):
 
     parsed = arg_parser.get_configuration_file_name(plan, input_args)
 
-    plan.assert(value=parsed, assertion="==", target_value = "test.json")
+    plan.verify(value=parsed, assertion="==", target_value = "test.json")
