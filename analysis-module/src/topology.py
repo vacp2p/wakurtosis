@@ -17,13 +17,13 @@ def _load_topics(node_info, nodes, node, tomls_folder):
     with open(tomls_folder + node_info["node_config"], mode='rb') as read_file:
         toml_config = tomllib.load(read_file)
         if node_info["image"] == vars.G_NWAKU_IMAGE_NAME:
-            topics = list(toml_config["topics"].split(" "))
+            topics = toml_config["pubsub-topic"]
         elif node_info["image"] == vars.G_GOWAKU_IMAGE_NAME:
-            topics = toml_config["topics"]
+            topics = toml_config["pubsub-topic"]
         else:
             raise ValueError("Unknown image type")
     # Load topics into topology for easier access
-    nodes[node]["topics"] = topics
+    nodes[node]["pubsub-topic"] = topics
 
 
 def load_topics_into_topology(topology, tomls_folder):

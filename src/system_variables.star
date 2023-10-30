@@ -1,5 +1,5 @@
 # IMAGES
-NWAKU_IMAGE = "statusteam/nim-waku:nwaku-trace3"
+NWAKU_IMAGE = "wakuorg/nwaku:wakunode_dst"
 GOWAKU_IMAGE = "gowaku"
 NOMOS_IMAGE = "nomos-node"
 

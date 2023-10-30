@@ -43,9 +43,9 @@ def _load_topics(node_info, nodes, node):
     with open("tomls/" + node_info["node_config"], mode='rb') as read_file:
         toml_config = tomllib.load(read_file)
         if node_info["image"] == "nim-waku":
-            topics = list(toml_config["topics"].split(" "))
+            topics = toml_config["pubsub-topic"]
         elif node_info["image"] == "go-waku":
-            topics = toml_config["topics"]
+            topics = toml_config["pubsub-topic"]
         else:
             raise ValueError("Unknown image type")
     # Load topics into topology for easier access
